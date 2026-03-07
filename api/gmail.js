@@ -121,11 +121,14 @@ export default async function handler(req, res) {
       const allContacts = [];
 
       // Helper: only match if name (not just email domain) contains query words
+      // Use only first word (firstname) for matching — handles voice-to-text errors in surname
       const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+      const firstWord = words[0] || q.toLowerCase();
       function nameMatches(name, email) {
         const nameLower = name.toLowerCase();
         const emailUser = email.split('@')[0].toLowerCase();
-        return words.every(w => nameLower.includes(w) || emailUser.includes(w));
+        // Match if ANY query word found in name, or first word in email user
+        return words.some(w => nameLower.includes(w)) || emailUser.includes(firstWord);
       }
 
       // 1. Try Google People API
@@ -152,9 +155,12 @@ export default async function handler(req, res) {
         const emailSet = new Set();
 
         // Search Gmail directly by name — finds emails TO or FROM this person
+        // Search by full name AND by first name only (handles voice-to-text surname errors)
         const searches = [
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q + ' in:sent')}`, headerName: 'To' },
+          { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(firstWord + ' in:sent')}`, headerName: 'To' },
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q)}`, headerName: 'From' },
+          { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(firstWord)}`, headerName: 'From' },
         ];
 
         for (const { url, headerName } of searches) {
