@@ -126,7 +126,7 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 
 <!-- TRANSCRIPT -->
-<div class="transcript-box" id="transcriptBox">Sig et projektnavn eller "morgenoverblik"</div>
+<div class="transcript-box" id="transcriptBox">Tryk på mikrofon for at tale</div>
 
 <!-- MIC -->
 <div class="mic-section">
@@ -309,7 +309,7 @@ function goHome() {
   conversationHistory = [];
   document.getElementById('projectView').style.display = 'none';
   document.getElementById('homeView').style.display = 'flex';
-  setTranscript('Sig et projektnavn eller "morgenoverblik"');
+  setTranscript('Tryk på mikrofon for at tale');
   setMicHint('Altid lyttende');
 }
 
@@ -319,8 +319,14 @@ async function createProject() {
   const { data, error } = await sb.from('projects').insert({ name }).select();
   closeModal();
   document.getElementById('newProjectName').value = '';
-  await loadProjects();
-  if (!error) speak(`Projektet ${name} er oprettet.`);
+  if (!error && data && data.length > 0) {
+    await loadProjects();
+    // Auto-navigate into the new project
+    openProject(data[0]);
+    speak(`Projektet ${name} er oprettet. Du er nu i ${name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
+  } else {
+    await loadProjects();
+  }
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); }
@@ -374,6 +380,13 @@ function handleCommand(text) {
   if (t.includes('morgenoverblik') || t.includes('morning brief') || t.includes('godmorgen')) { playMorningBrief(); return; }
   if ((t.includes('gå hjem') || t.includes('tilbage') || t.includes('hjem')) && activeProject) { goHome(); speak('Tilbage til hjem.'); return; }
 
+  // If already in a project, don't navigate — send to Claude instead
+  if (activeProject) {
+    sendToClaude(text);
+    return;
+  }
+
+  // From home screen: check if user said a project name to navigate
   for (const p of projects) {
     if (t.includes(p.name.toLowerCase())) {
       openProject(p);
@@ -382,40 +395,79 @@ function handleCommand(text) {
     }
   }
 
+  // No project match — send to Claude from home
   sendToClaude(text);
 }
 
-// ── CONTINUOUS LISTENING ──
+// ── PUSH TO TALK ──
 function startListening() {
-  if (isListening || isSpeaking || isThinking) return;
-  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { setMicHint('Stemme ikke understøttet — brug Safari'); return; }
+  if (isListening || isThinking) return;
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    setMicHint('Stemme ikke understøttet — brug Safari');
+    return;
+  }
+
+  // Stop speaking if active
+  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
   recognition.lang = 'da-DK';
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
 
-  recognition.onstart = () => { isListening = true; setMicState('listening'); };
-  recognition.onresult = e => { isListening = false; handleCommand(e.results[0][0].transcript); };
+  recognition.onstart = () => { isListening = true; setMicState('listening'); setMicHint('Tal nu — slip for at sende'); };
+  
+  recognition.onresult = e => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    setTranscript(transcript);
+  };
+
   recognition.onend = () => {
     isListening = false;
-    if (!isSpeaking && !isThinking) { setMicState('idle'); setTimeout(startListening, 400); }
-  };
-  recognition.onerror = e => {
-    isListening = false;
-    const retry = e.error === 'no-speech' ? 200 : 1500;
-    setTimeout(startListening, retry);
+    const transcript = document.getElementById('transcriptBox').textContent;
+    const isPlaceholder = transcript.includes('Tryk på mikrofon') || transcript.includes('Sig et projekt');
+    if (transcript && transcript.length > 2 && !isPlaceholder) {
+      handleCommand(transcript);
+    } else {
+      setMicState('idle');
+      setMicHint('Tryk for at tale');
+    }
   };
 
-  try { recognition.start(); } catch {}
+  recognition.onerror = e => {
+    isListening = false;
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
+    if (e.error === 'not-allowed') setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
+  };
+
+  try { recognition.start(); } catch(e) { console.log('Recognition error:', e); }
+}
+
+function stopListening() {
+  if (recognition && isListening) {
+    try { recognition.stop(); } catch {}
+  }
 }
 
 function handleMicTap() {
-  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); setTimeout(startListening, 300); return; }
-  if (isListening) { if(recognition) recognition.stop(); return; }
+  if (isThinking) return; // Don't interrupt while thinking
+  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); setMicHint('Tryk for at tale'); return; }
+  if (isListening) { stopListening(); return; }
   startListening();
 }
+
+// Stop mic when page loses focus
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopListening();
+    speechSynthesis.cancel();
+    isSpeaking = false;
+    isListening = false;
+    setMicState('idle');
+  }
+});
 
 // ── UI ──
 function setMicState(state) {
@@ -448,7 +500,8 @@ async function init() {
   setDate();
   fetchWeather();
   await loadProjects();
-  setTimeout(startListening, 1200);
+  setMicState('idle');
+  setMicHint('Tryk for at tale');
 }
 init();
 </script>
