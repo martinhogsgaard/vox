@@ -1057,25 +1057,24 @@ async function findContact(query, subject, body) {
     window._foundContacts = contacts;
     window._awaitingEmailContent = false;
 
-    const announceContact = () => {
-      if (isSpeaking) { setTimeout(announceContact, 300); return; }
-      let msg;
-      if (contacts.length === 1) {
-        const name = contacts[0].name || contacts[0].emails[0];
-        const email = contacts[0].emails[0];
-        msg = `I found ${name}, ${email.replace('@', ' at ')}. Is that the right person?`;
-      } else {
-        const list = contacts.map((c, i) => {
-          const name = c.name || c.emails[0];
-          const email = c.emails[0].replace('@', ' at ');
-          return `${i + 1}: ${name}, ${email}`;
-        }).join('. ');
-        msg = `I found ${contacts.length} contacts. ${list}. Which one?`;
-      }
-      saveToHistory('assistant', msg);
-      speak(msg);
-    };
-    announceContact();
+    let msg;
+    if (contacts.length === 1) {
+      const name = contacts[0].name || contacts[0].emails[0];
+      const email = contacts[0].emails[0];
+      msg = `I found ${name}, ${email.replace('@', ' at ')}. Is that the right person?`;
+    } else {
+      const list = contacts.map((c, i) => {
+        const name = c.name || c.emails[0];
+        const email = c.emails[0].replace('@', ' at ');
+        return `${i + 1}: ${name}, ${email}`;
+      }).join('. ');
+      msg = `I found ${contacts.length} contacts. ${list}. Which one?`;
+    }
+    saveToHistory('assistant', msg);
+    // Force speak — cancel anything currently playing first
+    window.speechSynthesis.cancel();
+    isSpeaking = false;
+    setTimeout(() => speak(msg), 400);
   } catch(e) { speak('Could not search contacts.'); }
 }
 
