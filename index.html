@@ -786,9 +786,17 @@ async function executeAction(action) {
       }
     }
   } else if (action.type === 'send_email') {
-    // If to looks like a name (no @), search contacts first
-    if (action.to && !action.to.includes('@')) {
-      await findContact(action.to, action.subject, action.body);
+    // Always search contacts if address looks fake/guessed (example.com, placeholder, no real domain)
+    const looksReal = action.to && action.to.includes('@') && 
+      !action.to.includes('example.com') && 
+      !action.to.includes('placeholder') &&
+      action.to.split('@')[1]?.includes('.');
+    if (!looksReal) {
+      // Extract name from fake address or use as-is
+      const query = action.to?.includes('@') 
+        ? action.to.split('@')[0].replace(/[._]/g,' ') 
+        : action.to;
+      await findContact(query, action.subject, action.body);
     } else {
       await sendEmail(action.to, action.subject, action.body);
     }
