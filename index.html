@@ -154,6 +154,17 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
   </div>
 </div>
 
+<!-- PROJEKTER VIEW -->
+<div class="content" id="projekterView" style="display:none;">
+  <div>
+    <div class="projects-card" id="projekterList"><div style="padding:14px;font-size:13px;color:var(--label)">Henter...</div></div>
+    <div class="new-project" onclick="openModal()" style="background:var(--card);border-radius:var(--rs);border:1px solid var(--border);margin-top:8px;">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>Nyt projekt</span>
+    </div>
+  </div>
+</div>
+
 <!-- TRANSCRIPT -->
 <div class="transcript-box" id="transcriptBox">Tryk på mikrofon for at tale</div>
 
@@ -357,6 +368,33 @@ async function openProject(p) {
   setMicHint(`Aktiv: ${p.name}`);
 }
 
+function renderProjekterView() {
+  const list = document.getElementById('projekterList');
+  if (!projects || projects.length === 0) {
+    list.innerHTML = '<div class="cal-empty">Ingen projekter endnu</div>';
+    return;
+  }
+  list.innerHTML = projects.map(p => `
+    <div class="project-item" onclick="openProjectFromNav('${p.id}')">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span class="project-name">${p.name}</span>
+      <span class="project-arrow">›</span>
+    </div>
+  `).join('');
+}
+
+function openProjectFromNav(id) {
+  const p = projects.find(p => p.id === id);
+  if (p) {
+    ['calendarView','projekterView'].forEach(vid => {
+      const el = document.getElementById(vid);
+      if (el) el.style.display = 'none';
+    });
+    setActiveNav('projekter');
+    openProject(p);
+  }
+}
+
 async function renderCalendarView() {
   const list = document.getElementById('calendarList');
   list.innerHTML = '<div class="cal-loading">Henter kalender...</div>';
@@ -455,10 +493,9 @@ function navTo(tab) {
   setActiveNav(tab);
 
   const calView = document.getElementById('calendarView');
+  const projView = document.getElementById('projekterView');
   // Hide all views
-  if (home) home.style.display = 'none';
-  if (proj) proj.style.display = 'none';
-  if (calView) calView.style.display = 'none';
+  [home, proj, calView, projView].forEach(v => { if (v) v.style.display = 'none'; });
 
   if (tab === 'hjem') {
     if (home) home.style.display = 'flex';
@@ -466,20 +503,14 @@ function navTo(tab) {
     conversationHistory = [];
     homeHistory = [];
   } else if (tab === 'projekter') {
-    if (home) home.style.display = 'flex';
+    if (projView) { projView.style.display = 'flex'; renderProjekterView(); }
     activeProject = null;
     conversationHistory = [];
-    // Scroll to projects
-    setTimeout(() => {
-      const projSection = document.querySelector('#homeView > div:last-child');
-      if (projSection) projSection.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
   } else if (tab === 'kalender') {
     if (calView) { calView.style.display = 'flex'; renderCalendarView(); }
     activeProject = null;
   } else if (tab === 'konto') {
     if (home) home.style.display = 'flex';
-    speak("Account settings coming soon.");
   }
 }
 
@@ -488,6 +519,10 @@ function goHome() {
   conversationHistory = [];
   homeHistory = [];
   setActiveNav('hjem');
+  ['calendarView','projekterView','projectView'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
   document.getElementById('projectView').style.display = 'none';
   document.getElementById('homeView').style.display = 'flex';
   setTranscript('Tryk på mikrofon for at tale');
