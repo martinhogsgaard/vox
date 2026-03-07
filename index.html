@@ -431,13 +431,14 @@ Rules:
     let reply = data.content[0].text;
 
     // Parse and execute any ACTION command
-    const actionMatch = reply.match(/ACTION:(\{.*\})/);
-    if (actionMatch) {
-      reply = reply.replace(/\nACTION:\{[^}]*\}/, '').trim();
+    const actionLineMatch = reply.match(/ACTION:(\{[^\n]+\})/);
+    if (actionLineMatch) {
+      reply = reply.replace(/\nACTION:\{[^\n]+\}/, '').trim();
       try {
-        const action = JSON.parse(actionMatch[1]);
+        const action = JSON.parse(actionLineMatch[1]);
+        console.log('Parsed action:', JSON.stringify(action));
         await executeAction(action);
-      } catch(e) { console.log('Action parse error:', e); }
+      } catch(e) { console.log('Action parse error:', e, 'Raw:', actionLineMatch[1]); }
     }
 
     if (activeProject) {
