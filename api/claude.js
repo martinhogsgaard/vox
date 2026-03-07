@@ -1,3 +1,30 @@
+// Keywords that suggest web search is needed
+const SEARCH_TRIGGERS = [
+  'find', 'search', 'look up', 'what is', 'where is', 'address', 'price', 'cost',
+  'weather', 'news', 'latest', 'current', 'today', 'restaurant', 'store', 'shop',
+  'phone', 'number', 'hours', 'open', 'website', 'email', 'contact',
+  'find', 'søg', 'hvad er', 'hvor er', 'adresse', 'pris', 'vejret', 'nyheder',
+  'restaurant', 'butik', 'telefon', 'åbningstider', 'hjemmeside'
+];
+
+// Keywords that mean we should NOT search (fast actions)
+const NO_SEARCH_TRIGGERS = [
+  'ACTION:', 'create_event', 'send_email', 'find_contact', 'delete_event',
+  'opret møde', 'opret projekt', 'send mail', 'slet møde', 'flyt møde',
+  'har jeg møder', 'hvad sker der', 'kalender'
+];
+
+function shouldUseWebSearch(messages) {
+  const lastMessage = messages?.[messages.length - 1]?.content || '';
+  const text = (typeof lastMessage === 'string' ? lastMessage : '').toLowerCase();
+  
+  // Never search for action-type requests
+  if (NO_SEARCH_TRIGGERS.some(t => text.includes(t.toLowerCase()))) return false;
+  
+  // Search if any search trigger found
+  return SEARCH_TRIGGERS.some(t => text.includes(t.toLowerCase()));
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -8,57 +35,53 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const useSearch = shouldUseWebSearch(body.messages);
 
-    const bodyWithSearch = {
-      ...body,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }]
-    };
+    const requestBody = useSearch
+      ? { ...body, tools: [{ type: 'web_search_20250305', name: 'web_search' }] }
+      : body;
 
     const headers = {
       'Content-Type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'web-search-2025-03-05'
+      ...(useSearch && { 'anthropic-beta': 'web-search-2025-03-05' })
     };
 
-    // First call
     let response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers,
-      body: JSON.stringify(bodyWithSearch)
+      body: JSON.stringify(requestBody)
     });
     let data = await response.json();
 
-    // If Claude wants to use web search, handle the tool loop
+    // Handle web search tool loop
     let iterations = 0;
     while (data.stop_reason === 'tool_use' && iterations < 3) {
       iterations++;
-
-      // Find tool use blocks
       const toolUseBlocks = data.content.filter(b => b.type === 'tool_use');
       if (toolUseBlocks.length === 0) break;
 
-      // Build messages with tool results
       const messages = [
-        ...(bodyWithSearch.messages || []),
+        ...(requestBody.messages || []),
         { role: 'assistant', content: data.content },
         {
           role: 'user',
           content: toolUseBlocks.map(block => ({
             type: 'tool_result',
             tool_use_id: block.id,
-            content: JSON.stringify(block.input) // Anthropic handles the actual search
+            content: JSON.stringify(block.input)
           }))
         }
       ];
 
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', headers,
-        body: JSON.stringify({ ...bodyWithSearch, messages })
+        body: JSON.stringify({ ...requestBody, messages })
       });
       data = await response.json();
     }
 
-    // Extract only text blocks for the app
+    // Return only text blocks
     if (data.content && Array.isArray(data.content)) {
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) {
