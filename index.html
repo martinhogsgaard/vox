@@ -623,7 +623,22 @@ function addBubble(role, text, scroll = true) {
 }
 
 // ── CLAUDE ──
+// Words that mean "stop what you're doing"
+const STOP_WORDS = ['stop', 'hold op', 'nok', 'stilhed', 'quiet', 'shut up', 'enough', 'lad være'];
+
+function isStopCommand(text) {
+  const t = text.toLowerCase().trim();
+  return STOP_WORDS.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w));
+}
+
 async function sendToClaude(text) {
+  if (isStopCommand(text)) {
+    stopSpeaking();
+    if (activeProject) conversationHistory = conversationHistory.slice(0, -2);
+    else homeHistory = homeHistory.slice(0, -2);
+    speak('Ok.');
+    return;
+  }
   console.log('sendToClaude called, text:', text, 'activeProject:', activeProject ? activeProject.name : 'null');
   isThinking = true;
   setMicState('thinking');
@@ -711,6 +726,8 @@ ACTION:{"type":"delete_project","name":"ProjectName"}
 ACTION:{"type":"go_home"}
 ACTION:{"type":"open_drive_folder"}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
+ACTION:{"type":"create_multiple_events","events":[{"title":"Pasta","date":"2026-03-09","time":"18:00","duration":30},{"title":"Pizza","date":"2026-03-10","time":"18:00","duration":30}]}
+ACTION:{"type":"create_multiple_events","events":[{"title":"Pasta","date":"2026-03-10","time":"18:00","duration":60},{"title":"Risotto","date":"2026-03-11","time":"18:00","duration":60}]}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
@@ -727,6 +744,8 @@ Rules:
 - Reply in English. If Martin asks a factual or informational question (addresses, directions, information, advice), give a complete helpful answer. For action confirmations and small talk, keep it to 1-2 sentences. Martin is often driving so be concise but never refuse to answer a question due to length.
 - For calendar READ requests ("har jeg møder", "hvad sker der", "vis mig", "er der noget"): answer directly from CALENDAR above. NO action. Never create an event when asked a question about existing events.
 - For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
+- Event titles must be SHORT — max 5 words. NEVER put recipes, shopping lists, or instructions in the title. Just the dish name e.g. "Chicken Tikka Masala" not the full recipe.
+- For MULTIPLE events (e.g. 5 dinners Mon-Fri), use create_multiple_events with all events in one action. Titles max 5 words each.
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
 - For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
@@ -739,6 +758,10 @@ Rules:
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
 - Only ONE action per reply. When in doubt — no action.
+- If Martin says "stop", "nok", "hold op" or similar — stop immediately, apologize briefly, and ask what he needs instead. Never repeat content he has already rejected.
+- NEVER read out full recipes, long lists, documents or detailed content aloud — Martin is driving. Instead say "I've added X to your calendar" or "Done — 5 recipes saved". Keep all spoken replies under 3 sentences.
+- When adding multiple calendar events, use create_multiple_events with all events in one action — never create them one by one.
+- If Martin asks to save/add something to calendar, do it — don't describe what you're saving.
 - Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
@@ -881,6 +904,29 @@ async function executeAction(action) {
         buildInviteBody(action.title, action.date, action.time, action.duration || 60)
       );
     }
+  } else if (action.type === 'create_multiple_events') {
+    // Create several events in sequence
+    const events = action.events || [];
+    for (let i = 0; i < events.length; i++) {
+      const e = events[i];
+      await createCalendarEvent(e.title, e.date, e.time, e.duration || 60, e.allday, false);
+    }
+    const msg = `Done. Added ${events.length} events to your calendar.`;
+    saveToHistory('assistant', msg);
+    speakQueued(msg);
+  } else if (action.type === 'create_multiple_events') {
+    // Create multiple events silently, then confirm with one message
+    const events = action.events || [];
+    let created = 0;
+    for (const e of events) {
+      try {
+        await createCalendarEvent(e.title, e.date, e.time, e.duration, e.allday, e.reminder);
+        created++;
+      } catch(err) { console.log('Failed to create event:', e.title, err); }
+    }
+    const msg = `Done. Added ${created} event${created !== 1 ? 's' : ''} to your calendar.`;
+    saveToHistory('assistant', msg);
+    speak(msg);
   } else if (action.type === 'create_event') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
   } else if (action.type === 'find_contact') {
