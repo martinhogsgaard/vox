@@ -358,7 +358,28 @@ async function sendToClaude(text) {
   setMicState('thinking');
   if (activeProject) { addBubble('user', text); conversationHistory.push({ role:'user', content:text }); }
 
-  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant working on these projects: WoodUpp (packaging and shipping of flatpack wooden units), ByAulum (warehouse and operations optimization for a client), Timelog (a time-tracking app he is building). ${activeProject ? `Active project: "${activeProject.name}".` : 'No active project.'} Always reply in English — Martin understands English and the voice reads it aloud. Keep replies very short, max 2-3 sentences. Martin is often driving. Confirm briefly when you note something.`;
+  const projectNames = projects.map(p => p.name).join(', ');
+
+  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant.
+Current projects in the system: ${projectNames}.
+${activeProject ? `Active project: "${activeProject.name}".` : 'No active project — Martin is on the home screen.'}
+
+You can perform ACTIONS by including a JSON command at the very end of your reply, on its own line, like this:
+ACTION:{"type":"create_project","name":"ProjectName"}
+ACTION:{"type":"open_project","name":"ProjectName"}
+ACTION:{"type":"go_home"}
+
+Available actions:
+- create_project: Create a new project with a given name
+- open_project: Navigate to an existing project by name
+- go_home: Go back to home screen
+
+Rules:
+- Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
+- If Martin asks to create a project/folder, ALWAYS include the ACTION command.
+- If Martin asks to open/go to a project, ALWAYS include the ACTION command.
+- Only include ONE action per reply.
+- Speak naturally, then put the ACTION on the last line if needed.`;
 
   const messages = conversationHistory.length > 0 ? conversationHistory : [{ role:'user', content:text }];
 
@@ -366,20 +387,51 @@ async function sendToClaude(text) {
     const res = await fetch('/api/claude', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, system, messages })
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:400, system, messages })
     });
     const data = await res.json();
-    const reply = data.content[0].text;
+    let reply = data.content[0].text;
+
+    // Parse and execute any ACTION command
+    const actionMatch = reply.match(/ACTION:(\{.*\})/);
+    if (actionMatch) {
+      reply = reply.replace(/
+ACTION:\{.*\}/, '').trim();
+      try {
+        const action = JSON.parse(actionMatch[1]);
+        await executeAction(action);
+      } catch(e) { console.log('Action parse error:', e); }
+    }
+
     if (activeProject) {
       addBubble('assistant', reply);
       await sb.from('messages').insert({ project_id: activeProject.id, role:'assistant', content:reply });
       conversationHistory.push({ role:'assistant', content:reply });
     }
     isThinking = false;
-    speak(reply, () => { setMicState('idle'); setTimeout(startListening, 600); });
-  } catch {
+    speak(reply, () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
+  } catch(e) {
+    console.log('Claude error:', e);
     isThinking = false;
-    speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setTimeout(startListening, 600); });
+    speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
+  }
+}
+
+async function executeAction(action) {
+  console.log('Executing action:', action);
+  if (action.type === 'create_project') {
+    const { data, error } = await sb.from('projects').insert({ name: action.name }).select();
+    if (!error && data && data.length > 0) {
+      await loadProjects();
+      setTimeout(() => openProject(data[0]), 300);
+    } else {
+      console.log('Create project error:', error);
+    }
+  } else if (action.type === 'open_project') {
+    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
+    if (p) setTimeout(() => openProject(p), 300);
+  } else if (action.type === 'go_home') {
+    goHome();
   }
 }
 
