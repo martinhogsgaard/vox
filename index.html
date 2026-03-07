@@ -363,7 +363,9 @@ async function sendToClaude(text) {
   if (activeProject) {
     addBubble('user', text);
     conversationHistory.push({ role:'user', content:text });
-    await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
+    const { error: msgErr } = await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
+    if (msgErr) console.error('Save user message failed:', msgErr);
+    else console.log('Saved user message to project:', activeProject.id);
   }
 
   const projectNames = projects.map(p => p.name).join(', ');
@@ -417,7 +419,9 @@ Rules:
 
     if (activeProject) {
       addBubble('assistant', reply);
-      await sb.from('messages').insert({ project_id: activeProject.id, role:'assistant', content:reply });
+      const { error: aErr } = await sb.from('messages').insert({ project_id: activeProject.id, role:'assistant', content:reply });
+      if (aErr) console.error('Save assistant message failed:', aErr);
+      else console.log('Saved assistant message to project:', activeProject.id);
       conversationHistory.push({ role:'assistant', content:reply });
     }
     isThinking = false;
