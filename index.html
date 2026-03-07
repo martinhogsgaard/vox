@@ -356,7 +356,11 @@ function addBubble(role, text, scroll = true) {
 async function sendToClaude(text) {
   isThinking = true;
   setMicState('thinking');
-  if (activeProject) { addBubble('user', text); conversationHistory.push({ role:'user', content:text }); }
+  if (activeProject) {
+    addBubble('user', text);
+    conversationHistory.push({ role:'user', content:text });
+    await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
+  }
 
   const projectNames = projects.map(p => p.name).join(', ');
 
@@ -368,10 +372,12 @@ You can perform ACTIONS by including a JSON command at the very end of your repl
 ACTION:{"type":"create_project","name":"ProjectName"}
 ACTION:{"type":"open_project","name":"ProjectName"}
 ACTION:{"type":"go_home"}
+ACTION:{"type":"delete_project","name":"ProjectName"}
 
 Available actions:
 - create_project: Create a new project with a given name
-- open_project: Navigate to an existing project by name
+- open_project: Navigate to an existing project by name  
+- delete_project: Delete a project by name
 - go_home: Go back to home screen
 
 Rules:
@@ -429,6 +435,15 @@ async function executeAction(action) {
   } else if (action.type === 'open_project') {
     const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
     if (p) setTimeout(() => openProject(p), 300);
+  } else if (action.type === 'delete_project') {
+    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
+    if (p) {
+      // Delete all messages for this project first
+      await sb.from('messages').delete().eq('project_id', p.id);
+      await sb.from('projects').delete().eq('id', p.id);
+      if (activeProject && activeProject.id === p.id) goHome();
+      await loadProjects();
+    }
   } else if (action.type === 'go_home') {
     goHome();
   }
