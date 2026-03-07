@@ -270,7 +270,9 @@ function speak(text, onDone) {
   setMicState('speaking');
 
   // iOS Safari cuts off speech after ~15 seconds — split into sentences
-  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  // Replace "dot" placeholder to avoid splitting email addresses
+  const safeSplit = text.replace(/ dot /g, ' DOT ');
+  const sentences = safeSplit.match(/[^.!?]+[.!?]*/g) || [safeSplit];
   let idx = 0;
 
   function speakNext() {
@@ -280,7 +282,7 @@ function speak(text, onDone) {
       else { setMicState('idle'); setMicHint('Tryk for at tale'); }
       return;
     }
-    const u = new SpeechSynthesisUtterance(sentences[idx].trim());
+    const u = new SpeechSynthesisUtterance(sentences[idx].trim().replace(/ DOT /g, ' dot '));
     u.voice = selectedVoice || null;
     u.lang = 'en-GB';
     u.rate = isIOS ? 1.0 : 1.1;
@@ -635,6 +637,7 @@ ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
 ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
+ACTION:{"type":"create_event_and_invite","title":"ByAulum møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Martin Høgsgaard"}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
 ACTION:{"type":"spell_email","email":"mie@example.dk"}
@@ -649,6 +652,7 @@ Rules:
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
 - For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
+- For create_event_and_invite: ONLY use when Martin explicitly says BOTH "opret møde" AND "send invitation/mødeindkaldelse til [person]" in the SAME request. Never combine them unless both are clearly stated.
 - For find_contact: ONLY use when you have NOT yet searched for this person. If you already found a contact and said so, do NOT search again — use confirm_email instead.
 - For confirm_email: use when Martin says yes/ja/correct/that one/number, OR when you already found a contact and Martin says anything that isn't a clear rejection. index=1 for first result.
 - For spell_email: use when Martin spells out an email address letter by letter (e.g. "m i e at w e p r o d u c e dot d k" → "mie@weproduce.dk"). Parse it into a proper email address.
@@ -774,6 +778,21 @@ async function executeAction(action) {
       listCalendarEvents();
     };
     setTimeout(waitAndList, 500);
+  } else if (action.type === 'create_event_and_invite') {
+    // Create event then find contact and send invite
+    await createCalendarEvent(action.title, action.date, action.time, action.duration, false, false);
+    if (action.invite_to) {
+      window._pendingInvite = {
+        title: action.title,
+        date: action.date,
+        time: action.time,
+        duration: action.duration || 60
+      };
+      await findContact(action.invite_to, 
+        `Mødeindkaldelse: ${action.title}`,
+        buildInviteBody(action.title, action.date, action.time, action.duration || 60)
+      );
+    }
   } else if (action.type === 'create_event') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
   } else if (action.type === 'find_contact') {
@@ -1018,14 +1037,38 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
 }
 
 // ── GMAIL ──
-// Convert email address to speakable text
+// Convert email address to speakable text — NO dots (they break sentence splitter)
 function speakableEmail(email) {
   if (!email) return '';
   const [user, domain] = email.split('@');
   if (!domain) return email;
-  const domainClean = domain.replace('.dk', ' dot dk').replace('.com', ' dot com').replace('.', ' dot ');
-  const userSpoken = user.toUpperCase().split('').join(' ');
+  const domainClean = domain.replace(/\./g, ' dot ');
+  const userSpoken = user.length <= 5
+    ? user.toUpperCase().split('').join(' ')
+    : user.replace(/[._-]/g, ' ');
   return `${userSpoken} at ${domainClean}`;
+}
+
+// Build a meeting invite email body
+function buildInviteBody(title, date, time, duration) {
+  const d = new Date(`${date}T${time || '09:00'}:00`);
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const dateStr = d.toLocaleDateString('da-DK', options);
+  const timeStr = time || '09:00';
+  const endDate = new Date(d.getTime() + duration * 60000);
+  const endTime = endDate.toTimeString().substring(0, 5);
+  return `Hej,
+
+Jeg vil gerne invitere dig til følgende møde:
+
+Emne: ${title}
+Dato: ${dateStr}
+Tidspunkt: ${timeStr} - ${endTime}
+
+Ses vi?
+
+Venlig hilsen
+Martin`;
 }
 
 // Pending email state for contact confirmation flow
