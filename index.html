@@ -173,6 +173,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let activeProject = null;
 let conversationHistory = [];
+let homeHistory = []; // Conversation history when on home screen
 let projects = [];
 let isListening = false;
 let isSpeaking = false;
@@ -321,6 +322,7 @@ async function openProject(p) {
 function goHome() {
   activeProject = null;
   conversationHistory = [];
+  homeHistory = [];
   document.getElementById('projectView').style.display = 'none';
   document.getElementById('homeView').style.display = 'flex';
   setTranscript('Tryk på mikrofon for at tale');
@@ -368,6 +370,9 @@ async function sendToClaude(text) {
     const { error: msgErr } = await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
     if (msgErr) console.error('Save user message failed:', msgErr);
     else console.log('Saved user message to project:', activeProject.id);
+  } else {
+    homeHistory.push({ role:'user', content:text });
+    if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
   }
 
   const projectNames = projects.map(p => p.name).join(', ');
@@ -411,9 +416,9 @@ Rules:
 - When in doubt — do NOT include an action.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
-  const messages = conversationHistory.length > 0 
-    ? conversationHistory.slice(-10) 
-    : [{ role:'user', content:text }];
+  const messages = activeProject
+    ? (conversationHistory.length > 0 ? conversationHistory.slice(-10) : [{ role:'user', content:text }])
+    : (homeHistory.length > 0 ? homeHistory.slice(-10) : [{ role:'user', content:text }]);
 
   try {
     const res = await fetch('/api/claude', {
@@ -440,6 +445,9 @@ Rules:
       if (aErr) console.error('Save assistant message failed:', aErr);
       else console.log('Saved assistant message to project:', activeProject.id);
       conversationHistory.push({ role:'assistant', content:reply });
+    } else {
+      homeHistory.push({ role:'assistant', content:reply });
+      if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
     }
     isThinking = false;
     speak(reply, () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
