@@ -358,6 +358,7 @@ function addBubble(role, text, scroll = true) {
 
 // ── CLAUDE ──
 async function sendToClaude(text) {
+  console.log('sendToClaude called, text:', text, 'activeProject:', activeProject ? activeProject.name : 'null');
   isThinking = true;
   setMicState('thinking');
   if (activeProject) {
