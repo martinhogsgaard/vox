@@ -174,6 +174,15 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let activeProject = null;
 let conversationHistory = [];
 let homeHistory = []; // Conversation history when on home screen
+
+function saveToHistory(role, content) {
+  if (activeProject) {
+    if (role === 'assistant') conversationHistory.push({ role, content });
+  } else {
+    homeHistory.push({ role, content });
+    if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
+  }
+}
 let projects = [];
 let isListening = false;
 let isSpeaking = false;
@@ -429,6 +438,7 @@ Rules:
   const messages = activeProject
     ? (conversationHistory.length > 0 ? conversationHistory.slice(-10) : [{ role:'user', content:text }])
     : (homeHistory.length > 0 ? homeHistory.slice(-10) : [{ role:'user', content:text }]);
+  console.log('Sending', messages.length, 'messages to Claude:', messages.map(m => m.role + ': ' + m.content.substring(0,60)));
 
   try {
     const res = await fetch('/api/claude', {
@@ -600,13 +610,19 @@ async function listCalendarEvents(date) {
     const data = await res.json();
     if (data.error) { speak('Calendar error: ' + data.error); return; }
     const events = data.items || [];
-    if (events.length === 0) { speak(date ? `You have no events on that day.` : "You have no more events today."); return; }
-    const summary = events.map(e => {
-      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
-      return `${time}, ${e.summary}`;
-    }).join('. ');
     const dayLabel = date ? new Date(date).toLocaleDateString('en', {weekday:'long'}) : 'today';
-    speak(`On ${dayLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`);
+    let msg;
+    if (events.length === 0) {
+      msg = date ? `You have no events on ${dayLabel}.` : "You have no more events today.";
+    } else {
+      const summary = events.map(e => {
+        const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
+        return `${time}, ${e.summary}`;
+      }).join('. ');
+      msg = `On ${dayLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
+    }
+    saveToHistory('assistant', msg);
+    speak(msg);
   } catch(e) { speak('Could not load calendar events.'); }
 }
 
@@ -641,14 +657,18 @@ async function listDateEvents(date, timeFrom, timeTo) {
     const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
     const timeLabel = timeFrom ? ` between ${timeFrom} and ${timeTo || 'end of day'}` : '';
     if (events.length === 0) {
-      speak(`You have no events on ${dayLabel}${timeLabel}.`);
+      const noMsg = `You have no events on ${dayLabel}${timeLabel}.`;
+      saveToHistory('assistant', noMsg);
+      speak(noMsg);
       return;
     }
     const summary = events.map(e => {
       const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : 'All day';
       return `${time}, ${e.summary}`;
     }).join('. ');
-    speak(`On ${dayLabel}${timeLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`);
+    const msg = `On ${dayLabel}${timeLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
+    saveToHistory('assistant', msg);
+    speak(msg);
   } catch(e) { speak('Could not load events for that day.'); }
 }
 
@@ -660,14 +680,16 @@ async function listUpcomingEvents() {
     });
     const data = await res.json();
     const events = data.items || [];
-    if (events.length === 0) { speak("You have no upcoming events this week."); return; }
+    if (events.length === 0) { saveToHistory('assistant', "You have no upcoming events this week."); speak("You have no upcoming events this week."); return; }
     const summary = events.map(e => {
       const d = new Date(e.start.dateTime || e.start.date);
       const day = d.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
       const time = e.start.dateTime ? d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
       return `${day}${time ? ' at ' + time : ''}: ${e.summary}`;
     }).join('. ');
-    speak(`You have ${events.length} upcoming events. ${summary}.`);
+    const msg = `You have ${events.length} upcoming events. ${summary}.`;
+    saveToHistory('assistant', msg);
+    speak(msg);
   } catch(e) { speak('Could not load upcoming events.'); }
 }
 
