@@ -122,59 +122,70 @@ export default async function handler(req, res) {
     }
 
     } else if (action === 'find_contact') {
-      // Search Google People API for contacts matching query
       const q = req.body.query || '';
-      const r = await fetch(
-        `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=5`,
-        { headers }
-      );
-      const data = await r.json();
-      const results = (data.results || []).map(p => ({
-        name: p.person?.names?.[0]?.displayName || '',
-        emails: (p.person?.emailAddresses || []).map(e => e.value)
-      })).filter(c => c.emails.length > 0);
+      const allContacts = [];
 
-      // Also search sent mail for matching addresses
-      const sentR = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent('to:' + q + ' in:sent')}`,
-        { headers }
-      );
-      const sentData = await sentR.json();
-      const sentEmails = new Set();
-      if (sentData.messages) {
-        await Promise.all(sentData.messages.slice(0, 10).map(async m => {
-          const mr = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=To`,
-            { headers }
-          );
-          const md = await mr.json();
-          const to = md.payload?.headers?.find(h => h.name === 'To')?.value || '';
-          // Parse "Name <email>" format
-          const matches = to.matchAll(/([^<,]+)<([^>]+)>/g);
-          for (const m of matches) {
-            const name = m[1].trim();
-            const email = m[2].trim();
-            if (name.toLowerCase().includes(q.toLowerCase()) || email.toLowerCase().includes(q.toLowerCase())) {
-              sentEmails.add(JSON.stringify({ name, email }));
+      // 1. Try Google People API
+      try {
+        const r = await fetch(
+          `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=5`,
+          { headers }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const results = (data.results || []).map(p => ({
+            name: p.person?.names?.[0]?.displayName || '',
+            emails: (p.person?.emailAddresses || []).map(e => e.value)
+          })).filter(c => c.emails.length > 0);
+          allContacts.push(...results);
+        } else {
+          console.log('People API status:', r.status);
+        }
+      } catch(e) { console.log('People API error:', e.message); }
+
+      // 2. Search sent mail for matching addresses
+      try {
+        const sentR = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent('in:sent')}`,
+          { headers }
+        );
+        if (sentR.ok) {
+          const sentData = await sentR.json();
+          if (sentData.messages) {
+            const sentEmails = new Set();
+            await Promise.all(sentData.messages.slice(0, 15).map(async m => {
+              const mr = await fetch(
+                `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=To`,
+                { headers }
+              );
+              if (!mr.ok) return;
+              const md = await mr.json();
+              const to = md.payload?.headers?.find(h => h.name === 'To')?.value || '';
+              const matches = [...to.matchAll(/([^<,]+)<([^>]+)>/g)];
+              for (const match of matches) {
+                const name = match[1].trim();
+                const email = match[2].trim();
+                if (name.toLowerCase().includes(q.toLowerCase()) || email.toLowerCase().includes(q.toLowerCase())) {
+                  sentEmails.add(JSON.stringify({ name, email }));
+                }
+              }
+              if (!to.includes('<')) {
+                to.split(',').forEach(addr => {
+                  const email = addr.trim();
+                  if (email.toLowerCase().includes(q.toLowerCase())) {
+                    sentEmails.add(JSON.stringify({ name: '', email }));
+                  }
+                });
+              }
+            }));
+            for (const s of sentEmails) {
+              const { name, email } = JSON.parse(s);
+              const exists = allContacts.some(c => c.emails.includes(email));
+              if (!exists) allContacts.push({ name, emails: [email] });
             }
           }
-          // Plain email without name
-          if (!to.includes('<')) {
-            to.split(',').forEach(e => {
-              const email = e.trim();
-              if (email.toLowerCase().includes(q.toLowerCase())) sentEmails.add(JSON.stringify({ name: '', email }));
-            });
-          }
-        }));
-      }
-
-      // Merge contacts + sent history, deduplicate by email
-      const allContacts = [...results];
-      for (const s of sentEmails) {
-        const { name, email } = JSON.parse(s);
-        const exists = allContacts.some(c => c.emails.includes(email));
-        if (!exists) allContacts.push({ name, emails: [email] });
-      }
+        }
+      } catch(e) { console.log('Sent mail search error:', e.message); }
 
       return res.status(200).json({ contacts: allContacts.slice(0, 5) });
     }
