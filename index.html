@@ -1020,15 +1020,12 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
 // ── GMAIL ──
 // Convert email address to speakable text
 function speakableEmail(email) {
+  if (!email) return '';
   const [user, domain] = email.split('@');
-  const domainParts = domain.split('.');
-  const ext = domainParts.pop();
-  const domainName = domainParts.join(' dot ');
-  // Spell out short usernames, read longer ones as words
-  const userSpoken = user.length <= 4 
-    ? user.split('').join(' ') 
-    : user.replace(/[._-]/g, ' ');
-  return `${userSpoken} at ${domainName} dot ${ext}`;
+  if (!domain) return email;
+  const domainClean = domain.replace('.dk', ' dot dk').replace('.com', ' dot com').replace('.', ' dot ');
+  const userSpoken = user.toUpperCase().split('').join(' ');
+  return `${userSpoken} at ${domainClean}`;
 }
 
 // Pending email state for contact confirmation flow
@@ -1071,17 +1068,19 @@ async function findContact(query, subject, body) {
     window._awaitingEmailContent = false;
 
     let msg;
-    if (contacts.length === 1) {
-      const name = contacts[0].name || contacts[0].emails[0];
-      const email = contacts[0].emails[0];
-      msg = `I found ${name}. Email address: ${speakableEmail(email)}. Is that correct?`;
+    // Flatten: one entry per email address
+    const flat = [];
+    contacts.forEach(c => {
+      (c.emails || []).forEach(e => flat.push({ name: c.name || e, email: e }));
+    });
+
+    if (flat.length === 1) {
+      msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
     } else {
-      const list = contacts.map((c, i) => {
-        const name = c.name || c.emails[0];
-        const email = speakableEmail(c.emails[0]);
-        return `${i + 1}: ${name}, ${email}`;
-      }).join('. ');
-      msg = `I found ${contacts.length} contacts. ${list}. Which one?`;
+      const list = flat.map((c, i) => `${i + 1}: ${speakableEmail(c.email)}`).join('. ');
+      msg = `I found ${flat.length} addresses for ${flat[0].name}. ${list}. Which one?`;
+      // Store flat list so confirm_email index works correctly
+      window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
     }
     saveToHistory('assistant', msg);
     // Force speak — cancel anything currently playing first
