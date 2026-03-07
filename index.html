@@ -649,9 +649,11 @@ Rules:
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
 - For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
-- For find_contact: use when Martin mentions a person's name. Include subject and body so they're ready after confirmation.
-- For confirm_email: use when Martin says yes/confirmed/number after a contact search. index=1 for first contact.
+- For find_contact: ONLY use when you have NOT yet searched for this person. If you already found a contact and said so, do NOT search again — use confirm_email instead.
+- For confirm_email: use when Martin says yes/ja/correct/that one/number, OR when you already found a contact and Martin says anything that isn't a clear rejection. index=1 for first result.
 - For spell_email: use when Martin spells out an email address letter by letter (e.g. "m i e at w e p r o d u c e dot d k" → "mie@weproduce.dk"). Parse it into a proper email address.
+- IMPORTANT: Once a contact has been found and spoken aloud, treat all subsequent replies as confirmation or rejection — never search again for the same person.
+- For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - Only ONE action per reply. When in doubt — no action.`;
 
@@ -776,6 +778,12 @@ async function executeAction(action) {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
   } else if (action.type === 'find_contact') {
     await findContact(action.query, action.subject, action.body);
+  } else if (action.type === 'send_confirmed_email') {
+    if (window._confirmedEmail) {
+      await sendEmail(window._confirmedEmail, action.subject, action.body);
+      window._confirmedEmail = null;
+      window._foundContacts = null;
+    }
   } else if (action.type === 'spell_email') {
     // User spelled out an email address — confirm and send
     if (window._pendingEmail) {
@@ -787,14 +795,24 @@ async function executeAction(action) {
       speak(msg);
     }
   } else if (action.type === 'confirm_email') {
-    // User confirmed which contact to use
-    if (window._pendingEmail && window._foundContacts) {
+    if (window._foundContacts) {
       const idx = (action.index || 1) - 1;
       const contact = window._foundContacts[idx];
       if (contact) {
-        await sendEmail(contact.emails[0], window._pendingEmail.subject, window._pendingEmail.body);
-        window._pendingEmail = null;
-        window._foundContacts = null;
+        const draft = window._pendingEmailDraft || {};
+        if (draft.subject && draft.body) {
+          // We already have content — send directly
+          await sendEmail(contact.emails[0], draft.subject, draft.body);
+          window._pendingEmail = null;
+          window._pendingEmailDraft = null;
+          window._foundContacts = null;
+        } else {
+          // Address confirmed — now ask for content
+          window._confirmedEmail = contact.emails[0];
+          const msg = `Great. What should the email say, and what's the subject?`;
+          saveToHistory('assistant', msg);
+          speak(msg);
+        }
       }
     }
   } else if (action.type === 'send_email') {
@@ -1030,26 +1048,31 @@ async function findContact(query, subject, body) {
       return;
     }
 
-    // Store pending email
-    window._pendingEmail = { subject, body };
+    // Store pending email — but NOT subject/body yet, confirm address first
+    window._pendingEmail = { subject: '', body: '' };
+    window._pendingEmailDraft = { subject, body };
     window._foundContacts = contacts;
+    window._awaitingEmailContent = false;
 
-    if (contacts.length === 1) {
-      const name = contacts[0].name || contacts[0].emails[0];
-      const email = contacts[0].emails[0];
-      const msg = `Found ${name} at ${email.replace('@', ' at ')}. Shall I send the email?`;
+    const announceContact = () => {
+      if (isSpeaking) { setTimeout(announceContact, 300); return; }
+      let msg;
+      if (contacts.length === 1) {
+        const name = contacts[0].name || contacts[0].emails[0];
+        const email = contacts[0].emails[0];
+        msg = `I found ${name}, ${email.replace('@', ' at ')}. Is that the right person?`;
+      } else {
+        const list = contacts.map((c, i) => {
+          const name = c.name || c.emails[0];
+          const email = c.emails[0].replace('@', ' at ');
+          return `${i + 1}: ${name}, ${email}`;
+        }).join('. ');
+        msg = `I found ${contacts.length} contacts. ${list}. Which one?`;
+      }
       saveToHistory('assistant', msg);
       speak(msg);
-    } else {
-      const list = contacts.map((c, i) => {
-        const name = c.name || c.emails[0];
-        const email = c.emails[0].replace('@', ' at ');
-        return `${i + 1}: ${name} at ${email}`;
-      }).join('. ');
-      const msg = `I found ${contacts.length} matches. ${list}. Which one?`;
-      saveToHistory('assistant', msg);
-      speak(msg);
-    }
+    };
+    announceContact();
   } catch(e) { speak('Could not search contacts.'); }
 }
 
