@@ -316,16 +316,18 @@ function goHome() {
 async function createProject() {
   const name = document.getElementById('newProjectName').value.trim();
   if (!name) return;
+  console.log('Creating project:', name);
   const { data, error } = await sb.from('projects').insert({ name }).select();
+  console.log('Create result:', data, error);
   closeModal();
   document.getElementById('newProjectName').value = '';
+  await loadProjects();
   if (!error && data && data.length > 0) {
-    await loadProjects();
-    // Auto-navigate into the new project
     openProject(data[0]);
-    speak(`Projektet ${name} er oprettet. Du er nu i ${name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
-  } else {
-    await loadProjects();
+    speak(`Projektet ${name} er oprettet.`);
+  } else if (error) {
+    console.error('Project create error:', error);
+    alert('Fejl ved oprettelse: ' + error.message);
   }
 }
 
@@ -413,21 +415,32 @@ function startListening() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
   recognition.lang = 'da-DK';
-  recognition.continuous = false;
   recognition.interimResults = true;
 
-  recognition.onstart = () => { isListening = true; setMicState('listening'); setMicHint('Tal nu — slip for at sende'); };
-  
+  recognition.onstart = () => {
+    isListening = true;
+    // Stop speaking immediately when user starts talking
+    if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; }
+    setMicState('listening');
+    setMicHint('Tryk igen for at sende');
+    setTranscript('');
+  };
+
+  let finalTranscript = '';
   recognition.onresult = e => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-    setTranscript(transcript);
+    finalTranscript = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
+      else finalTranscript += e.results[i][0].transcript;
+    }
+    setTranscript(finalTranscript.trim());
   };
 
   recognition.onend = () => {
     isListening = false;
-    const transcript = document.getElementById('transcriptBox').textContent;
-    const isPlaceholder = transcript.includes('Tryk på mikrofon') || transcript.includes('Sig et projekt');
-    if (transcript && transcript.length > 2 && !isPlaceholder) {
+    const transcript = finalTranscript.trim();
+    finalTranscript = '';
+    if (transcript && transcript.length > 1) {
       handleCommand(transcript);
     } else {
       setMicState('idle');
@@ -437,11 +450,16 @@ function startListening() {
 
   recognition.onerror = e => {
     isListening = false;
+    finalTranscript = '';
     setMicState('idle');
-    setMicHint('Tryk for at tale');
-    if (e.error === 'not-allowed') setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
+    if (e.error === 'not-allowed') {
+      setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
+    } else {
+      setMicHint('Tryk for at tale');
+    }
   };
 
+  recognition.continuous = true;
   try { recognition.start(); } catch(e) { console.log('Recognition error:', e); }
 }
 
@@ -452,9 +470,9 @@ function stopListening() {
 }
 
 function handleMicTap() {
-  if (isThinking) return; // Don't interrupt while thinking
+  if (isThinking) return;
+  if (isListening) { stopListening(); return; } // Tap again to send
   if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); setMicHint('Tryk for at tale'); return; }
-  if (isListening) { stopListening(); return; }
   startListening();
 }
 
