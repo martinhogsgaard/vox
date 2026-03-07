@@ -712,7 +712,7 @@ async function executeAction(action) {
       await loadProjects();
     }
   } else if (action.type === 'connect_calendar') {
-    window.location.href = '/api/google-auth';
+    window.location.href = '/api/google-auth?force=true';
   } else if (action.type === 'list_upcoming') {
     const waitAndList = () => {
       if (isSpeaking) { setTimeout(waitAndList, 300); return; }
@@ -959,6 +959,12 @@ function handleCommand(text) {
       speak(`Opening ${p.name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
       return;
     }
+  }
+
+  // Direct reconnect bypass
+  if (t.includes('reconnect') || t.includes('forbind igen') || t.includes('connect again')) {
+    window.location.href = '/api/google-auth?force=true';
+    return;
   }
 
   // No project match — send to Claude from home
