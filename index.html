@@ -623,6 +623,24 @@ async function sendToClaude(text) {
   const weekDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   // Calculate weekday in Copenhagen timezone
   const copenhagenWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Copenhagen', weekday: 'long' }).format(now);
+
+  // Generate next 60 days with ISO week numbers so Claude never miscalculates
+  function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const next60 = Array.from({length: 60}, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(d);
+    const week = getISOWeek(d);
+    const dayName = dayNames[d.getDay()];
+    return `W${week} ${dayName} = ${dateStr}`;
+  });
+  const calendarMap = next60.join(', ');
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowDate2 = new Date(now);
   tomorrowDate2.setDate(tomorrowDate2.getDate() + 1);
@@ -652,7 +670,10 @@ async function sendToClaude(text) {
   const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
 Current projects: ${projectNames}.
 Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
-ALWAYS use Europe/Copenhagen timezone for all dates and times. Today in Copenhagen is ${todayStr} (${weekday}). When Martin says "mandag", "næste uge", "om 3 uger", "9. september" etc — calculate the exact YYYY-MM-DD date yourself based on today being ${todayStr}.
+ALWAYS use Europe/Copenhagen timezone for all dates and times. Today in Copenhagen is ${todayStr} (${weekday}).
+DATE REFERENCE — use this exact map, never calculate yourself:
+${calendarMap}
+For dates beyond 60 days, calculate from today (${todayStr}).
 ${activeProject ? `Active project: "${activeProject.name}". When in a project, help Martin think, plan, brainstorm, and solve problems related to that project.` : 'No active project — general conversation mode.'}${calendarContext}
 
 You have full knowledge of the world — geography, business, technology, Danish culture and language, logistics, packaging, software development, and more. Use this knowledge freely.
