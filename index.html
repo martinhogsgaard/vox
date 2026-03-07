@@ -305,7 +305,7 @@ async function openProject(p) {
   chat.innerHTML = '';
   
   if (conversationHistory.length === 0) {
-    addBubble('assistant', `Du er nu i ${p.name}. Hvad vil du tale om?`);
+    addBubble('assistant', `You are now in ${p.name}. What would you like to talk about?`);
   } else {
     conversationHistory.forEach(m => addBubble(m.role, m.content, false));
     chat.scrollTop = chat.scrollHeight;
@@ -333,7 +333,7 @@ async function createProject() {
   await loadProjects();
   if (!error && data && data.length > 0) {
     openProject(data[0]);
-    speak(`Projektet ${name} er oprettet.`);
+    speak(`Project ${name} created. You are now in ${name}.`);
   } else if (error) {
     console.error('Project create error:', error);
     alert('Fejl ved oprettelse: ' + error.message);
@@ -358,7 +358,7 @@ async function sendToClaude(text) {
   setMicState('thinking');
   if (activeProject) { addBubble('user', text); conversationHistory.push({ role:'user', content:text }); }
 
-  const system = `Du er Vox — Martins personlige AI-assistent. Martin Høgsgaard er ekstern konsulent med projekterne: WoodUpp (emballage/forsendelse af flatpack træ), ByAulum (lager/driftsoptimering), Timelog (tidsregistrerings-app under udvikling). ${activeProject ? `Aktivt projekt: "${activeProject.name}".` : 'Ingen aktivt projekt.'} Svar ALTID på dansk. Maks 2-3 korte sætninger — Martin kører bil. Bekræft kort når du noterer noget.`;
+  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant working on these projects: WoodUpp (packaging and shipping of flatpack wooden units), ByAulum (warehouse and operations optimization for a client), Timelog (a time-tracking app he is building). ${activeProject ? `Active project: "${activeProject.name}".` : 'No active project.'} Always reply in English — Martin understands English and the voice reads it aloud. Keep replies very short, max 2-3 sentences. Martin is often driving. Confirm briefly when you note something.`;
 
   const messages = conversationHistory.length > 0 ? conversationHistory : [{ role:'user', content:text }];
 
@@ -379,7 +379,7 @@ async function sendToClaude(text) {
     speak(reply, () => { setMicState('idle'); setTimeout(startListening, 600); });
   } catch {
     isThinking = false;
-    speak('Beklager, der opstod en fejl.', () => { setMicState('idle'); setTimeout(startListening, 600); });
+    speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setTimeout(startListening, 600); });
   }
 }
 
@@ -389,7 +389,7 @@ function handleCommand(text) {
   setTranscript(text);
 
   if (t.includes('morgenoverblik') || t.includes('morning brief') || t.includes('godmorgen')) { playMorningBrief(); return; }
-  if ((t.includes('gå hjem') || t.includes('tilbage') || t.includes('hjem')) && activeProject) { goHome(); speak('Tilbage til hjem.'); return; }
+  if ((t.includes('gå hjem') || t.includes('tilbage') || t.includes('hjem')) && activeProject) { goHome(); speak('Going home.'); return; }
 
   // If already in a project, don't navigate — send to Claude instead
   if (activeProject) {
@@ -401,7 +401,7 @@ function handleCommand(text) {
   for (const p of projects) {
     if (t.includes(p.name.toLowerCase())) {
       openProject(p);
-      speak(`Åbner ${p.name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
+      speak(`Opening ${p.name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
       return;
     }
   }
