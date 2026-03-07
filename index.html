@@ -390,49 +390,50 @@ async function sendToClaude(text) {
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant.
-Current projects in the system: ${projectNames}.
-Today's date: ${todayStr}. Tomorrow: ${tomorrowStr}.
-${activeProject ? `Active project: "${activeProject.name}".` : 'No active project — Martin is on the home screen.'}
+  // Fetch upcoming calendar events to inject into system prompt
+  let calendarContext = '';
+  try {
+    const calRes = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'upcoming_14' })
+    });
+    const calData = await calRes.json();
+    const calEvents = calData.items || [];
+    if (calEvents.length > 0) {
+      calendarContext = '\n\nCALENDAR (next 12 months, up to 100 events):\n' + calEvents.map(e => {
+        const start = e.start.dateTime || e.start.date;
+        const end = e.end.dateTime || e.end.date;
+        return `- id:${e.id} | "${e.summary}" | start:${start} | end:${end}`;
+      }).join('\n');
+    } else {
+      calendarContext = '\n\nCALENDAR: No upcoming events.';
+    }
+  } catch(err) { console.log('Could not fetch calendar context:', err); }
 
-You can perform ACTIONS by including a JSON command at the very end of your reply, on its own line, like this:
+  const weekday = now.toLocaleDateString('en', {weekday:'long'});
+  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant.
+Current projects: ${projectNames}.
+Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
+${activeProject ? `Active project: "${activeProject.name}".` : 'No active project.'}${calendarContext}
+
+ACTIONS — append ONE on the last line when Martin asks you to act:
 ACTION:{"type":"create_project","name":"ProjectName"}
 ACTION:{"type":"open_project","name":"ProjectName"}
-ACTION:{"type":"go_home"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
-ACTION:{"type":"connect_calendar"}
-ACTION:{"type":"list_calendar"}
-ACTION:{"type":"list_upcoming"}
-ACTION:{"type":"list_date","date":"2026-03-08"}
-ACTION:{"type":"list_date","date":"2026-03-08","time_from":"17:00","time_to":"22:00"}
-ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
-ACTION:{"type":"find_event","query":"Meeting title to find"}
-ACTION:{"type":"delete_event","original_time":"20:00"}
-ACTION:{"type":"delete_event","query":"Mie"}
-ACTION:{"type":"update_event","query":"Mie","new_time":"15:00"}
-ACTION:{"type":"update_event","original_time":"16:00","new_time":"15:00"}
-
-Available actions:
-- create_project: Create a new project with a given name
-- open_project: Navigate to an existing project by name  
-- delete_project: Delete a project by name
-- go_home: Go back to home screen
-- connect_calendar: Connect Google Calendar
-- list_calendar: List today's calendar events
-- list_upcoming: List events for the next 7 days
-- list_date: List events for a specific date — include date (YYYY-MM-DD), and optionally time_from and time_to (HH:MM) to narrow to a time window
-- create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
-- find_event: Find an event by title (include query as search term)
-- delete_event: Delete an event — use original_time (HH:MM) if Martin mentions a time, or query (title keyword) if he mentions a name
-- update_event: Update an event — include query (title keyword) if known, or original_time (HH:MM of the current event time) if Martin mentions a time. Include any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes. Do NOT wait for a separate find step.
+ACTION:{"type":"go_home"}
+ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
+ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
+ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
+ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
+ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
 
 Rules:
-- Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
-- ONLY include an ACTION if Martin EXPLICITLY asks to: create a new project, open/go to a project, delete a project, or go home.
-- NEVER include an ACTION for notes, questions, reminders, tasks, or any other request.
-- If Martin asks a question or wants to save a note — just reply normally, NO action.
-- Only include ONE action per reply, on the very last line.
-- When in doubt — do NOT include an action.`;
+- Reply in English. MAX 2 sentences — Martin is driving.
+- For calendar READ requests: answer directly from CALENDAR above. No action needed.
+- For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
+- For all-day events: set allday:true, omit time/duration.
+- For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
+- Only ONE action per reply. When in doubt — no action.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
   const messages = activeProject
@@ -523,67 +524,26 @@ async function executeAction(action) {
     };
     setTimeout(waitAndFind, 500);
   } else if (action.type === 'delete_event') {
-    if (!action.event_id) {
-      lastFoundEvents = []; // Start fresh
-      if (action.query) await findCalendarEvent(action.query, true);
-      console.log('After findCalendarEvent, lastFoundEvents:', lastFoundEvents.map(e=>e.summary));
-      // If not found by title, OR query looks like a time, try matching by time
-      const looksLikeTime = /^\d{1,2}[:.:]?\d{0,2}$/.test((action.query||'').trim());
-      if (lastFoundEvents.length === 0 || looksLikeTime) {
-        lastFoundEvents = [];
-        await loadTodayEventsForContext();
-        if (action.original_time || action.query) {
-          const rawSearch = action.original_time || action.query || '';
-          const searchTime = rawSearch.replace(':', '').replace('.', '').padStart(4, '0');
-          const match = lastFoundEvents.find(e => {
-            if (!e.start.dateTime) return false;
-            const t = new Date(e.start.dateTime).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false}).replace(':', '');
-            console.log('Delete: comparing event time', t, 'with search', searchTime);
-            return t === searchTime;
-          });
-          if (match) lastFoundEvents = [match];
-        }
-      }
+    if (action.event_id) {
+      await deleteCalendarEvent(action.event_id);
+    } else if (action.query || action.title) {
+      const q = action.query || action.title;
+      await findCalendarEvent(q, true);
       if (lastFoundEvents.length === 1) {
         await deleteCalendarEvent(lastFoundEvents[0].id);
       } else if (lastFoundEvents.length > 1) {
-        const names = lastFoundEvents.map(e => e.summary).join(', ');
-        speak(`I found multiple events: ${names}. Which one did you mean?`);
+        speak(`I found ${lastFoundEvents.length} events matching that. Please be more specific.`);
       } else {
-        speak("I could not find that event.");
+        speak(`I could not find an event called "${q}".`);
       }
     } else {
-      await deleteCalendarEvent(action.event_id);
+      speak("I could not identify that event. Please say the event name.");
     }
   } else if (action.type === 'update_event') {
-    // Step 1: find the event by query or original_time
-    if (!action.event_id) {
-      lastFoundEvents = []; // Always start fresh
-      if (action.query) {
-        await findCalendarEvent(action.query, true);
-      }
-      // If still not found, try matching by original_time in today's events
-      if (lastFoundEvents.length === 0) {
-        await loadTodayEventsForContext();
-        if (action.original_time) {
-          const searchTime = action.original_time.replace(':', '');
-          const match = lastFoundEvents.find(e => {
-            if (!e.start.dateTime) return false;
-            const t = new Date(e.start.dateTime).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false}).replace(':', '');
-            console.log('Comparing event time:', t, 'with:', searchTime);
-            return t === searchTime;
-          });
-          if (match) { lastFoundEvents = [match]; console.log('Matched by time:', match.summary); }
-        }
-      }
-    }
-    // Step 2: update
-    const eventId = action.event_id || (lastFoundEvents[0] && lastFoundEvents[0].id);
-    console.log('updateEvent: id=', eventId, 'lastFound=', lastFoundEvents.map(e=>e.summary));
-    if (eventId) {
-      await updateCalendarEvent(eventId, action.new_title, action.new_date, action.new_time, action.new_duration);
+    if (action.event_id) {
+      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
     } else {
-      speak("I could not find that event. Please say the event name.");
+      speak("I could not identify that event. Please try again.");
     }
   } else if (action.type === 'list_calendar') {
     // Wait for Claude to finish speaking before reading calendar
@@ -593,7 +553,7 @@ async function executeAction(action) {
     };
     setTimeout(waitAndList, 500);
   } else if (action.type === 'create_event') {
-    await createCalendarEvent(action.title, action.date, action.time, action.duration);
+    await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
   } else if (action.type === 'go_home') {
     goHome();
   }
@@ -626,19 +586,12 @@ async function listCalendarEvents(date) {
   } catch(e) { speak('Could not load calendar events.'); }
 }
 
-async function createCalendarEvent(title, date, time, duration) {
+async function createCalendarEvent(title, date, time, duration, allday, reminder) {
   try {
-    const start = new Date(`${date}T${time || '09:00'}:00`);
-    const end = new Date(start.getTime() + (duration || 60) * 60000);
-    const event = {
-      summary: title,
-      start: { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' },
-      end: { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' }
-    };
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', event })
+      body: JSON.stringify({ action: 'create', event: { title, date, time, duration, allday, reminder } })
     });
     const data = await res.json();
     if (data.id) speak(`Done. ${title} has been added to your calendar.`);
@@ -747,32 +700,32 @@ async function deleteCalendarEvent(eventId) {
 
 async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration) {
   try {
-    const id = eventId || (lastFoundEvents[0] && lastFoundEvents[0].id);
-    const original = lastFoundEvents[0];
-    if (!id || !original) { speak('I do not know which event to update. Please say find event first.'); return; }
-
+    if (!eventId) { speak('I do not know which event to update.'); return; }
     const updates = {};
     if (newTitle) updates.summary = newTitle;
-
-    const startDate = newDate || (original.start.dateTime ? original.start.dateTime.split('T')[0] : original.start.date);
-    const startTime = newTime || (original.start.dateTime ? original.start.dateTime.split('T')[1].substring(0,5) : '09:00');
-    const duration = newDuration || 60;
-
-    const start = new Date(`${startDate}T${startTime}:00`);
-    const end = new Date(start.getTime() + duration * 60000);
-    updates.start = { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' };
-    updates.end = { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' };
-
+    if (newDate || newTime) {
+      // We need the original event to preserve unchanged fields
+      const getRes = await fetch('/api/google-calendar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get', event: { id: eventId } })
+      });
+      const original = await getRes.json();
+      const origStart = original.start?.dateTime || original.start?.date || '';
+      const startDate = newDate || origStart.split('T')[0];
+      const startTime = newTime || (origStart.includes('T') ? origStart.split('T')[1].substring(0,5) : '09:00');
+      const duration = newDuration || 60;
+      const start = new Date(`${startDate}T${startTime}:00`);
+      const end = new Date(start.getTime() + duration * 60000);
+      updates.start = { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' };
+      updates.end = { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' };
+    }
     const res = await fetch('/api/google-calendar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update', event: { id, updates } })
+      body: JSON.stringify({ action: 'update', event: { id: eventId, updates } })
     });
     const data = await res.json();
-    console.log('Update response:', JSON.stringify(data));
-    if (data.id) {
-      const newT = newTime || (original && original.start.dateTime ? new Date(original.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '');
-      speak(`Done. ${newTitle || (original && original.summary) || 'Event'} has been updated${newTime ? ' to ' + newTime : ''}.`);
-    } else speak('Could not update the event. Please try again.');
+    if (data.id) speak(`Done. The event has been updated.`);
+    else speak('Could not update the event. Please try again.');
   } catch(e) { console.error('Update error:', e); speak('Could not update the event.'); }
 }
 
