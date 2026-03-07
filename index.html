@@ -107,6 +107,13 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 <div class="divider"></div>
 
+<!-- SPLASH -->
+<div id="splashScreen" style="position:fixed;inset:0;background:#1c1c1e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:24px;">
+  <div style="font-size:42px;font-weight:700;color:#fff;letter-spacing:-1px;">Vox</div>
+  <div style="font-size:14px;color:rgba(255,255,255,.5);letter-spacing:.05em;text-transform:uppercase;">Din personlige assistent</div>
+  <div style="margin-top:16px;background:#fff;color:#1c1c1e;border:none;border-radius:50px;padding:16px 40px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;letter-spacing:-.2px;" onclick="startApp()">Tryk for at starte</div>
+</div>
+
 <!-- HOME -->
 <div class="content" id="homeView">
   <div>
@@ -1039,29 +1046,37 @@ function handleMicTap() {
   startListening();
 }
 
-// ── iOS AUDIO UNLOCK ──
-// iOS requires a user gesture to unlock AudioContext
-let audioUnlocked = false;
-function unlockAudio() {
-  if (audioUnlocked) return;
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const buf = ctx.createBuffer(1, 1, 22050);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  src.start(0);
-  setTimeout(() => ctx.close(), 100);
-  audioUnlocked = true;
-  // Also trigger voice load on first tap
-  if (speechSynthesis.getVoices().length === 0) {
-    const u = new SpeechSynthesisUtterance('');
+// ── iOS AUDIO UNLOCK via splash ──
+function startApp() {
+  // 1. Unlock AudioContext with user gesture
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    setTimeout(() => ctx.close(), 200);
+  } catch(e) { console.log('AudioContext error:', e); }
+
+  // 2. Unlock speechSynthesis with silent utterance
+  try {
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
     speechSynthesis.speak(u);
-    speechSynthesis.cancel();
-  }
+  } catch(e) {}
+
+  // 3. Load voices
   loadVoices();
+  setTimeout(loadVoices, 300);
+  setTimeout(loadVoices, 1000);
+
+  // 4. Hide splash, show app
+  document.getElementById('splashScreen').style.display = 'none';
+
+  // 5. Init app
+  init();
 }
-document.addEventListener('touchstart', unlockAudio, { once: true });
-document.addEventListener('click', unlockAudio, { once: true });
 
 // Stop mic when page loses focus
 document.addEventListener('visibilitychange', () => {
@@ -1119,7 +1134,14 @@ async function init() {
     speak('Could not connect Google Calendar. Please try again.');
   }
 }
-init();
+// On iOS/Safari: show splash and wait for tap to unlock audio
+// On desktop: start immediately
+if (isIOS || isSafari) {
+  document.getElementById('splashScreen').style.display = 'flex';
+} else {
+  document.getElementById('splashScreen').style.display = 'none';
+  init();
+}
 </script>
 </body>
 </html>
