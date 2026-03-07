@@ -637,6 +637,7 @@ ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
 ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
+ACTION:{"type":"spell_email","email":"mie@example.dk"}
 ACTION:{"type":"confirm_email","index":1}
 ACTION:{"type":"read_inbox"}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
@@ -650,6 +651,7 @@ Rules:
 - For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
 - For find_contact: use when Martin mentions a person's name. Include subject and body so they're ready after confirmation.
 - For confirm_email: use when Martin says yes/confirmed/number after a contact search. index=1 for first contact.
+- For spell_email: use when Martin spells out an email address letter by letter (e.g. "m i e at w e p r o d u c e dot d k" → "mie@weproduce.dk"). Parse it into a proper email address.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - Only ONE action per reply. When in doubt — no action.`;
 
@@ -774,6 +776,16 @@ async function executeAction(action) {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
   } else if (action.type === 'find_contact') {
     await findContact(action.query, action.subject, action.body);
+  } else if (action.type === 'spell_email') {
+    // User spelled out an email address — confirm and send
+    if (window._pendingEmail) {
+      const email = action.email;
+      const name = window._pendingContactQuery || email;
+      window._foundContacts = [{ name, emails: [email] }];
+      const msg = `Got it. I'll send to ${email.replace('@', ' at ')}. Shall I send the email now?`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    }
   } else if (action.type === 'confirm_email') {
     // User confirmed which contact to use
     if (window._pendingEmail && window._foundContacts) {
@@ -1004,8 +1016,17 @@ async function findContact(query, subject, body) {
     console.log('findContact response:', JSON.stringify(data));
     const contacts = data.contacts || [];
 
+    // Clean up garbled name from email headers
+    contacts.forEach(c => {
+      c.name = c.name.replace(/^["\\ ]+|["\\ ]+$/g, '').trim();
+    });
+
     if (contacts.length === 0) {
-      speak(`I could not find any contact matching "${query}". Please say the email address.`);
+      window._pendingEmail = { subject, body };
+      window._pendingContactQuery = query;
+      const msg = `I could not find anyone named ${query}. Please say their email address.`;
+      saveToHistory('assistant', msg);
+      speak(msg);
       return;
     }
 
@@ -1013,21 +1034,19 @@ async function findContact(query, subject, body) {
     window._pendingEmail = { subject, body };
     window._foundContacts = contacts;
 
-    if (contacts.length === 1 && contacts[0].emails.length === 1) {
-      // Only one match — confirm directly
+    if (contacts.length === 1) {
       const name = contacts[0].name || contacts[0].emails[0];
       const email = contacts[0].emails[0];
-      const msg = `I found ${name} at ${email.replace('@', ' at ')}. Shall I send the email?`;
+      const msg = `Found ${name} at ${email.replace('@', ' at ')}. Shall I send the email?`;
       saveToHistory('assistant', msg);
       speak(msg);
     } else {
-      // Multiple matches — list them
       const list = contacts.map((c, i) => {
         const name = c.name || c.emails[0];
         const email = c.emails[0].replace('@', ' at ');
-        return `${i + 1}: ${name}, ${email}`;
+        return `${i + 1}: ${name} at ${email}`;
       }).join('. ');
-      const msg = `I found ${contacts.length} contacts. ${list}. Which one should I use?`;
+      const msg = `I found ${contacts.length} matches. ${list}. Which one?`;
       saveToHistory('assistant', msg);
       speak(msg);
     }
