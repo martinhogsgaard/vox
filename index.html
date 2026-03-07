@@ -180,8 +180,7 @@ let isThinking = false;
 let recognition = null;
 let hasSeeded = false;
 let selectedVoice = null;
-let calendarToken = null;
-let calendarRefreshToken = null;
+let calendarConnected = false;
 
 // ── VOICE ──
 function loadVoices() {
@@ -477,12 +476,11 @@ async function executeAction(action) {
 }
 
 async function listCalendarEvents() {
-  if (!calendarToken) { speak('Calendar is not connected. Say connect calendar to get started.'); return; }
   try {
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list', access_token: calendarToken, refresh_token: calendarRefreshToken })
+      body: JSON.stringify({ action: 'list' })
     });
     const data = await res.json();
     const events = data.items || [];
@@ -496,7 +494,6 @@ async function listCalendarEvents() {
 }
 
 async function createCalendarEvent(title, date, time, duration) {
-  if (!calendarToken) { speak('Calendar is not connected.'); return; }
   try {
     const start = new Date(`${date}T${time || '09:00'}:00`);
     const end = new Date(start.getTime() + (duration || 60) * 60000);
@@ -508,7 +505,7 @@ async function createCalendarEvent(title, date, time, duration) {
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', access_token: calendarToken, refresh_token: calendarRefreshToken, event })
+      body: JSON.stringify({ action: 'create', event })
     });
     const data = await res.json();
     if (data.id) speak(`Done. ${title} has been added to your calendar.`);
@@ -666,27 +663,13 @@ async function init() {
   // Check if returning from Google OAuth
   const params = new URLSearchParams(window.location.search);
   if (params.get('calendar') === 'connected') {
-    calendarToken = params.get('access_token');
-    calendarRefreshToken = params.get('refresh_token');
-    // Store in localStorage for persistence
-    localStorage.setItem('vox_calendar_token', calendarToken);
-    localStorage.setItem('vox_calendar_refresh', calendarRefreshToken);
+    calendarConnected = true;
     window.history.replaceState({}, '', '/');
     speak('Google Calendar is now connected.');
   } else if (params.get('calendar') === 'error') {
     window.history.replaceState({}, '', '/');
     speak('Could not connect Google Calendar. Please try again.');
   }
-
-  // Load stored calendar tokens
-  if (!calendarToken) {
-    calendarToken = localStorage.getItem('vox_calendar_token');
-    calendarRefreshToken = localStorage.getItem('vox_calendar_refresh');
-  }
-
-  // Update calendar status indicator
-  const calStatus = document.getElementById('calStatus');
-  if (calStatus) calStatus.textContent = calendarToken ? '● Connected' : '○ Not connected';
 }
 init();
 </script>
