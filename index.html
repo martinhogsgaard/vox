@@ -376,9 +376,14 @@ async function sendToClaude(text) {
   }
 
   const projectNames = projects.map(p => p.name).join(', ');
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
   const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant.
 Current projects in the system: ${projectNames}.
+Today's date: ${todayStr}. Tomorrow: ${tomorrowStr}.
 ${activeProject ? `Active project: "${activeProject.name}".` : 'No active project — Martin is on the home screen.'}
 
 You can perform ACTIONS by including a JSON command at the very end of your reply, on its own line, like this:
@@ -514,6 +519,7 @@ async function executeAction(action) {
   } else if (action.type === 'update_event') {
     // Step 1: find the event by query or original_time
     if (!action.event_id) {
+      lastFoundEvents = []; // Always start fresh
       if (action.query) {
         await findCalendarEvent(action.query, true);
       }
@@ -696,9 +702,12 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
       body: JSON.stringify({ action: 'update', event: { id, updates } })
     });
     const data = await res.json();
-    if (data.id) speak(`Done. ${newTitle || original.summary} has been updated.`);
-    else speak('Could not update the event. Please try again.');
-  } catch(e) { speak('Could not update the event.'); }
+    console.log('Update response:', JSON.stringify(data));
+    if (data.id) {
+      const newT = newTime || (original && original.start.dateTime ? new Date(original.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : '');
+      speak(`Done. ${newTitle || (original && original.summary) || 'Event'} has been updated${newTime ? ' to ' + newTime : ''}.`);
+    } else speak('Could not update the event. Please try again.');
+  } catch(e) { console.error('Update error:', e); speak('Could not update the event.'); }
 }
 
 // ── VOICE COMMANDS ──
