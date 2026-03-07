@@ -66,6 +66,7 @@ export default async function handler(req, res) {
   const headers = { 'Authorization': `Bearer ${tokenData.access_token}`, 'Content-Type': 'application/json' };
 
   try {
+    console.log('Gmail action:', action, 'token expires:', tokenData.expires_at);
     if (action === 'send') {
       const raw = makeEmail({ to, subject, body });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -180,6 +181,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('Gmail error:', err);
+    return res.status(500).json({ error: err.message, stack: err.stack });
   }
 }
