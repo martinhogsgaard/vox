@@ -185,36 +185,45 @@ let selectedVoice = null;
 function loadVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
-  console.log('Voices:', voices.map(v => v.name + '(' + v.lang + ')').join(' | '));
-  const priority = ['Daniel', 'Alex', 'Samantha', 'Karen', 'Moira', 'Rishi', 'Gordon', 'Jamie'];
+  // Google Natural voices sound most human — prioritize them
+  const priority = [
+    'Google UK English Male',
+    'Google US English 1 (Natural)',
+    'Google US English 2 (Natural)',
+    'Google US English 3 (Natural)',
+    'Google UK English Female',
+    'Daniel',
+    'Alex',
+    'Samantha'
+  ];
   for (const name of priority) {
-    const v = voices.find(v => v.name.includes(name));
-    if (v) { selectedVoice = v; console.log('Using:', v.name); return; }
+    const v = voices.find(v => v.name === name);
+    if (v) { selectedVoice = v; return; }
   }
-  selectedVoice = voices.find(v => v.lang.startsWith('en') && !v.name.includes('Zira') && !v.name.includes('David') && !v.name.includes('Fred')) || voices[0];
-  console.log('Fallback:', selectedVoice && selectedVoice.name);
+  selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
 }
 speechSynthesis.onvoiceschanged = loadVoices;
-setTimeout(loadVoices, 500);
-setTimeout(loadVoices, 1500);
+setTimeout(loadVoices, 200);
+setTimeout(loadVoices, 1000);
 
 function speak(text, onDone) {
   speechSynthesis.cancel();
-  loadVoices();
+  if (!selectedVoice) loadVoices();
   const u = new SpeechSynthesisUtterance(text);
-  if (selectedVoice) u.voice = selectedVoice;
-  u.lang = selectedVoice ? selectedVoice.lang : 'en-GB';
-  u.rate = 1.35;
+  u.voice = selectedVoice || null;
+  u.lang = 'en-GB';
+  u.rate = 1.1;
   u.pitch = 1.0;
   isSpeaking = true;
   setMicState('speaking');
   u.onend = u.onerror = () => {
     isSpeaking = false;
     if (onDone) onDone();
-    else { setMicState('idle'); setTimeout(startListening, 600); }
+    else { setMicState('idle'); setMicHint('Tryk for at tale'); }
   };
   speechSynthesis.speak(u);
 }
+
 
 // ── DATE ──
 function setDate() {
