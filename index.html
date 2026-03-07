@@ -1404,9 +1404,18 @@ function stopListening() {
 }
 
 function handleMicTap() {
-  if (isThinking) return;
-  if (isListening) { stopListening(); return; } // Tap again to send
-  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); setMicHint('Tryk for at tale'); return; }
+  // ALWAYS allow interrupting speech — even while thinking
+  if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
+    speechSynthesis.cancel();
+    _speakQueue = [];
+    _speakBusy = false;
+    isSpeaking = false;
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
+    return;
+  }
+  if (isThinking) return; // Can't interrupt thinking (API call in progress)
+  if (isListening) { stopListening(); return; }
   startListening();
 }
 
