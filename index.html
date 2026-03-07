@@ -394,6 +394,8 @@ ACTION:{"type":"delete_project","name":"ProjectName"}
 ACTION:{"type":"connect_calendar"}
 ACTION:{"type":"list_calendar"}
 ACTION:{"type":"list_upcoming"}
+ACTION:{"type":"list_date","date":"2026-03-08"}
+ACTION:{"type":"list_date","date":"2026-03-08","time_from":"17:00","time_to":"22:00"}
 ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
 ACTION:{"type":"find_event","query":"Meeting title to find"}
 ACTION:{"type":"delete_event","original_time":"20:00"}
@@ -409,6 +411,7 @@ Available actions:
 - connect_calendar: Connect Google Calendar
 - list_calendar: List today's calendar events
 - list_upcoming: List events for the next 7 days
+- list_date: List events for a specific date — include date (YYYY-MM-DD), and optionally time_from and time_to (HH:MM) to narrow to a time window
 - create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
 - find_event: Find an event by title (include query as search term)
 - delete_event: Delete an event — use original_time (HH:MM) if Martin mentions a time, or query (title keyword) if he mentions a name
@@ -494,6 +497,13 @@ async function executeAction(action) {
     const waitAndList = () => {
       if (isSpeaking) { setTimeout(waitAndList, 300); return; }
       listUpcomingEvents();
+    };
+    setTimeout(waitAndList, 500);
+  } else if (action.type === 'list_date') {
+    const d = action.date, tf = action.time_from, tt = action.time_to;
+    const waitAndList = () => {
+      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
+      listDateEvents(d, tf, tt);
     };
     setTimeout(waitAndList, 500);
   } else if (action.type === 'find_event') {
@@ -618,6 +628,28 @@ async function createCalendarEvent(title, date, time, duration) {
     if (data.id) speak(`Done. ${title} has been added to your calendar.`);
     else speak('Could not create the event. Please try again.');
   } catch(e) { speak('Could not create calendar event.'); }
+}
+
+async function listDateEvents(date, timeFrom, timeTo) {
+  try {
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_date', date, time_from: timeFrom, time_to: timeTo })
+    });
+    const data = await res.json();
+    const events = data.items || [];
+    const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
+    const timeLabel = timeFrom ? ` between ${timeFrom} and ${timeTo || 'end of day'}` : '';
+    if (events.length === 0) {
+      speak(`You have no events on ${dayLabel}${timeLabel}.`);
+      return;
+    }
+    const summary = events.map(e => {
+      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : 'All day';
+      return `${time}, ${e.summary}`;
+    }).join('. ');
+    speak(`On ${dayLabel}${timeLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`);
+  } catch(e) { speak('Could not load events for that day.'); }
 }
 
 async function listUpcomingEvents() {
