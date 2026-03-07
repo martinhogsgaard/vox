@@ -172,7 +172,8 @@ export default async function handler(req, res) {
             const header = md.payload?.headers?.find(h => h.name === headerName)?.value || '';
             const matches = [...header.matchAll(/([^<,]+)<([^>]+)>/g)];
             for (const match of matches) {
-              const name = match[1].trim();
+              // Clean name: strip quotes, backslashes, extra whitespace
+              const name = match[1].replace(/['"\\]/g, '').trim();
               const email = match[2].trim().toLowerCase();
               if (nameMatches(name, email)) {
                 emailSet.add(JSON.stringify({ name, email }));
