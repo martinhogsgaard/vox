@@ -185,15 +185,18 @@ let selectedVoice = null;
 function loadVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
-  const priority = ['Daniel', 'Alex', 'Samantha', 'Karen', 'Rishi', 'Moira'];
+  console.log('Voices:', voices.map(v => v.name + '(' + v.lang + ')').join(' | '));
+  const priority = ['Daniel', 'Alex', 'Samantha', 'Karen', 'Moira', 'Rishi', 'Gordon', 'Jamie'];
   for (const name of priority) {
     const v = voices.find(v => v.name.includes(name));
-    if (v) { selectedVoice = v; return; }
+    if (v) { selectedVoice = v; console.log('Using:', v.name); return; }
   }
-  selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+  selectedVoice = voices.find(v => v.lang.startsWith('en') && !v.name.includes('Zira') && !v.name.includes('David') && !v.name.includes('Fred')) || voices[0];
+  console.log('Fallback:', selectedVoice && selectedVoice.name);
 }
 speechSynthesis.onvoiceschanged = loadVoices;
 setTimeout(loadVoices, 500);
+setTimeout(loadVoices, 1500);
 
 function speak(text, onDone) {
   speechSynthesis.cancel();
@@ -201,7 +204,8 @@ function speak(text, onDone) {
   const u = new SpeechSynthesisUtterance(text);
   if (selectedVoice) u.voice = selectedVoice;
   u.lang = selectedVoice ? selectedVoice.lang : 'en-GB';
-  u.rate = 1.05;
+  u.rate = 1.35;
+  u.pitch = 1.0;
   isSpeaking = true;
   setMicState('speaking');
   u.onend = u.onerror = () => {
@@ -236,14 +240,20 @@ async function fetchWeather() {
 // ── PROJECTS ──
 async function loadProjects() {
   const { data, error } = await sb.from('projects').select('*');
-  if (error || !data || data.length === 0) {
-    if (!hasSeeded) {
-      hasSeeded = true;
-      for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer']) await sb.from('projects').insert({ name });
-      const { data: s } = await sb.from('projects').select('*');
-      projects = s || [];
+  if (error) { console.log('Projects error:', error); return; }
+  
+  // Only seed if table is genuinely empty — never seed if there are already rows
+  if (!data || data.length === 0) {
+    console.log('No projects found — seeding defaults once');
+    for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer']) {
+      await sb.from('projects').insert({ name });
     }
-  } else { projects = data; }
+    const { data: s } = await sb.from('projects').select('*');
+    projects = s || [];
+  } else {
+    projects = data;
+  }
+  
   renderProjects(projects);
   document.getElementById('projectsSub').textContent = `${projects.length} aktive projekter`;
 }
@@ -270,12 +280,27 @@ async function openProject(p) {
   document.getElementById('homeView').style.display = 'none';
   document.getElementById('projectView').style.display = 'flex';
   document.getElementById('projectViewLabel').textContent = p.name.toUpperCase();
-  const { data } = await sb.from('messages').select('*').eq('project_id', p.id);
-  conversationHistory = (data || []).map(m => ({ role: m.role, content: m.content }));
+  
+  // Load message history for this project
+  const { data, error } = await sb.from('messages').select('*').eq('project_id', p.id);
+  if (error) console.log('Messages error:', error);
+  
+  // Sort by created_at if available, otherwise use insertion order
+  const sorted = (data || []).sort((a, b) => {
+    if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
+    return 0;
+  });
+  
+  conversationHistory = sorted.map(m => ({ role: m.role, content: m.content }));
   const chat = document.getElementById('chatArea');
   chat.innerHTML = '';
-  if (conversationHistory.length === 0) addBubble('assistant', `Du er nu i ${p.name}. Hvad vil du tale om?`);
-  else { conversationHistory.forEach(m => addBubble(m.role, m.content, false)); chat.scrollTop = chat.scrollHeight; }
+  
+  if (conversationHistory.length === 0) {
+    addBubble('assistant', `Du er nu i ${p.name}. Hvad vil du tale om?`);
+  } else {
+    conversationHistory.forEach(m => addBubble(m.role, m.content, false));
+    chat.scrollTop = chat.scrollHeight;
+  }
   setMicHint(`Aktiv: ${p.name}`);
 }
 
@@ -291,10 +316,11 @@ function goHome() {
 async function createProject() {
   const name = document.getElementById('newProjectName').value.trim();
   if (!name) return;
-  await sb.from('projects').insert({ name });
+  const { data, error } = await sb.from('projects').insert({ name }).select();
   closeModal();
   document.getElementById('newProjectName').value = '';
-  loadProjects();
+  await loadProjects();
+  if (!error) speak(`Projektet ${name} er oprettet.`);
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); }
