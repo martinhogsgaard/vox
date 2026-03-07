@@ -392,7 +392,8 @@ ACTION:{"type":"list_upcoming"}
 ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
 ACTION:{"type":"find_event","query":"Meeting title to find"}
 ACTION:{"type":"delete_event","query":"Mie"}
-ACTION:{"type":"update_event","query":"Mie","new_time":"15:00","new_date":"2026-03-08","new_title":"New title","new_duration":90}
+ACTION:{"type":"update_event","query":"Mie","new_time":"15:00"}
+ACTION:{"type":"update_event","original_time":"16:00","new_time":"15:00"}
 
 Available actions:
 - create_project: Create a new project with a given name
@@ -405,7 +406,7 @@ Available actions:
 - create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
 - find_event: Find an event by title (include query as search term)
 - delete_event: Delete an event — use query (title keyword) instead of event_id whenever possible
-- update_event: Update an event — ALWAYS include query (title keyword to find it) plus any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes. Do NOT wait for a separate find step.
+- update_event: Update an event — include query (title keyword) if known, or original_time (HH:MM of the current event time) if Martin mentions a time. Include any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes. Do NOT wait for a separate find step.
 
 Rules:
 - Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
@@ -503,13 +504,32 @@ async function executeAction(action) {
       await deleteCalendarEvent(action.event_id);
     }
   } else if (action.type === 'update_event') {
-    // If no event_id, search first then update
     if (!action.event_id && action.query) {
-      await findCalendarEvent(action.query, true); // silent=true
+      // Try search first
+      await findCalendarEvent(action.query, true);
+      // If not found by title, try fetching today's events and match by time
+      if (lastFoundEvents.length === 0 && action.original_time) {
+        await loadTodayEventsForContext();
+        const match = lastFoundEvents.find(e => {
+          if (!e.start.dateTime) return false;
+          const t = new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit', minute:'2-digit', hour12:false});
+          return t.includes(action.original_time.replace(':',''));
+        });
+        if (match) lastFoundEvents = [match];
+      }
       if (lastFoundEvents.length === 1) {
         await updateCalendarEvent(lastFoundEvents[0].id, action.new_title, action.new_date, action.new_time, action.new_duration);
       } else if (lastFoundEvents.length === 0) {
-        speak("I could not find that event.");
+        // Last resort: load today and pick first event
+        await loadTodayEventsForContext();
+        if (lastFoundEvents.length === 1) {
+          await updateCalendarEvent(lastFoundEvents[0].id, action.new_title, action.new_date, action.new_time, action.new_duration);
+        } else {
+          speak("I could not find that event. Please say the event name more clearly.");
+        }
+      } else {
+        const names = lastFoundEvents.map(e => e.summary).join(', ');
+        speak(`I found multiple events: ${names}. Which one did you mean?`);
       }
     } else {
       await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
@@ -597,6 +617,18 @@ async function listUpcomingEvents() {
 
 // Store last found events for follow-up delete/edit
 let lastFoundEvents = [];
+
+async function loadTodayEventsForContext() {
+  try {
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list' })
+    });
+    const data = await res.json();
+    lastFoundEvents = data.items || [];
+    console.log('Loaded today events for context:', lastFoundEvents.map(e => e.summary));
+  } catch(e) { console.error('Could not load today events:', e); }
+}
 
 async function findCalendarEvent(query, silent = false) {
   try {
