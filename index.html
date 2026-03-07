@@ -702,7 +702,7 @@ ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
 - Reply in English. If Martin asks a factual or informational question (addresses, directions, information, advice), give a complete helpful answer. For action confirmations and small talk, keep it to 1-2 sentences. Martin is often driving so be concise but never refuse to answer a question due to length.
-- For calendar READ requests: answer directly from CALENDAR above. No action needed.
+- For calendar READ requests ("har jeg møder", "hvad sker der", "vis mig", "er der noget"): answer directly from CALENDAR above. NO action. Never create an event when asked a question about existing events.
 - For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
