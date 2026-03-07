@@ -32,15 +32,15 @@ async function refreshAccessToken(refreshToken) {
   return tokens;
 }
 
-function makeEmail({ to, subject, body, replyToMessageId, replyToThreadId }) {
+function makeEmail({ to, subject, body }) {
   const lines = [
     `To: ${to}`,
     `Subject: ${subject}`,
     `Content-Type: text/plain; charset=utf-8`,
     `MIME-Version: 1.0`,
+    '',
+    body
   ];
-  if (replyToMessageId) lines.push(`In-Reply-To: ${replyToMessageId}`);
-  lines.push('', body);
   const raw = lines.join('\r\n');
   return btoa(unescape(encodeURIComponent(raw)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -66,24 +66,22 @@ export default async function handler(req, res) {
   const headers = { 'Authorization': `Bearer ${tokenData.access_token}`, 'Content-Type': 'application/json' };
 
   try {
-    console.log('Gmail action:', action, 'token expires:', tokenData.expires_at);
+    console.log('Gmail action:', action);
+
     if (action === 'send') {
       const raw = makeEmail({ to, subject, body });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST', headers,
-        body: JSON.stringify({ raw, ...(threadId ? { threadId } : {}) })
+        body: JSON.stringify({ raw })
       });
       const data = await r.json();
       return res.status(200).json(data);
 
     } else if (action === 'list') {
-      // List recent inbox messages
       const q = query || 'in:inbox';
       const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=${encodeURIComponent(q)}`, { headers });
       const data = await r.json();
       if (!data.messages) return res.status(200).json({ messages: [] });
-
-      // Fetch subject + sender for each message
       const details = await Promise.all(data.messages.slice(0, 5).map(async m => {
         const mr = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`, { headers });
         const md = await mr.json();
@@ -99,15 +97,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ messages: details });
 
     } else if (action === 'get') {
-      // Get full message body
       const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`, { headers });
       const data = await r.json();
-      // Extract plain text body
-      let body = '';
+      let bodyText = '';
       const parts = data.payload?.parts || [data.payload];
       for (const part of parts) {
         if (part?.mimeType === 'text/plain' && part?.body?.data) {
-          body = decodeURIComponent(escape(atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'))));
+          bodyText = decodeURIComponent(escape(atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'))));
           break;
         }
       }
@@ -117,9 +113,8 @@ export default async function handler(req, res) {
         threadId: data.threadId,
         from: hdrs.find(h => h.name === 'From')?.value || '',
         subject: hdrs.find(h => h.name === 'Subject')?.value || '',
-        body: body.substring(0, 2000)
+        body: bodyText.substring(0, 2000)
       });
-    }
 
     } else if (action === 'find_contact') {
       const q = req.body.query || '';
@@ -160,8 +155,8 @@ export default async function handler(req, res) {
               );
               if (!mr.ok) return;
               const md = await mr.json();
-              const to = md.payload?.headers?.find(h => h.name === 'To')?.value || '';
-              const matches = [...to.matchAll(/([^<,]+)<([^>]+)>/g)];
+              const toHeader = md.payload?.headers?.find(h => h.name === 'To')?.value || '';
+              const matches = [...toHeader.matchAll(/([^<,]+)<([^>]+)>/g)];
               for (const match of matches) {
                 const name = match[1].trim();
                 const email = match[2].trim();
@@ -169,8 +164,8 @@ export default async function handler(req, res) {
                   sentEmails.add(JSON.stringify({ name, email }));
                 }
               }
-              if (!to.includes('<')) {
-                to.split(',').forEach(addr => {
+              if (!toHeader.includes('<')) {
+                toHeader.split(',').forEach(addr => {
                   const email = addr.trim();
                   if (email.toLowerCase().includes(q.toLowerCase())) {
                     sentEmails.add(JSON.stringify({ name: '', email }));
@@ -188,11 +183,13 @@ export default async function handler(req, res) {
       } catch(e) { console.log('Sent mail search error:', e.message); }
 
       return res.status(200).json({ contacts: allContacts.slice(0, 5) });
+
+    } else {
+      return res.status(400).json({ error: 'Unknown action: ' + action });
     }
 
-    return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     console.error('Gmail error:', err);
-    return res.status(500).json({ error: err.message, stack: err.stack });
+    return res.status(500).json({ error: err.message });
   }
 }
