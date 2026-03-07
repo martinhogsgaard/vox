@@ -120,6 +120,14 @@ export default async function handler(req, res) {
       const q = req.body.query || '';
       const allContacts = [];
 
+      // Helper: only match if name (not just email domain) contains query words
+      const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+      function nameMatches(name, email) {
+        const nameLower = name.toLowerCase();
+        const emailUser = email.split('@')[0].toLowerCase();
+        return words.every(w => nameLower.includes(w) || emailUser.includes(w));
+      }
+
       // 1. Try Google People API
       try {
         const r = await fetch(
@@ -131,7 +139,7 @@ export default async function handler(req, res) {
           const results = (data.results || []).map(p => ({
             name: p.person?.names?.[0]?.displayName || '',
             emails: (p.person?.emailAddresses || []).map(e => e.value)
-          })).filter(c => c.emails.length > 0);
+          })).filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
           allContacts.push(...results);
         } else {
           console.log('People API status:', r.status);
@@ -140,14 +148,6 @@ export default async function handler(req, res) {
 
       // 2. Search sent AND received mail — match on NAME only (not email domain)
       try {
-        const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-
-        function nameMatches(name, email) {
-          // Only match if the NAME contains the query — not just the email domain
-          const nameLower = name.toLowerCase();
-          const emailUser = email.split('@')[0].toLowerCase();
-          return words.every(w => nameLower.includes(w) || emailUser.includes(w));
-        }
 
         const emailSet = new Set();
 
