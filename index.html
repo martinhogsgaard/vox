@@ -679,7 +679,7 @@ Rules:
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
 - For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
 - For create_event_and_invite: ONLY use when Martin explicitly says BOTH "opret møde" AND "send invitation/mødeindkaldelse til [person]" in the SAME request. Never combine them unless both are clearly stated.
-- For find_contact: ONLY use when you have NOT yet searched for this person. If you already found a contact and said so, do NOT search again — use confirm_email instead.
+- For find_contact: ONLY use when you have NOT yet searched for this person. Martin's own name is "Martin Høgsgaard" — if he says his own name with any spelling variation (høstgaard, høesgaard, høsgaard etc), use "Martin Høgsgaard". Common contacts: Mie Priess-Sørensen (his wife). Always use the correct Danish spelling. If you already found a contact and said so, do NOT search again — use confirm_email instead.
 - For confirm_email: use when Martin says yes/ja/correct/that one/number, OR when you already found a contact and Martin says anything that isn't a clear rejection. index=1 for first result.
 - For spell_email: use when Martin spells out an email address letter by letter (e.g. "m i e at w e p r o d u c e dot d k" → "mie@weproduce.dk"). Parse it into a proper email address.
 - IMPORTANT: Once a contact has been found and spoken aloud, treat all subsequent replies as confirmation or rejection — never search again for the same person.
@@ -703,14 +703,14 @@ Rules:
     const data = await res.json();
     let reply = data.content[0].text;
 
-    // Parse and execute any ACTION command
+    // Parse action but DON'T run it yet
     const actionLineMatch = reply.match(/ACTION:(\{[^\n]+\})/);
+    let parsedAction = null;
     if (actionLineMatch) {
       reply = reply.replace(/\nACTION:\{[^\n]+\}/, '').trim();
       try {
-        const action = JSON.parse(actionLineMatch[1]);
-        console.log('Parsed action:', JSON.stringify(action));
-        await executeAction(action);
+        parsedAction = JSON.parse(actionLineMatch[1]);
+        console.log('Parsed action:', JSON.stringify(parsedAction));
       } catch(e) { console.log('Action parse error:', e, 'Raw:', actionLineMatch[1]); }
     }
 
@@ -725,7 +725,15 @@ Rules:
       if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
     }
     isThinking = false;
-    speak(reply, () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
+
+    // Speak reply first — then execute action when speech is done
+    speak(reply, async () => {
+      setMicState('idle');
+      setMicHint('Tryk for at tale');
+      if (parsedAction) {
+        await executeAction(parsedAction);
+      }
+    });
   } catch(e) {
     console.log('Claude error:', e);
     isThinking = false;
@@ -1168,7 +1176,7 @@ async function findContact(query, subject, body) {
       window._pendingContactQuery = query;
       const msg = `I could not find anyone named ${query}. Please say their email address.`;
       saveToHistory('assistant', msg);
-      speak(msg);
+      speakQueued(msg);
       return;
     }
 
@@ -1188,21 +1196,16 @@ async function findContact(query, subject, body) {
     if (flat.length === 1) {
       msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
       saveToHistory('assistant', msg);
-      setTimeout(() => speak(msg), 400);
+      speakQueued(msg);
     } else {
       // Store flat list so confirm_email index works correctly
       window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
-      // Speak each address separately so sentence-chunking doesn't cut it off
       const lines = [`I found ${flat.length} addresses for ${flat[0].name}.`];
-      flat.forEach((c, i) => lines.push(`Number ${i + 1}: ${speakableEmail(c.email)}.`));
+      flat.forEach((c, i) => lines.push(`Number ${i + 1}: ${speakableEmail(c.email)}`));
       lines.push('Which one should I use?');
       msg = lines.join(' ');
       saveToHistory('assistant', msg);
-      // Speak lines in sequence using queue
-      setTimeout(() => {
-        speak(lines[0]);
-        lines.slice(1).forEach(line => speakQueued(line));
-      }, 400);
+      lines.forEach(line => speakQueued(line));
     }
   } catch(e) { speak('Could not search contacts.'); }
 }
