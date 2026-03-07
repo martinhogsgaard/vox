@@ -389,10 +389,11 @@ Available actions:
 
 Rules:
 - Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
-- If Martin asks to create a project/folder, ALWAYS include the ACTION command.
-- If Martin asks to open/go to a project, ALWAYS include the ACTION command.
-- Only include ONE action per reply.
-- Speak naturally, then put the ACTION on the last line if needed.`;
+- ONLY include an ACTION if Martin EXPLICITLY asks to: create a new project, open/go to a project, delete a project, or go home.
+- NEVER include an ACTION for notes, questions, reminders, tasks, or any other request.
+- If Martin asks a question or wants to save a note — just reply normally, NO action.
+- Only include ONE action per reply, on the very last line.
+- When in doubt — do NOT include an action.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
   const messages = conversationHistory.length > 0 
