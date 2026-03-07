@@ -616,10 +616,17 @@ async function sendToClaude(text) {
   }
 
   const projectNames = projects.map(p => p.name).join(', ');
+  // Always use Danish timezone (Europe/Copenhagen) for date calculations
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const copenhagenDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(now);
+  const todayStr = copenhagenDate; // 'sv-SE' gives YYYY-MM-DD format
+  const weekDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  // Calculate weekday in Copenhagen timezone
+  const copenhagenWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Copenhagen', weekday: 'long' }).format(now);
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowDate2 = new Date(now);
+  tomorrowDate2.setDate(tomorrowDate2.getDate() + 1);
+  const tomorrowStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(tomorrowDate2);
 
   // Fetch upcoming calendar events to inject into system prompt
   let calendarContext = '';
@@ -641,10 +648,11 @@ async function sendToClaude(text) {
     }
   } catch(err) { console.log('Could not fetch calendar context:', err); }
 
-  const weekday = now.toLocaleDateString('en', {weekday:'long'});
+  const weekday = copenhagenWeekday;
   const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
 Current projects: ${projectNames}.
 Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
+ALWAYS use Europe/Copenhagen timezone for all dates and times. Today in Copenhagen is ${todayStr} (${weekday}). When Martin says "mandag", "næste uge", "om 3 uger", "9. september" etc — calculate the exact YYYY-MM-DD date yourself based on today being ${todayStr}.
 ${activeProject ? `Active project: "${activeProject.name}". When in a project, help Martin think, plan, brainstorm, and solve problems related to that project.` : 'No active project — general conversation mode.'}${calendarContext}
 
 You have full knowledge of the world — geography, business, technology, Danish culture and language, logistics, packaging, software development, and more. Use this knowledge freely.
