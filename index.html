@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Vox</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --border: #e5e5ea;
+    --label: #8e8e93;
+    --text: #1c1c1e;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 390px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  /* HEADER */
+  .header { padding: 52px 20px 12px; flex-shrink: 0; }
+  .date-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--label); text-transform: uppercase; margin-bottom: 2px; }
+  .header-row { display: flex; justify-content: space-between; align-items: center; }
+  .date-main { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .date-main span { font-weight: 300; color: var(--label); }
+  .settings-btn { width: 32px; height: 32px; border-radius: 50%; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .settings-btn svg { width: 15px; height: 15px; stroke: var(--text); fill: none; stroke-width: 1.6; }
+  .divider { height: 1px; background: var(--border); margin: 0 20px; flex-shrink: 0; }
+
+  /* CONTENT */
+  .content { flex: 1; overflow-y: auto; padding: 14px 20px 0; display: flex; flex-direction: column; gap: 14px; }
+  .section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--label); text-transform: uppercase; margin-bottom: 8px; }
+
+  /* BRIEF CARD */
+  .brief-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .brief-item { display: flex; align-items: center; padding: 10px 14px; gap: 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .brief-item:last-child { border-bottom: none; }
+  .brief-item svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.6; flex-shrink: 0; }
+  .brief-title { flex: 1; font-size: 14px; font-weight: 500; }
+  .brief-sub { font-size: 12px; color: var(--label); }
+  .brief-badge { font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--label); }
+  .play-btn { display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--text); color: white; border: none; border-radius: var(--radius-sm); padding: 11px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; width: 100%; cursor: pointer; margin-top: 8px; }
+  .play-btn svg { width: 14px; height: 14px; fill: white; }
+  .play-btn:disabled { opacity: 0.5; }
+
+  /* PROJECTS */
+  .projects-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+  .project-item { display: flex; align-items: center; padding: 10px 14px; gap: 10px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .project-item:active { background: var(--bg); }
+  .project-item.active-project { background: #f0f4ff; }
+  .project-item svg { width: 14px; height: 14px; stroke: var(--label); fill: none; stroke-width: 1.6; flex-shrink: 0; }
+  .project-name { flex: 1; font-size: 14px; font-weight: 500; }
+  .project-meta { font-size: 12px; color: var(--label); margin-right: 6px; }
+  .project-arrow { font-size: 16px; color: var(--label); line-height: 1; }
+  .new-project { display: flex; align-items: center; padding: 10px 14px; gap: 10px; cursor: pointer; }
+  .new-project svg { width: 14px; height: 14px; stroke: var(--label); fill: none; stroke-width: 1.6; }
+  .new-project span { font-size: 14px; color: var(--label); }
+
+  /* CHAT BUBBLE */
+  .chat-area { display: none; flex-direction: column; gap: 8px; padding: 0; }
+  .chat-area.visible { display: flex; }
+  .bubble { padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.5; max-width: 85%; }
+  .bubble.user { background: var(--text); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .bubble.assistant { background: var(--card); color: var(--text); align-self: flex-start; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .bubble.thinking { opacity: 0.5; font-style: italic; }
+  .back-btn { font-size: 13px; color: var(--label); cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+
+  /* MIC */
+  .mic-section { display: flex; flex-direction: column; align-items: center; padding: 4px 0 8px; flex-shrink: 0; }
+  .mic-status { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; color: var(--label); text-transform: uppercase; margin-bottom: 12px; }
+  .mic-outer { width: 72px; height: 72px; border-radius: 50%; background: var(--card); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .mic-outer:active { transform: scale(0.95); }
+  .mic-outer.listening { background: var(--text); border-color: var(--text); box-shadow: 0 0 0 10px rgba(28,28,30,0.08), 0 0 0 20px rgba(28,28,30,0.04); animation: pulse 1.5s infinite; }
+  .mic-outer.thinking-mic { background: #f5f5f5; border-color: var(--border); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 10px rgba(28,28,30,0.08), 0 0 0 20px rgba(28,28,30,0.04); }
+    50% { box-shadow: 0 0 0 14px rgba(28,28,30,0.05), 0 0 0 28px rgba(28,28,30,0.02); }
+  }
+  .mic-outer svg { width: 28px; height: 28px; stroke: var(--text); fill: none; stroke-width: 1.5; transition: stroke 0.2s; }
+  .mic-outer.listening svg { stroke: white; }
+  .mic-hint { font-size: 11px; color: var(--label); margin-top: 8px; text-align: center; min-height: 16px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav { background: rgba(242,242,247,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; padding: 8px 0 24px; flex-shrink: 0; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; cursor: pointer; }
+  .nav-item svg { width: 22px; height: 22px; stroke: var(--label); fill: none; stroke-width: 1.5; }
+  .nav-item.active svg { stroke: var(--text); }
+  .nav-label { font-size: 9px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--label); }
+  .nav-item.active .nav-label { color: var(--text); }
+
+  /* NEW PROJECT MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.visible { display: flex; }
+  .modal { background: var(--card); border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 390px; }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 16px; }
+  .modal-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; background: var(--bg); }
+  .modal-input:focus { border-color: var(--text); }
+  .modal-btn { width: 100%; background: var(--text); color: white; border: none; border-radius: var(--radius-sm); padding: 13px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; margin-top: 12px; cursor: pointer; }
+  .modal-cancel { width: 100%; background: none; border: none; color: var(--label); font-family: 'DM Sans', sans-serif; font-size: 15px; margin-top: 8px; cursor: pointer; padding: 8px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="date-label">I DAG</div>
+  <div class="header-row">
+    <div class="date-main" id="dateDisplay">Indlæser...</div>
+    <div class="settings-btn">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </div>
+  </div>
+</div>
+<div class="divider"></div>
+
+<!-- CONTENT -->
+<div class="content" id="homeView">
+
+  <!-- MORNING BRIEF -->
+  <div>
+    <div class="section-label">Morgenoverblik</div>
+    <div class="brief-card">
+      <div class="brief-item">
+        <svg viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2"/><circle cx="12" cy="12" r="4"/></svg>
+        <div class="brief-title">Vejr</div>
+        <div class="brief-sub" id="weatherSub">Henter...</div>
+      </div>
+      <div class="brief-item">
+        <svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v2"/><path d="M2 8h6M2 12h6M2 16h6"/></svg>
+        <div class="brief-title">Nyheder</div>
+        <div class="brief-sub" id="newsSub">Klik for at hente</div>
+      </div>
+      <div class="brief-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div class="brief-title">Projekter</div>
+        <div class="brief-sub" id="projectsSub">Henter...</div>
+      </div>
+    </div>
+    <button class="play-btn" id="playBriefBtn" onclick="playMorningBrief()">
+      <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+      Afspil morgenoverblik
+    </button>
+  </div>
+
+  <!-- PROJECTS -->
+  <div>
+    <div class="section-label">Projekter</div>
+    <div class="projects-card" id="projectsList">
+      <div style="padding: 14px; font-size: 13px; color: var(--label);">Henter projekter...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PROJECT CHAT VIEW -->
+<div class="content" id="projectView" style="display:none;">
+  <div>
+    <div class="back-btn" onclick="showHome()">
+      ‹ <span id="backLabel">Tilbage</span>
+    </div>
+    <div class="section-label" id="projectViewLabel">Samtale</div>
+    <div class="chat-area visible" id="chatArea"></div>
+  </div>
+</div>
+
+<!-- MIC -->
+<div class="mic-section">
+  <div class="mic-status" id="micStatus">Tryk for at tale</div>
+  <div class="mic-outer" id="micBtn" onclick="toggleMic()">
+    <svg viewBox="0 0 24 24">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/>
+    </svg>
+  </div>
+  <div class="mic-hint" id="micHint">Sig "start" for at begynde</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="showHome()">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    <span class="nav-label">Hjem</span>
+  </div>
+  <div class="nav-item" onclick="showProjectsNav()">
+    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+    <span class="nav-label">Projekter</span>
+  </div>
+  <div class="nav-item">
+    <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/></svg>
+    <span class="nav-label">Tal</span>
+  </div>
+  <div class="nav-item">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span class="nav-label">Kalender</span>
+  </div>
+  <div class="nav-item">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="nav-label">Konto</span>
+  </div>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div class="modal-overlay" id="newProjectModal">
+  <div class="modal">
+    <div class="modal-title">Nyt projekt</div>
+    <input class="modal-input" id="newProjectName" placeholder="Projektnavn..." maxlength="50" />
+    <button class="modal-btn" onclick="createProject()">Opret projekt</button>
+    <button class="modal-cancel" onclick="closeModal()">Annuller</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const SUPABASE_URL = 'https://kahpdsismxckxljddxya.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_zZHoYuO7px_TyNeV2v2m-A_G7Kv9eUn';
+const CLAUDE_API_KEY = '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';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let activeProject = null;
+let isListening = false;
+let isSpeaking = false;
+let recognition = null;
+let conversationHistory = [];
+
+// ── DATE ──
+function setDate() {
+  const now = new Date();
+  const days = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+  const months = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+  const dayName = days[now.getDay()];
+  const date = now.getDate();
+  const month = months[now.getMonth()];
+  const year = now.getFullYear();
+  document.getElementById('dateDisplay').innerHTML = `${dayName}<span>, ${date}. ${month} ${year}</span>`;
+}
+
+// ── WEATHER ──
+async function fetchWeather() {
+  try {
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m,weathercode&timezone=Europe/Copenhagen');
+    const data = await res.json();
+    const temp = Math.round(data.current.temperature_2m);
+    const code = data.current.weathercode;
+    const desc = weatherDesc(code);
+    document.getElementById('weatherSub').textContent = `${temp}° · ${desc}`;
+    return `${temp} grader, ${desc}`;
+  } catch {
+    document.getElementById('weatherSub').textContent = 'Ikke tilgængeligt';
+    return 'vejret er ikke tilgængeligt';
+  }
+}
+
+function weatherDesc(code) {
+  if (code === 0) return 'Klart';
+  if (code <= 3) return 'Let skyet';
+  if (code <= 48) return 'Tåget';
+  if (code <= 67) return 'Regn';
+  if (code <= 77) return 'Sne';
+  if (code <= 82) return 'Byger';
+  return 'Torden';
+}
+
+// ── PROJECTS ──
+async function loadProjects() {
+  const { data, error } = await sb.from('projects').select('*').order('created_at');
+  if (error || !data || data.length === 0) {
+    await seedDefaultProjects();
+    return loadProjects();
+  }
+  renderProjects(data);
+  document.getElementById('projectsSub').textContent = `${data.length} projekter aktive`;
+  return data;
+}
+
+async function seedDefaultProjects() {
+  const defaults = ['WoodUpp', 'ByAulum', 'Timelog', 'Nye idéer'];
+  for (const name of defaults) {
+    await sb.from('projects').insert({ name });
+  }
+}
+
+function renderProjects(projects) {
+  const list = document.getElementById('projectsList');
+  list.innerHTML = '';
+  projects.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'project-item';
+    div.id = `project-${p.id}`;
+    div.innerHTML = `
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <div class="project-name">${p.name}</div>
+      <div class="project-arrow">›</div>
+    `;
+    div.onclick = () => openProject(p);
+    list.appendChild(div);
+  });
+  // Add new project button
+  const newDiv = document.createElement('div');
+  newDiv.className = 'new-project';
+  newDiv.innerHTML = `
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    <span>Nyt projekt</span>
+  `;
+  newDiv.onclick = () => document.getElementById('newProjectModal').classList.add('visible');
+  list.appendChild(newDiv);
+}
+
+async function openProject(project) {
+  activeProject = project;
+  document.getElementById('homeView').style.display = 'none';
+  document.getElementById('projectView').style.display = 'flex';
+  document.getElementById('projectViewLabel').textContent = project.name.toUpperCase();
+  document.getElementById('backLabel').textContent = project.name;
+
+  // Load messages
+  const { data } = await sb.from('messages').select('*').eq('project_id', project.id).order('created_at');
+  conversationHistory = (data || []).map(m => ({ role: m.role, content: m.content }));
+  
+  const chatArea = document.getElementById('chatArea');
+  chatArea.innerHTML = '';
+  if (conversationHistory.length === 0) {
+    addBubble('assistant', `Hej Martin! Du er nu i ${project.name}. Hvad vil du tale om?`);
+  } else {
+    conversationHistory.forEach(m => addBubble(m.role, m.content, false));
+  }
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showHome() {
+  activeProject = null;
+  conversationHistory = [];
+  document.getElementById('projectView').style.display = 'none';
+  document.getElementById('homeView').style.display = 'flex';
+}
+
+function showProjectsNav() {
+  showHome();
+  document.getElementById('projectsList').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── CREATE PROJECT ──
+async function createProject() {
+  const name = document.getElementById('newProjectName').value.trim();
+  if (!name) return;
+  await sb.from('projects').insert({ name });
+  closeModal();
+  document.getElementById('newProjectName').value = '';
+  loadProjects();
+}
+
+function closeModal() {
+  document.getElementById('newProjectModal').classList.remove('visible');
+}
+
+// ── CHAT ──
+function addBubble(role, text, scroll = true) {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `bubble ${role}`;
+  div.textContent = text;
+  chatArea.appendChild(div);
+  if (scroll) chatArea.scrollTop = chatArea.scrollHeight;
+  return div;
+}
+
+async function sendMessage(text) {
+  if (!text.trim()) return;
+
+  // Show in chat if in project view
+  if (activeProject) {
+    addBubble('user', text);
+  }
+
+  // Save user message
+  if (activeProject) {
+    await sb.from('messages').insert({ project_id: activeProject.id, role: 'user', content: text });
+    conversationHistory.push({ role: 'user', content: text });
+  }
+
+  // Thinking indicator
+  let thinkingBubble = null;
+  if (activeProject) {
+    thinkingBubble = addBubble('assistant thinking', '...');
+  }
+
+  setMicState('thinking');
+
+  try {
+    const systemPrompt = activeProject
+      ? `Du er Vox, Martins personlige AI-assistent. Du hjælper Martin med projektet "${activeProject.name}". Svar på dansk. Hold svarene korte og præcise — Martin lytter mens han kører bil. Maks 3-4 sætninger medmindre han beder om mere.`
+      : `Du er Vox, Martins personlige AI-assistent. Svar på dansk. Hold svarene korte og præcise.`;
+
+    const messages = activeProject ? conversationHistory : [{ role: 'user', content: text }];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: messages
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.content[0].text;
+
+    if (thinkingBubble) thinkingBubble.remove();
+
+    if (activeProject) {
+      addBubble('assistant', reply);
+      await sb.from('messages').insert({ project_id: activeProject.id, role: 'assistant', content: reply });
+      conversationHistory.push({ role: 'assistant', content: reply });
+    }
+
+    speakText(reply);
+
+  } catch (err) {
+    if (thinkingBubble) thinkingBubble.remove();
+    const errMsg = 'Beklager, der opstod en fejl. Prøv igen.';
+    if (activeProject) addBubble('assistant', errMsg);
+    speakText(errMsg);
+    setMicState('idle');
+  }
+}
+
+// ── SPEECH ──
+function speakText(text) {
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'da-DK';
+  utterance.rate = 1.0;
+  utterance.onend = () => {
+    isSpeaking = false;
+    setMicState('idle');
+  };
+  isSpeaking = true;
+  speechSynthesis.speak(utterance);
+}
+
+function setMicState(state) {
+  const btn = document.getElementById('micBtn');
+  const status = document.getElementById('micStatus');
+  const hint = document.getElementById('micHint');
+  btn.classList.remove('listening', 'thinking-mic');
+  if (state === 'listening') {
+    btn.classList.add('listening');
+    status.textContent = 'Lytter...';
+    hint.textContent = 'Sig "slut" når du er færdig';
+  } else if (state === 'thinking') {
+    btn.classList.add('thinking-mic');
+    status.textContent = 'Tænker...';
+    hint.textContent = '';
+  } else {
+    status.textContent = 'Tryk for at tale';
+    hint.textContent = activeProject ? `Aktiv: ${activeProject.name}` : 'Vælg et projekt eller tal frit';
+  }
+}
+
+function toggleMic() {
+  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); return; }
+  if (isListening) { stopListening(); return; }
+  startListening();
+}
+
+function startListening() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Din browser understøtter ikke stemme. Brug Safari på iPhone.');
+    return;
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'da-DK';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => { isListening = true; setMicState('listening'); };
+  recognition.onend = () => { isListening = false; };
+  recognition.onerror = () => { isListening = false; setMicState('idle'); };
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    isListening = false;
+    sendMessage(text);
+  };
+  recognition.start();
+}
+
+function stopListening() {
+  if (recognition) recognition.stop();
+  isListening = false;
+  setMicState('idle');
+}
+
+// ── MORNING BRIEF ──
+async function playMorningBrief() {
+  const btn = document.getElementById('playBriefBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Afspiller...';
+
+  const weather = await fetchWeather();
+  const { data: projects } = await sb.from('projects').select('*');
+  const projectNames = projects ? projects.map(p => p.name).join(', ') : 'ingen projekter';
+  const { data: messages } = await sb.from('messages').select('*');
+  const msgCount = messages ? messages.length : 0;
+
+  const now = new Date();
+  const days = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+  const months = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+
+  const briefText = `Godmorgen Martin. Det er ${days[now.getDay()]} den ${now.getDate()}. ${months[now.getMonth()]}. Vejret i dag: ${weather}. Du har ${projects ? projects.length : 0} aktive projekter: ${projectNames}. Der er i alt ${msgCount} beskeder gemt på tværs af dine projekter. Hvad vil du starte med i dag?`;
+
+  speakText(briefText);
+
+  const onEnd = () => {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:white"><path d="M5 3l14 9-14 9V3z"/></svg> Afspil morgenoverblik';
+  };
+  setTimeout(onEnd, briefText.length * 60);
+}
+
+// ── INIT ──
+async function init() {
+  setDate();
+  fetchWeather();
+  loadProjects();
+  setMicState('idle');
+}
+
+init();
+</script>
+</body>
+</html>
