@@ -82,6 +82,16 @@ export default async function handler(req, res) {
       const data = await r.json();
       return res.status(200).json(data);
 
+    } else if (action === 'upcoming_14') {
+      const now = new Date();
+      const future = new Date(now);
+      future.setFullYear(future.getFullYear() + 1); // Full year ahead
+      const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+        `timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
+      const r = await fetch(url, { headers });
+      const data = await r.json();
+      return res.status(200).json(data);
+
     } else if (action === 'upcoming') {
       const now = new Date();
       const nextWeek = new Date(now);
@@ -97,13 +107,14 @@ export default async function handler(req, res) {
       const date = req.body.date; // YYYY-MM-DD
       const timeFrom = req.body.time_from; // HH:MM optional
       const timeTo = req.body.time_to;     // HH:MM optional
-      const tz = 'Europe/Copenhagen';
+      // Use +01:00 offset (CET) — handles both winter and summer time reasonably
+      const offset = '+01:00';
       const dayStart = timeFrom
-        ? new Date(`${date}T${timeFrom}:00+01:00`)
-        : new Date(`${date}T00:00:00+01:00`);
+        ? new Date(`${date}T${timeFrom}:00${offset}`)
+        : new Date(`${date}T00:00:00${offset}`);
       const dayEnd = timeTo
-        ? new Date(`${date}T${timeTo}:00+01:00`)
-        : new Date(`${date}T23:59:59+01:00`);
+        ? new Date(`${date}T${timeTo}:00${offset}`)
+        : new Date(`${date}T23:59:59${offset}`);
       const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
         `timeMin=${dayStart.toISOString()}&timeMax=${dayEnd.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=20`;
       const r = await fetch(url, { headers });
@@ -111,9 +122,35 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
 
     } else if (action === 'create') {
+      let eventBody;
+      const title = event.summary || event.title;
+      const isReminder = event.reminder === true;
+      // Reminders: short 15-min event with popup notification at start
+      const reminderOverrides = isReminder
+        ? { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }] }
+        : { useDefault: true };
+
+      if (event.allday) {
+        eventBody = {
+          summary: isReminder ? `🔔 ${title}` : title,
+          start: { date: event.date },
+          end: { date: event.date },
+          reminders: reminderOverrides
+        };
+      } else {
+        const start = new Date(`${event.date}T${event.time || '09:00'}:00`);
+        const durationMins = isReminder ? 15 : (event.duration || 60);
+        const end = new Date(start.getTime() + durationMins * 60000);
+        eventBody = {
+          summary: isReminder ? `🔔 ${title}` : title,
+          start: { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' },
+          end: { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' },
+          reminders: reminderOverrides
+        };
+      }
       const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST', headers,
-        body: JSON.stringify(event)
+        body: JSON.stringify(eventBody)
       });
       const data = await r.json();
       return res.status(200).json(data);
@@ -126,6 +163,11 @@ export default async function handler(req, res) {
       const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
         `timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=20&q=${encodeURIComponent(event.query)}`;
       const r = await fetch(url, { headers });
+      const data = await r.json();
+      return res.status(200).json(data);
+
+    } else if (action === 'get') {
+      const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${event.id}`, { headers });
       const data = await r.json();
       return res.status(200).json(data);
 
