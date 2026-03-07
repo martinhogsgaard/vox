@@ -33,16 +33,22 @@ async function refreshAccessToken(refreshToken) {
 }
 
 function makeEmail({ to, subject, body }) {
+  // Encode subject with RFC2047 for non-ASCII characters (æøå etc)
+  const encodeSubject = (str) => {
+    const encoded = Buffer.from(str, 'utf-8').toString('base64');
+    return `=?UTF-8?B?${encoded}?=`;
+  };
   const lines = [
     `To: ${to}`,
-    `Subject: ${subject}`,
-    `Content-Type: text/plain; charset=utf-8`,
+    `Subject: ${encodeSubject(subject)}`,
     `MIME-Version: 1.0`,
+    `Content-Type: text/plain; charset=utf-8`,
+    `Content-Transfer-Encoding: base64`,
     '',
-    body
+    Buffer.from(body, 'utf-8').toString('base64')
   ];
   const raw = lines.join('\r\n');
-  return btoa(unescape(encodeURIComponent(raw)))
+  return Buffer.from(raw).toString('base64')
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
