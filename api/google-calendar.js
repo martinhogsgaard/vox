@@ -100,11 +100,30 @@ export default async function handler(req, res) {
       const data = await r.json();
       return res.status(200).json(data);
 
+    } else if (action === 'search') {
+      // Search events by title in next 30 days
+      const now = new Date();
+      const future = new Date(now);
+      future.setDate(future.getDate() + 30);
+      const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+        `timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=20&q=${encodeURIComponent(event.query)}`;
+      const r = await fetch(url, { headers });
+      const data = await r.json();
+      return res.status(200).json(data);
+
     } else if (action === 'delete') {
       const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${event.id}`, {
         method: 'DELETE', headers
       });
       return res.status(200).json({ success: r.ok });
+
+    } else if (action === 'update') {
+      const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${event.id}`, {
+        method: 'PATCH', headers,
+        body: JSON.stringify(event.updates)
+      });
+      const data = await r.json();
+      return res.status(200).json(data);
     }
 
     return res.status(400).json({ error: 'Unknown action' });
