@@ -1025,6 +1025,9 @@ window._foundContacts = null;
 async function findContact(query, subject, body) {
   console.log('findContact called with query:', query);
   try {
+    // Stop any current speech before announcing result
+    window.speechSynthesis.cancel();
+    await new Promise(r => setTimeout(r, 300));
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'find_contact', query })
