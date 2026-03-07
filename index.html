@@ -1074,19 +1074,33 @@ async function findContact(query, subject, body) {
       (c.emails || []).forEach(e => flat.push({ name: c.name || e, email: e }));
     });
 
-    if (flat.length === 1) {
-      msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
-    } else {
-      const list = flat.map((c, i) => `${i + 1}: ${speakableEmail(c.email)}`).join('. ');
-      msg = `I found ${flat.length} addresses for ${flat[0].name}. ${list}. Which one?`;
-      // Store flat list so confirm_email index works correctly
-      window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
-    }
-    saveToHistory('assistant', msg);
-    // Force speak — cancel anything currently playing first
     window.speechSynthesis.cancel();
     isSpeaking = false;
-    setTimeout(() => speak(msg), 400);
+
+    if (flat.length === 1) {
+      msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
+      saveToHistory('assistant', msg);
+      setTimeout(() => speak(msg), 400);
+    } else {
+      // Store flat list so confirm_email index works correctly
+      window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
+      // Speak each address separately so sentence-chunking doesn't cut it off
+      const lines = [`I found ${flat.length} addresses for ${flat[0].name}.`];
+      flat.forEach((c, i) => lines.push(`Number ${i + 1}: ${speakableEmail(c.email)}.`));
+      lines.push('Which one should I use?');
+      msg = lines.join(' ');
+      saveToHistory('assistant', msg);
+      // Speak line by line with delays
+      setTimeout(() => {
+        lines.forEach((line, i) => {
+          setTimeout(() => {
+            window.speechSynthesis.cancel();
+            isSpeaking = false;
+            speak(line);
+          }, i * 2500);
+        });
+      }, 400);
+    }
   } catch(e) { speak('Could not search contacts.'); }
 }
 
