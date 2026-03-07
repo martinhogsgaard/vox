@@ -151,22 +151,18 @@ export default async function handler(req, res) {
 
         const emailSet = new Set();
 
-        // Search sent mail
-        const sentR = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=${encodeURIComponent('in:sent')}`,
-          { headers }
-        );
-        // Search received mail too
-        const recR = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=${encodeURIComponent('in:inbox')}`,
-          { headers }
-        );
+        // Search Gmail directly by name — finds emails TO or FROM this person
+        const searches = [
+          { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q + ' in:sent')}`, headerName: 'To' },
+          { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q)}`, headerName: 'From' },
+        ];
 
-        for (const [r, headerName] of [[sentR, 'To'], [recR, 'From']]) {
+        for (const { url, headerName } of searches) {
+          const r = await fetch(url, { headers });
           if (!r.ok) continue;
           const data = await r.json();
           if (!data.messages) continue;
-          await Promise.all(data.messages.slice(0, 20).map(async m => {
+          await Promise.all(data.messages.slice(0, 5).map(async m => {
             const mr = await fetch(
               `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=${headerName}`,
               { headers }
