@@ -790,7 +790,7 @@ async function executeAction(action) {
       const email = action.email;
       const name = window._pendingContactQuery || email;
       window._foundContacts = [{ name, emails: [email] }];
-      const msg = `Got it. I'll send to ${email.replace('@', ' at ')}. Shall I send the email now?`;
+      const msg = `Got it. I'll send to ${speakableEmail(email)}. Shall I send?`;
       saveToHistory('assistant', msg);
       speak(msg);
     }
@@ -1018,6 +1018,19 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
 }
 
 // ── GMAIL ──
+// Convert email address to speakable text
+function speakableEmail(email) {
+  const [user, domain] = email.split('@');
+  const domainParts = domain.split('.');
+  const ext = domainParts.pop();
+  const domainName = domainParts.join(' dot ');
+  // Spell out short usernames, read longer ones as words
+  const userSpoken = user.length <= 4 
+    ? user.split('').join(' ') 
+    : user.replace(/[._-]/g, ' ');
+  return `${userSpoken} at ${domainName} dot ${ext}`;
+}
+
 // Pending email state for contact confirmation flow
 window._pendingEmail = null;
 window._foundContacts = null;
@@ -1061,11 +1074,11 @@ async function findContact(query, subject, body) {
     if (contacts.length === 1) {
       const name = contacts[0].name || contacts[0].emails[0];
       const email = contacts[0].emails[0];
-      msg = `I found ${name}, ${email.replace('@', ' at ')}. Is that the right person?`;
+      msg = `I found ${name}. Email address: ${speakableEmail(email)}. Is that correct?`;
     } else {
       const list = contacts.map((c, i) => {
         const name = c.name || c.emails[0];
-        const email = c.emails[0].replace('@', ' at ');
+        const email = speakableEmail(c.emails[0]);
         return `${i + 1}: ${name}, ${email}`;
       }).join('. ');
       msg = `I found ${contacts.length} contacts. ${list}. Which one?`;
