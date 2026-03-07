@@ -635,6 +635,9 @@ ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
 ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
+ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
+ACTION:{"type":"read_inbox"}
+ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
 - Reply in English. MAX 2 sentences — Martin is driving.
@@ -642,6 +645,8 @@ Rules:
 - For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
+- For send_email: write a full professional email body based on what Martin says.
+- For read_inbox: reads Martin's 5 latest emails aloud.
 - Only ONE action per reply. When in doubt — no action.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
@@ -763,6 +768,20 @@ async function executeAction(action) {
     setTimeout(waitAndList, 500);
   } else if (action.type === 'create_event') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
+  } else if (action.type === 'send_email') {
+    await sendEmail(action.to, action.subject, action.body);
+  } else if (action.type === 'read_inbox') {
+    const waitAndRead = () => {
+      if (isSpeaking) { setTimeout(waitAndRead, 300); return; }
+      readInbox();
+    };
+    setTimeout(waitAndRead, 500);
+  } else if (action.type === 'read_email') {
+    const waitAndRead = () => {
+      if (isSpeaking) { setTimeout(waitAndRead, 300); return; }
+      readEmail(action.message_id);
+    };
+    setTimeout(waitAndRead, 500);
   } else if (action.type === 'go_home') {
     goHome();
   }
@@ -936,6 +955,63 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
     if (data.id) speak(`Done. The event has been updated.`);
     else speak('Could not update the event. Please try again.');
   } catch(e) { console.error('Update error:', e); speak('Could not update the event.'); }
+}
+
+// ── GMAIL ──
+async function sendEmail(to, subject, body) {
+  try {
+    speak(`Sending email to ${to}...`);
+    const res = await fetch('/api/gmail', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'send', to, subject, body })
+    });
+    const data = await res.json();
+    if (data.id) {
+      const msg = `Done. Email sent to ${to}.`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    } else {
+      speak('Could not send the email. ' + (data.error || 'Please try again.'));
+    }
+  } catch(e) { speak('Could not send the email.'); }
+}
+
+async function readInbox() {
+  try {
+    const res = await fetch('/api/gmail', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list' })
+    });
+    const data = await res.json();
+    const messages = data.messages || [];
+    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
+    const summary = messages.map((m, i) => {
+      const from = m.from.replace(/<.*>/, '').trim() || m.from;
+      return `${i + 1}. From ${from}: ${m.subject}`;
+    }).join('. ');
+    const msg = `You have ${messages.length} recent emails. ${summary}.`;
+    saveToHistory('assistant', msg);
+    // Store message IDs for follow-up
+    window._lastInboxMessages = messages;
+    speak(msg);
+  } catch(e) { speak('Could not load your inbox.'); }
+}
+
+async function readEmail(messageId) {
+  try {
+    const res = await fetch('/api/gmail', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get', messageId })
+    });
+    const data = await res.json();
+    if (data.body) {
+      const msg = `Email from ${data.from}. Subject: ${data.subject}. ${data.body.substring(0, 500)}`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    } else {
+      speak('Could not read that email.');
+    }
+  } catch(e) { speak('Could not read that email.'); }
 }
 
 // ── VOICE COMMANDS ──
