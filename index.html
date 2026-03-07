@@ -301,13 +301,17 @@ async function openProject(p) {
   });
   
   conversationHistory = sorted.map(m => ({ role: m.role, content: m.content }));
+  console.log(`Loaded ${conversationHistory.length} messages for ${p.name}`);
+  
   const chat = document.getElementById('chatArea');
   chat.innerHTML = '';
   
   if (conversationHistory.length === 0) {
     addBubble('assistant', `You are now in ${p.name}. What would you like to talk about?`);
   } else {
-    conversationHistory.forEach(m => addBubble(m.role, m.content, false));
+    // Show last 20 messages in UI
+    const recent = conversationHistory.slice(-20);
+    recent.forEach(m => addBubble(m.role, m.content, false));
     chat.scrollTop = chat.scrollHeight;
   }
   setMicHint(`Aktiv: ${p.name}`);
@@ -387,7 +391,10 @@ Rules:
 - Only include ONE action per reply.
 - Speak naturally, then put the ACTION on the last line if needed.`;
 
-  const messages = conversationHistory.length > 0 ? conversationHistory : [{ role:'user', content:text }];
+  // Send last 10 messages to Claude (keeps context without exceeding token limits)
+  const messages = conversationHistory.length > 0 
+    ? conversationHistory.slice(-10) 
+    : [{ role:'user', content:text }];
 
   try {
     const res = await fetch('/api/claude', {
