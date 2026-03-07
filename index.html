@@ -715,7 +715,8 @@ Rules:
 - For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
-- Only ONE action per reply. When in doubt — no action.`;
+- Only ONE action per reply. When in doubt — no action.
+- Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
   const messages = activeProject
