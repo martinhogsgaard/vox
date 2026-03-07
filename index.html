@@ -396,6 +396,7 @@ ACTION:{"type":"list_calendar"}
 ACTION:{"type":"list_upcoming"}
 ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
 ACTION:{"type":"find_event","query":"Meeting title to find"}
+ACTION:{"type":"delete_event","original_time":"20:00"}
 ACTION:{"type":"delete_event","query":"Mie"}
 ACTION:{"type":"update_event","query":"Mie","new_time":"15:00"}
 ACTION:{"type":"update_event","original_time":"16:00","new_time":"15:00"}
@@ -410,7 +411,7 @@ Available actions:
 - list_upcoming: List events for the next 7 days
 - create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
 - find_event: Find an event by title (include query as search term)
-- delete_event: Delete an event — use query (title keyword) instead of event_id whenever possible
+- delete_event: Delete an event — use original_time (HH:MM) if Martin mentions a time, or query (title keyword) if he mentions a name
 - update_event: Update an event — include query (title keyword) if known, or original_time (HH:MM of the current event time) if Martin mentions a time. Include any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes. Do NOT wait for a separate find step.
 
 Rules:
@@ -503,8 +504,26 @@ async function executeAction(action) {
     setTimeout(waitAndFind, 500);
   } else if (action.type === 'delete_event') {
     if (!action.event_id) {
+      lastFoundEvents = []; // Start fresh
       if (action.query) await findCalendarEvent(action.query, true);
-      if (lastFoundEvents.length === 0) await loadTodayEventsForContext();
+      console.log('After findCalendarEvent, lastFoundEvents:', lastFoundEvents.map(e=>e.summary));
+      // If not found by title, OR query looks like a time, try matching by time
+      const looksLikeTime = /^\d{1,2}[:.:]?\d{0,2}$/.test((action.query||'').trim());
+      if (lastFoundEvents.length === 0 || looksLikeTime) {
+        lastFoundEvents = [];
+        await loadTodayEventsForContext();
+        if (action.original_time || action.query) {
+          const rawSearch = action.original_time || action.query || '';
+          const searchTime = rawSearch.replace(':', '').replace('.', '').padStart(4, '0');
+          const match = lastFoundEvents.find(e => {
+            if (!e.start.dateTime) return false;
+            const t = new Date(e.start.dateTime).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false}).replace(':', '');
+            console.log('Delete: comparing event time', t, 'with search', searchTime);
+            return t === searchTime;
+          });
+          if (match) lastFoundEvents = [match];
+        }
+      }
       if (lastFoundEvents.length === 1) {
         await deleteCalendarEvent(lastFoundEvents[0].id);
       } else if (lastFoundEvents.length > 1) {
@@ -560,32 +579,25 @@ async function executeAction(action) {
   }
 }
 
-async function listCalendarEvents() {
-  console.log('listCalendarEvents called');
+async function listCalendarEvents(date) {
   try {
+    const action = date ? 'list_date' : 'list';
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list' })
+      body: JSON.stringify({ action, date })
     });
-    console.log('Calendar response status:', res.status);
     const data = await res.json();
-    console.log('Calendar data:', JSON.stringify(data));
     if (data.error) { speak('Calendar error: ' + data.error); return; }
     const events = data.items || [];
-    console.log('Events found:', events.length);
-    if (events.length === 0) { speak("You have no more events today."); return; }
+    if (events.length === 0) { speak(date ? `You have no events on that day.` : "You have no more events today."); return; }
     const summary = events.map(e => {
       const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
       return `${time}, ${e.summary}`;
     }).join('. ');
-    const msg = `Today you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
-    console.log('Speaking:', msg);
-    speak(msg);
-  } catch(e) { 
-    console.error('Calendar exception:', e);
-    speak('Could not load calendar events.'); 
-  }
+    const dayLabel = date ? new Date(date).toLocaleDateString('en', {weekday:'long'}) : 'today';
+    speak(`On ${dayLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`);
+  } catch(e) { speak('Could not load calendar events.'); }
 }
 
 async function createCalendarEvent(title, date, time, duration) {
