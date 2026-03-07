@@ -233,6 +233,8 @@ function saveToHistory(role, content) {
 let projects = [];
 let isListening = false;
 let isSpeaking = false;
+let driveContext = ''; // File content from Google Drive project folder
+let driveFiles = [];   // List of files in current project folder
 let isThinking = false;
 let recognition = null;
 let hasSeeded = false;
@@ -263,43 +265,60 @@ setTimeout(loadVoices, 100);
 setTimeout(loadVoices, 500);
 setTimeout(loadVoices, 1500);
 
-function speak(text, onDone) {
-  speechSynthesis.cancel();
-  if (!selectedVoice) loadVoices();
+// Central speech queue — prevents overlapping and double-increments
+let _speakQueue = [];
+let _speakBusy = false;
+
+function _processQueue() {
+  if (_speakBusy || _speakQueue.length === 0) return;
+  const { text, onDone } = _speakQueue.shift();
+  _speakBusy = true;
   isSpeaking = true;
   setMicState('speaking');
 
-  // iOS Safari cuts off speech after ~15 seconds — split into sentences
-  // Replace "dot" placeholder to avoid splitting email addresses
-  const safeSplit = text.replace(/ dot /g, ' DOT ');
-  const sentences = safeSplit.match(/[^.!?]+[.!?]*/g) || [safeSplit];
+  // Split on sentence endings but protect email "dot" sequences
+  const safe = text.replace(/ dot /gi, ' DOT ');
+  const sentences = safe.match(/[^.!?]+[.!?]*/g) || [safe];
   let idx = 0;
 
-  function speakNext() {
+  function next() {
     if (idx >= sentences.length) {
-      isSpeaking = false;
+      _speakBusy = false;
+      isSpeaking = _speakQueue.length > 0;
       if (onDone) onDone();
-      else { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      _processQueue();
       return;
     }
-    const u = new SpeechSynthesisUtterance(sentences[idx].trim().replace(/ DOT /g, ' dot '));
+    const chunk = sentences[idx].trim().replace(/ DOT /g, ' dot ');
+    if (!chunk) { idx++; next(); return; }
+    const u = new SpeechSynthesisUtterance(chunk);
     u.voice = selectedVoice || null;
     u.lang = 'en-GB';
     u.rate = isIOS ? 1.0 : 1.1;
     u.pitch = 1.0;
-    u.onend = () => { idx++; speakNext(); };
-    u.onerror = () => { idx++; speakNext(); };
+    u.onend = () => { idx++; next(); };
+    u.onerror = (e) => { console.warn('Speech error:', e.error, chunk); idx++; next(); };
     speechSynthesis.speak(u);
-    idx++;
-    // iOS workaround: keep speech synthesis alive with a heartbeat
-    if (isIOS) {
-      const keepAlive = setInterval(() => {
-        if (!isSpeaking) { clearInterval(keepAlive); return; }
-        if (!speechSynthesis.speaking) clearInterval(keepAlive);
-      }, 5000);
-    }
   }
-  speakNext();
+  next();
+}
+
+function speak(text, onDone) {
+  if (!selectedVoice) loadVoices();
+  // Cancel everything and start fresh
+  speechSynthesis.cancel();
+  _speakQueue = [];
+  _speakBusy = false;
+  _speakQueue.push({ text, onDone });
+  setTimeout(_processQueue, 50);
+}
+
+function speakQueued(text, onDone) {
+  // Add to queue without cancelling current speech
+  if (!selectedVoice) loadVoices();
+  _speakQueue.push({ text, onDone });
+  _processQueue();
 }
 
 
@@ -561,6 +580,7 @@ async function createProject() {
   if (!error && data && data.length > 0) {
     openProject(data[0]);
     speak(`Project ${name} created. You are now in ${name}.`);
+    ensureProjectFolder(name); // Create matching Drive folder
   } else if (error) {
     console.error('Project create error:', error);
     alert('Fejl ved oprettelse: ' + error.message);
@@ -622,16 +642,22 @@ async function sendToClaude(text) {
   } catch(err) { console.log('Could not fetch calendar context:', err); }
 
   const weekday = now.toLocaleDateString('en', {weekday:'long'});
-  const system = `You are Vox — Martin's personal AI assistant. Martin Høgsgaard is a Danish external consultant.
+  const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
 Current projects: ${projectNames}.
 Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
-${activeProject ? `Active project: "${activeProject.name}".` : 'No active project.'}${calendarContext}
+${activeProject ? `Active project: "${activeProject.name}". When in a project, help Martin think, plan, brainstorm, and solve problems related to that project.` : 'No active project — general conversation mode.'}${calendarContext}
+
+You have full knowledge of the world — geography, business, technology, Danish culture and language, logistics, packaging, software development, and more. Use this knowledge freely.
+${driveFiles.length > 0 ? `\n\nPROJECT FILES in Google Drive (${driveFiles.length} file${driveFiles.length>1?'s':''}):\n${driveFiles.map(f=>f.name).join(', ')}${driveContext ? '\n\nFILE CONTENTS:\n' + driveContext : ''}` : ''}
+Martin often speaks Danish and you always reply in English. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
+When Martin is brainstorming or asking for ideas, give real, concrete suggestions. Never say you "can't search" or "don't have access to information" — use your built-in knowledge.
 
 ACTIONS — append ONE on the last line when Martin asks you to act:
 ACTION:{"type":"create_project","name":"ProjectName"}
 ACTION:{"type":"open_project","name":"ProjectName"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
 ACTION:{"type":"go_home"}
+ACTION:{"type":"open_drive_folder"}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
@@ -646,7 +672,7 @@ ACTION:{"type":"read_inbox"}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
-- Reply in English. MAX 2 sentences — Martin is driving.
+- Reply in English. If Martin asks a factual or informational question (addresses, directions, information, advice), give a complete helpful answer. For action confirmations and small talk, keep it to 1-2 sentences. Martin is often driving so be concise but never refuse to answer a question due to length.
 - For calendar READ requests: answer directly from CALENDAR above. No action needed.
 - For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
 - For all-day events: set allday:true, omit time/duration.
@@ -659,19 +685,20 @@ Rules:
 - IMPORTANT: Once a contact has been found and spoken aloud, treat all subsequent replies as confirmation or rejection — never search again for the same person.
 - For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
+- For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
 - Only ONE action per reply. When in doubt — no action.`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
   const messages = activeProject
-    ? (conversationHistory.length > 0 ? conversationHistory.slice(-10) : [{ role:'user', content:text }])
-    : (homeHistory.length > 0 ? homeHistory.slice(-10) : [{ role:'user', content:text }]);
+    ? (conversationHistory.length > 0 ? conversationHistory.slice(-20) : [{ role:'user', content:text }])
+    : (homeHistory.length > 0 ? homeHistory.slice(-20) : [{ role:'user', content:text }]);
   console.log('Sending', messages.length, 'messages to Claude:', messages.map(m => m.role + ': ' + m.content.substring(0,60)));
 
   try {
     const res = await fetch('/api/claude', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:400, system, messages })
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, system, messages })
     });
     const data = await res.json();
     let reply = data.content[0].text;
@@ -861,6 +888,16 @@ async function executeAction(action) {
       readEmail(action.message_id);
     };
     setTimeout(waitAndRead, 500);
+  } else if (action.type === 'open_drive_folder') {
+    // Refresh drive context for current project
+    if (activeProject) {
+      await fetchDriveContext(activeProject.name);
+      const msg = driveFiles.length > 0
+        ? `Found ${driveFiles.length} file${driveFiles.length>1?'s':''} in the ${activeProject.name} folder: ${driveFiles.map(f=>f.name).join(', ')}.`
+        : `The ${activeProject.name} Drive folder is empty. Add files in Google Drive under Vox/${activeProject.name}.`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    }
   } else if (action.type === 'go_home') {
     goHome();
   }
@@ -1036,6 +1073,34 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
   } catch(e) { console.error('Update error:', e); speak('Could not update the event.'); }
 }
 
+// ── GOOGLE DRIVE ──
+async function fetchDriveContext(projectName) {
+  try {
+    const res = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_project_context', projectName })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    driveContext = data.context || '';
+    driveFiles = data.files || [];
+    console.log(`Drive: loaded ${driveFiles.length} files for "${projectName}"`);
+  } catch(e) {
+    console.log('Drive context error:', e.message);
+    driveContext = '';
+    driveFiles = [];
+  }
+}
+
+async function ensureProjectFolder(projectName) {
+  try {
+    await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ensure_project_folder', projectName })
+    });
+  } catch(e) { console.log('Drive folder error:', e.message); }
+}
+
 // ── GMAIL ──
 // Convert email address to speakable text — NO dots (they break sentence splitter)
 function speakableEmail(email) {
@@ -1078,9 +1143,6 @@ window._foundContacts = null;
 async function findContact(query, subject, body) {
   console.log('findContact called with query:', query);
   try {
-    // Stop any current speech before announcing result
-    window.speechSynthesis.cancel();
-    await new Promise(r => setTimeout(r, 300));
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'find_contact', query })
@@ -1117,9 +1179,6 @@ async function findContact(query, subject, body) {
       (c.emails || []).forEach(e => flat.push({ name: c.name || e, email: e }));
     });
 
-    window.speechSynthesis.cancel();
-    isSpeaking = false;
-
     if (flat.length === 1) {
       msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
       saveToHistory('assistant', msg);
@@ -1133,15 +1192,10 @@ async function findContact(query, subject, body) {
       lines.push('Which one should I use?');
       msg = lines.join(' ');
       saveToHistory('assistant', msg);
-      // Speak line by line with delays
+      // Speak lines in sequence using queue
       setTimeout(() => {
-        lines.forEach((line, i) => {
-          setTimeout(() => {
-            window.speechSynthesis.cancel();
-            isSpeaking = false;
-            speak(line);
-          }, i * 2500);
-        });
+        speak(lines[0]);
+        lines.slice(1).forEach(line => speakQueued(line));
       }, 400);
     }
   } catch(e) { speak('Could not search contacts.'); }
@@ -1245,7 +1299,7 @@ function startListening() {
   }
 
   // Stop speaking if active
-  if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; }
+  if (isSpeaking) { speechSynthesis.cancel(); _speakQueue = []; _speakBusy = false; isSpeaking = false; }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
@@ -1255,7 +1309,7 @@ function startListening() {
   recognition.onstart = () => {
     isListening = true;
     // Stop speaking immediately when user starts talking
-    if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; }
+    if (isSpeaking) { speechSynthesis.cancel(); _speakQueue = []; _speakBusy = false; isSpeaking = false; }
     setMicState('listening');
     setMicHint('Tryk igen for at sende');
     setTranscript('');
