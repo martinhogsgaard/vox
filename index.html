@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="da">
 <head>
 <meta charset="UTF-8">
@@ -274,28 +274,37 @@ function weatherDesc(code) {
 }
 
 // ── PROJECTS ──
-let hasSeeded = false;
-
 async function loadProjects() {
-  const { data, error } = await sb.from('projects').select('*').order('created_at');
-  if ((error || !data || data.length === 0) && !hasSeeded) {
-    hasSeeded = true;
-    await seedDefaultProjects();
-    const { data: seeded } = await sb.from('projects').select('*').order('created_at');
-    renderProjects(seeded || []);
-    document.getElementById('projectsSub').textContent = `${(seeded || []).length} projekter aktive`;
-    return seeded;
+  const { data, error } = await sb.from('projects').select('*');
+  if (error) {
+    console.log('Supabase error:', error);
+    renderProjectsFallback();
+    return;
   }
-  renderProjects(data || []);
-  document.getElementById('projectsSub').textContent = `${(data || []).length} projekter aktive`;
+  if (!data || data.length === 0) {
+    if (!hasSeeded) {
+      hasSeeded = true;
+      await seedDefaultProjects();
+      const { data: seeded } = await sb.from('projects').select('*');
+      renderProjects(seeded || []);
+      document.getElementById('projectsSub').textContent = `${(seeded || []).length} projekter aktive`;
+    }
+    return;
+  }
+  renderProjects(data);
+  document.getElementById('projectsSub').textContent = `${data.length} projekter aktive`;
   return data;
 }
 
-async function seedDefaultProjects() {
-  const defaults = ['WoodUpp', 'ByAulum', 'Timelog', 'Nye idéer'];
-  for (const name of defaults) {
-    await sb.from('projects').insert({ name });
-  }
+function renderProjectsFallback() {
+  const fallback = [
+    { id: 'woodupp', name: 'WoodUpp' },
+    { id: 'byaulum', name: 'ByAulum' },
+    { id: 'timelog', name: 'Timelog' },
+    { id: 'ideer', name: 'Nye idéer' },
+  ];
+  renderProjects(fallback);
+  document.getElementById('projectsSub').textContent = 'Offline tilstand';
 }
 
 function renderProjects(projects) {
@@ -450,6 +459,19 @@ function speakText(text) {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'da-DK';
   utterance.rate = 1.0;
+
+  // Pick the best available voice
+  const voices = speechSynthesis.getVoices();
+  const preferred = ['Majed', 'Daniel', 'Samantha', 'Karen', 'Moira'];
+  let chosen = null;
+  for (const name of preferred) {
+    chosen = voices.find(v => v.name.includes(name));
+    if (chosen) break;
+  }
+  // Fall back to any Danish voice
+  if (!chosen) chosen = voices.find(v => v.lang === 'da-DK');
+  if (chosen) utterance.voice = chosen;
+
   utterance.onend = () => {
     isSpeaking = false;
     setMicState('idle');
