@@ -138,13 +138,21 @@ export default async function handler(req, res) {
           reminders: reminderOverrides
         };
       } else {
-        const start = new Date(`${event.date}T${event.time || '09:00'}:00`);
+        // Build datetime string directly — never convert via Date() which uses server UTC
+        const startTime = event.time || '09:00';
         const durationMins = isReminder ? 15 : (event.duration || 60);
-        const end = new Date(start.getTime() + durationMins * 60000);
+        // Calculate end time by adding duration minutes directly to HH:MM
+        const [hours, mins] = startTime.split(':').map(Number);
+        const totalMins = hours * 60 + mins + durationMins;
+        const endHours = String(Math.floor(totalMins / 60) % 24).padStart(2, '0');
+        const endMins = String(totalMins % 60).padStart(2, '0');
+        const endDate = totalMins >= 1440
+          ? (() => { const d = new Date(event.date); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })()
+          : event.date;
         eventBody = {
           summary: isReminder ? `🔔 ${title}` : title,
-          start: { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' },
-          end: { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' },
+          start: { dateTime: `${event.date}T${startTime}:00`, timeZone: 'Europe/Copenhagen' },
+          end: { dateTime: `${endDate}T${endHours}:${endMins}:00`, timeZone: 'Europe/Copenhagen' },
           reminders: reminderOverrides
         };
       }
