@@ -395,8 +395,7 @@ Rules:
     // Parse and execute any ACTION command
     const actionMatch = reply.match(/ACTION:(\{.*\})/);
     if (actionMatch) {
-      reply = reply.replace(/
-ACTION:\{.*\}/, '').trim();
+      reply = reply.replace(/\nACTION:\{[^}]*\}/, '').trim();
       try {
         const action = JSON.parse(actionMatch[1]);
         await executeAction(action);
