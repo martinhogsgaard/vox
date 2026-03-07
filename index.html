@@ -233,46 +233,64 @@ let selectedVoice = null;
 let calendarConnected = false;
 
 // ── VOICE ──
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 function loadVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
-  // Google Natural voices sound most human — prioritize them
-  const priority = [
-    'Google UK English Male',
-    'Google US English 1 (Natural)',
-    'Google US English 2 (Natural)',
-    'Google US English 3 (Natural)',
-    'Google UK English Female',
-    'Daniel',
-    'Alex',
-    'Samantha'
-  ];
+  // iOS/Safari: prefer built-in English voices
+  const priority = isIOS
+    ? ['Daniel', 'Arthur', 'Oliver', 'Karen', 'Samantha', 'Alex']
+    : ['Google UK English Male', 'Google US English 1 (Natural)', 'Google UK English Female', 'Daniel', 'Alex', 'Samantha'];
   for (const name of priority) {
     const v = voices.find(v => v.name === name);
-    if (v) { selectedVoice = v; return; }
+    if (v) { selectedVoice = v; console.log('Voice selected:', v.name); return; }
   }
+  // Fallback: first English voice
   selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+  console.log('Voice fallback:', selectedVoice?.name);
 }
 speechSynthesis.onvoiceschanged = loadVoices;
-setTimeout(loadVoices, 200);
-setTimeout(loadVoices, 1000);
+setTimeout(loadVoices, 100);
+setTimeout(loadVoices, 500);
+setTimeout(loadVoices, 1500);
 
 function speak(text, onDone) {
   speechSynthesis.cancel();
   if (!selectedVoice) loadVoices();
-  const u = new SpeechSynthesisUtterance(text);
-  u.voice = selectedVoice || null;
-  u.lang = 'en-GB';
-  u.rate = 1.1;
-  u.pitch = 1.0;
   isSpeaking = true;
   setMicState('speaking');
-  u.onend = u.onerror = () => {
-    isSpeaking = false;
-    if (onDone) onDone();
-    else { setMicState('idle'); setMicHint('Tryk for at tale'); }
-  };
-  speechSynthesis.speak(u);
+
+  // iOS Safari cuts off speech after ~15 seconds — split into sentences
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  let idx = 0;
+
+  function speakNext() {
+    if (idx >= sentences.length) {
+      isSpeaking = false;
+      if (onDone) onDone();
+      else { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(sentences[idx].trim());
+    u.voice = selectedVoice || null;
+    u.lang = 'en-GB';
+    u.rate = isIOS ? 1.0 : 1.1;
+    u.pitch = 1.0;
+    u.onend = () => { idx++; speakNext(); };
+    u.onerror = () => { idx++; speakNext(); };
+    speechSynthesis.speak(u);
+    idx++;
+    // iOS workaround: keep speech synthesis alive with a heartbeat
+    if (isIOS) {
+      const keepAlive = setInterval(() => {
+        if (!isSpeaking) { clearInterval(keepAlive); return; }
+        if (!speechSynthesis.speaking) clearInterval(keepAlive);
+      }, 5000);
+    }
+  }
+  speakNext();
 }
 
 
@@ -337,8 +355,7 @@ function renderProjects(list) {
 
 async function openProject(p) {
   activeProject = p;
-  document.getElementById('homeView').style.display = 'none';
-  document.getElementById('projectView').style.display = 'flex';
+  showView('projectView');
   document.getElementById('projectViewLabel').textContent = p.name.toUpperCase();
   
   // Load message history for this project
@@ -368,6 +385,15 @@ async function openProject(p) {
   setMicHint(`Aktiv: ${p.name}`);
 }
 
+// ── CENTRAL NAVIGATION ──
+function showView(viewId) {
+  const views = ['homeView', 'projectView', 'calendarView', 'projekterView'];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === viewId ? 'flex' : 'none';
+  });
+}
+
 function renderProjekterView() {
   const list = document.getElementById('projekterList');
   if (!projects || projects.length === 0) {
@@ -385,14 +411,7 @@ function renderProjekterView() {
 
 function openProjectFromNav(id) {
   const p = projects.find(p => p.id === id);
-  if (p) {
-    ['calendarView','projekterView'].forEach(vid => {
-      const el = document.getElementById(vid);
-      if (el) el.style.display = 'none';
-    });
-    setActiveNav('projekter');
-    openProject(p);
-  }
+  if (p) openProject(p);
 }
 
 async function renderCalendarView() {
@@ -492,25 +511,20 @@ function navTo(tab) {
 
   setActiveNav(tab);
 
-  const calView = document.getElementById('calendarView');
-  const projView = document.getElementById('projekterView');
-  // Hide all views
-  [home, proj, calView, projView].forEach(v => { if (v) v.style.display = 'none'; });
+  activeProject = null;
+  conversationHistory = [];
 
   if (tab === 'hjem') {
-    if (home) home.style.display = 'flex';
-    activeProject = null;
-    conversationHistory = [];
     homeHistory = [];
+    showView('homeView');
   } else if (tab === 'projekter') {
-    if (projView) { projView.style.display = 'flex'; renderProjekterView(); }
-    activeProject = null;
-    conversationHistory = [];
+    showView('projekterView');
+    renderProjekterView();
   } else if (tab === 'kalender') {
-    if (calView) { calView.style.display = 'flex'; renderCalendarView(); }
-    activeProject = null;
+    showView('calendarView');
+    renderCalendarView();
   } else if (tab === 'konto') {
-    if (home) home.style.display = 'flex';
+    showView('homeView'); // placeholder
   }
 }
 
@@ -519,10 +533,7 @@ function goHome() {
   conversationHistory = [];
   homeHistory = [];
   setActiveNav('hjem');
-  ['calendarView','projekterView','projectView'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+  showView('homeView');
   document.getElementById('projectView').style.display = 'none';
   document.getElementById('homeView').style.display = 'flex';
   setTranscript('Tryk på mikrofon for at tale');
@@ -1005,8 +1016,14 @@ function startListening() {
     }
   };
 
-  recognition.continuous = true;
-  try { recognition.start(); } catch(e) { console.log('Recognition error:', e); }
+  // iOS Safari doesn't support continuous recognition reliably
+  recognition.continuous = !isIOS;
+  try { recognition.start(); } catch(e) {
+    console.log('Recognition start error:', e);
+    isListening = false;
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
+  }
 }
 
 function stopListening() {
@@ -1021,6 +1038,30 @@ function handleMicTap() {
   if (isSpeaking) { speechSynthesis.cancel(); isSpeaking = false; setMicState('idle'); setMicHint('Tryk for at tale'); return; }
   startListening();
 }
+
+// ── iOS AUDIO UNLOCK ──
+// iOS requires a user gesture to unlock AudioContext
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  setTimeout(() => ctx.close(), 100);
+  audioUnlocked = true;
+  // Also trigger voice load on first tap
+  if (speechSynthesis.getVoices().length === 0) {
+    const u = new SpeechSynthesisUtterance('');
+    speechSynthesis.speak(u);
+    speechSynthesis.cancel();
+  }
+  loadVoices();
+}
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('click', unlockAudio, { once: true });
 
 // Stop mic when page loses focus
 document.addEventListener('visibilitychange', () => {
