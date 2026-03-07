@@ -180,6 +180,8 @@ let isThinking = false;
 let recognition = null;
 let hasSeeded = false;
 let selectedVoice = null;
+let calendarToken = null;
+let calendarRefreshToken = null;
 
 // ── VOICE ──
 function loadVoices() {
@@ -380,12 +382,18 @@ ACTION:{"type":"create_project","name":"ProjectName"}
 ACTION:{"type":"open_project","name":"ProjectName"}
 ACTION:{"type":"go_home"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
+ACTION:{"type":"connect_calendar"}
+ACTION:{"type":"list_calendar"}
+ACTION:{"type":"create_event","title":"Meeting","date":"2025-03-07","time":"14:00","duration":60}
 
 Available actions:
 - create_project: Create a new project with a given name
 - open_project: Navigate to an existing project by name  
 - delete_project: Delete a project by name
 - go_home: Go back to home screen
+- connect_calendar: Connect Google Calendar
+- list_calendar: List today's calendar events
+- create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
 
 Rules:
 - Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
@@ -457,9 +465,55 @@ async function executeAction(action) {
       if (activeProject && activeProject.id === p.id) goHome();
       await loadProjects();
     }
+  } else if (action.type === 'connect_calendar') {
+    window.location.href = '/api/google-auth';
+  } else if (action.type === 'list_calendar') {
+    await listCalendarEvents();
+  } else if (action.type === 'create_event') {
+    await createCalendarEvent(action.title, action.date, action.time, action.duration);
   } else if (action.type === 'go_home') {
     goHome();
   }
+}
+
+async function listCalendarEvents() {
+  if (!calendarToken) { speak('Calendar is not connected. Say connect calendar to get started.'); return; }
+  try {
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list', access_token: calendarToken, refresh_token: calendarRefreshToken })
+    });
+    const data = await res.json();
+    const events = data.items || [];
+    if (events.length === 0) { speak("You have no more events today."); return; }
+    const summary = events.map(e => {
+      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
+      return `${time}: ${e.summary}`;
+    }).join('. ');
+    speak(`Today you have ${events.length} events. ${summary}`);
+  } catch(e) { speak('Could not load calendar events.'); }
+}
+
+async function createCalendarEvent(title, date, time, duration) {
+  if (!calendarToken) { speak('Calendar is not connected.'); return; }
+  try {
+    const start = new Date(`${date}T${time || '09:00'}:00`);
+    const end = new Date(start.getTime() + (duration || 60) * 60000);
+    const event = {
+      summary: title,
+      start: { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' },
+      end: { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' }
+    };
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create', access_token: calendarToken, refresh_token: calendarRefreshToken, event })
+    });
+    const data = await res.json();
+    if (data.id) speak(`Done. ${title} has been added to your calendar.`);
+    else speak('Could not create the event. Please try again.');
+  } catch(e) { speak('Could not create calendar event.'); }
 }
 
 // ── VOICE COMMANDS ──
@@ -608,6 +662,31 @@ async function init() {
   await loadProjects();
   setMicState('idle');
   setMicHint('Tryk for at tale');
+
+  // Check if returning from Google OAuth
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('calendar') === 'connected') {
+    calendarToken = params.get('access_token');
+    calendarRefreshToken = params.get('refresh_token');
+    // Store in localStorage for persistence
+    localStorage.setItem('vox_calendar_token', calendarToken);
+    localStorage.setItem('vox_calendar_refresh', calendarRefreshToken);
+    window.history.replaceState({}, '', '/');
+    speak('Google Calendar is now connected.');
+  } else if (params.get('calendar') === 'error') {
+    window.history.replaceState({}, '', '/');
+    speak('Could not connect Google Calendar. Please try again.');
+  }
+
+  // Load stored calendar tokens
+  if (!calendarToken) {
+    calendarToken = localStorage.getItem('vox_calendar_token');
+    calendarRefreshToken = localStorage.getItem('vox_calendar_refresh');
+  }
+
+  // Update calendar status indicator
+  const calStatus = document.getElementById('calStatus');
+  if (calStatus) calStatus.textContent = calendarToken ? '● Connected' : '○ Not connected';
 }
 init();
 </script>
