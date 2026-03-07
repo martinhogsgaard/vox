@@ -497,43 +497,48 @@ async function executeAction(action) {
     };
     setTimeout(waitAndFind, 500);
   } else if (action.type === 'delete_event') {
-    // If no event_id, search first then delete
-    if (!action.event_id && action.query) {
-      await findCalendarEvent(action.query);
-      if (lastFoundEvents.length === 1) await deleteCalendarEvent(lastFoundEvents[0].id);
+    if (!action.event_id) {
+      if (action.query) await findCalendarEvent(action.query, true);
+      if (lastFoundEvents.length === 0) await loadTodayEventsForContext();
+      if (lastFoundEvents.length === 1) {
+        await deleteCalendarEvent(lastFoundEvents[0].id);
+      } else if (lastFoundEvents.length > 1) {
+        const names = lastFoundEvents.map(e => e.summary).join(', ');
+        speak(`I found multiple events: ${names}. Which one did you mean?`);
+      } else {
+        speak("I could not find that event.");
+      }
     } else {
       await deleteCalendarEvent(action.event_id);
     }
   } else if (action.type === 'update_event') {
-    if (!action.event_id && action.query) {
-      // Try search first
-      await findCalendarEvent(action.query, true);
-      // If not found by title, try fetching today's events and match by time
-      if (lastFoundEvents.length === 0 && action.original_time) {
-        await loadTodayEventsForContext();
-        const match = lastFoundEvents.find(e => {
-          if (!e.start.dateTime) return false;
-          const t = new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit', minute:'2-digit', hour12:false});
-          return t.includes(action.original_time.replace(':',''));
-        });
-        if (match) lastFoundEvents = [match];
+    // Step 1: find the event by query or original_time
+    if (!action.event_id) {
+      if (action.query) {
+        await findCalendarEvent(action.query, true);
       }
-      if (lastFoundEvents.length === 1) {
-        await updateCalendarEvent(lastFoundEvents[0].id, action.new_title, action.new_date, action.new_time, action.new_duration);
-      } else if (lastFoundEvents.length === 0) {
-        // Last resort: load today and pick first event
+      // If still not found, try matching by original_time in today's events
+      if (lastFoundEvents.length === 0) {
         await loadTodayEventsForContext();
-        if (lastFoundEvents.length === 1) {
-          await updateCalendarEvent(lastFoundEvents[0].id, action.new_title, action.new_date, action.new_time, action.new_duration);
-        } else {
-          speak("I could not find that event. Please say the event name more clearly.");
+        if (action.original_time) {
+          const searchTime = action.original_time.replace(':', '');
+          const match = lastFoundEvents.find(e => {
+            if (!e.start.dateTime) return false;
+            const t = new Date(e.start.dateTime).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false}).replace(':', '');
+            console.log('Comparing event time:', t, 'with:', searchTime);
+            return t === searchTime;
+          });
+          if (match) { lastFoundEvents = [match]; console.log('Matched by time:', match.summary); }
         }
-      } else {
-        const names = lastFoundEvents.map(e => e.summary).join(', ');
-        speak(`I found multiple events: ${names}. Which one did you mean?`);
       }
+    }
+    // Step 2: update
+    const eventId = action.event_id || (lastFoundEvents[0] && lastFoundEvents[0].id);
+    console.log('updateEvent: id=', eventId, 'lastFound=', lastFoundEvents.map(e=>e.summary));
+    if (eventId) {
+      await updateCalendarEvent(eventId, action.new_title, action.new_date, action.new_time, action.new_duration);
     } else {
-      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
+      speak("I could not find that event. Please say the event name.");
     }
   } else if (action.type === 'list_calendar') {
     // Wait for Claude to finish speaking before reading calendar
