@@ -391,8 +391,8 @@ ACTION:{"type":"list_calendar"}
 ACTION:{"type":"list_upcoming"}
 ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
 ACTION:{"type":"find_event","query":"Meeting title to find"}
-ACTION:{"type":"delete_event","event_id":"abc123"}
-ACTION:{"type":"update_event","event_id":"abc123","new_time":"15:00","new_date":"2026-03-08","new_title":"New title","new_duration":90}
+ACTION:{"type":"delete_event","query":"Mie"}
+ACTION:{"type":"update_event","query":"Mie","new_time":"15:00","new_date":"2026-03-08","new_title":"New title","new_duration":90}
 
 Available actions:
 - create_project: Create a new project with a given name
@@ -403,9 +403,9 @@ Available actions:
 - list_calendar: List today's calendar events
 - list_upcoming: List events for the next 7 days
 - create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
-- find_event: Find an event by title to delete or edit it (include query as search term)
-- delete_event: Delete an event (include event_id)
-- update_event: Update an event's time or title (include event_id, and any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes)
+- find_event: Find an event by title (include query as search term)
+- delete_event: Delete an event — use query (title keyword) instead of event_id whenever possible
+- update_event: Update an event — ALWAYS include query (title keyword to find it) plus any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes. Do NOT wait for a separate find step.
 
 Rules:
 - Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
@@ -495,9 +495,25 @@ async function executeAction(action) {
     };
     setTimeout(waitAndFind, 500);
   } else if (action.type === 'delete_event') {
-    await deleteCalendarEvent(action.event_id);
+    // If no event_id, search first then delete
+    if (!action.event_id && action.query) {
+      await findCalendarEvent(action.query);
+      if (lastFoundEvents.length === 1) await deleteCalendarEvent(lastFoundEvents[0].id);
+    } else {
+      await deleteCalendarEvent(action.event_id);
+    }
   } else if (action.type === 'update_event') {
-    await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
+    // If no event_id, search first then update
+    if (!action.event_id && action.query) {
+      await findCalendarEvent(action.query, true); // silent=true
+      if (lastFoundEvents.length === 1) {
+        await updateCalendarEvent(lastFoundEvents[0].id, action.new_title, action.new_date, action.new_time, action.new_duration);
+      } else if (lastFoundEvents.length === 0) {
+        speak("I could not find that event.");
+      }
+    } else {
+      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
+    }
   } else if (action.type === 'list_calendar') {
     // Wait for Claude to finish speaking before reading calendar
     const waitAndList = () => {
@@ -582,7 +598,7 @@ async function listUpcomingEvents() {
 // Store last found events for follow-up delete/edit
 let lastFoundEvents = [];
 
-async function findCalendarEvent(query) {
+async function findCalendarEvent(query, silent = false) {
   try {
     const res = await fetch('/api/google-calendar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -590,11 +606,12 @@ async function findCalendarEvent(query) {
     });
     const data = await res.json();
     lastFoundEvents = data.items || [];
+    if (silent) return; // Used internally before update/delete
     if (lastFoundEvents.length === 0) { speak(`I could not find any event matching "${query}".`); return; }
     if (lastFoundEvents.length === 1) {
       const e = lastFoundEvents[0];
       const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
-      speak(`Found: ${e.summary}${time ? ' at ' + time : ''}. The event ID is saved. You can now say delete it or update it.`);
+      speak(`Found: ${e.summary}${time ? ' at ' + time : ''}. Say delete it or tell me how to update it.`);
     } else {
       const names = lastFoundEvents.slice(0,3).map(e => e.summary).join(', ');
       speak(`Found ${lastFoundEvents.length} events: ${names}. Please be more specific.`);
