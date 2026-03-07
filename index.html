@@ -993,13 +993,15 @@ window._pendingEmail = null;
 window._foundContacts = null;
 
 async function findContact(query, subject, body) {
+  console.log('findContact called with query:', query);
   try {
-    speak(`Searching for ${query}...`);
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'find_contact', query })
     });
+    console.log('findContact HTTP status:', res.status);
     const data = await res.json();
+    console.log('findContact response:', JSON.stringify(data));
     const contacts = data.contacts || [];
 
     if (contacts.length === 0) {
