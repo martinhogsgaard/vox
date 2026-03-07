@@ -92,6 +92,24 @@ export default async function handler(req, res) {
       const data = await r.json();
       return res.status(200).json(data);
 
+    } else if (action === 'list_date') {
+      // List events for a specific date, optionally filtered by time range
+      const date = req.body.date; // YYYY-MM-DD
+      const timeFrom = req.body.time_from; // HH:MM optional
+      const timeTo = req.body.time_to;     // HH:MM optional
+      const tz = 'Europe/Copenhagen';
+      const dayStart = timeFrom
+        ? new Date(`${date}T${timeFrom}:00+01:00`)
+        : new Date(`${date}T00:00:00+01:00`);
+      const dayEnd = timeTo
+        ? new Date(`${date}T${timeTo}:00+01:00`)
+        : new Date(`${date}T23:59:59+01:00`);
+      const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+        `timeMin=${dayStart.toISOString()}&timeMax=${dayEnd.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=20`;
+      const r = await fetch(url, { headers });
+      const data = await r.json();
+      return res.status(200).json(data);
+
     } else if (action === 'create') {
       const r = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
         method: 'POST', headers,
