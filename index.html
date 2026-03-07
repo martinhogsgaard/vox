@@ -476,21 +476,29 @@ async function executeAction(action) {
 }
 
 async function listCalendarEvents() {
+  console.log('listCalendarEvents called');
   try {
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'list' })
     });
+    console.log('Calendar response status:', res.status);
     const data = await res.json();
+    console.log('Calendar data:', JSON.stringify(data));
+    if (data.error) { speak('Calendar error: ' + data.error); return; }
     const events = data.items || [];
+    console.log('Events found:', events.length);
     if (events.length === 0) { speak("You have no more events today."); return; }
     const summary = events.map(e => {
       const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
       return `${time}: ${e.summary}`;
     }).join('. ');
     speak(`Today you have ${events.length} events. ${summary}`);
-  } catch(e) { speak('Could not load calendar events.'); }
+  } catch(e) { 
+    console.error('Calendar exception:', e);
+    speak('Could not load calendar events.'); 
+  }
 }
 
 async function createCalendarEvent(title, date, time, duration) {
