@@ -225,7 +225,7 @@
 // ── CONFIG ──
 const SUPABASE_URL = 'https://kahpdsismxckxljddxya.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_zZHoYuO7px_TyNeV2v2m-A_G7Kv9eUn';
-const CLAUDE_API_KEY = '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';
+// API key is stored securely on the server — never in the browser
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -405,7 +405,7 @@ async function sendMessage(text) {
 
     const messages = activeProject ? conversationHistory : [{ role: 'user', content: text }];
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
