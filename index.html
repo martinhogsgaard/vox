@@ -383,7 +383,11 @@ ACTION:{"type":"go_home"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
 ACTION:{"type":"connect_calendar"}
 ACTION:{"type":"list_calendar"}
-ACTION:{"type":"create_event","title":"Meeting","date":"2025-03-07","time":"14:00","duration":60}
+ACTION:{"type":"list_upcoming"}
+ACTION:{"type":"create_event","title":"Meeting","date":"2026-03-07","time":"14:00","duration":60}
+ACTION:{"type":"find_event","query":"Meeting title to find"}
+ACTION:{"type":"delete_event","event_id":"abc123"}
+ACTION:{"type":"update_event","event_id":"abc123","new_time":"15:00","new_date":"2026-03-08","new_title":"New title","new_duration":90}
 
 Available actions:
 - create_project: Create a new project with a given name
@@ -392,7 +396,11 @@ Available actions:
 - go_home: Go back to home screen
 - connect_calendar: Connect Google Calendar
 - list_calendar: List today's calendar events
+- list_upcoming: List events for the next 7 days
 - create_event: Create a calendar event (include title, date as YYYY-MM-DD, time as HH:MM, duration in minutes)
+- find_event: Find an event by title to delete or edit it (include query as search term)
+- delete_event: Delete an event (include event_id)
+- update_event: Update an event's time or title (include event_id, and any of: new_title, new_date as YYYY-MM-DD, new_time as HH:MM, new_duration in minutes)
 
 Rules:
 - Always reply in English. Keep replies to 1-2 sentences max — Martin is often driving.
@@ -466,6 +474,22 @@ async function executeAction(action) {
     }
   } else if (action.type === 'connect_calendar') {
     window.location.href = '/api/google-auth';
+  } else if (action.type === 'list_upcoming') {
+    const waitAndList = () => {
+      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
+      listUpcomingEvents();
+    };
+    setTimeout(waitAndList, 500);
+  } else if (action.type === 'find_event') {
+    const waitAndFind = () => {
+      if (isSpeaking) { setTimeout(waitAndFind, 300); return; }
+      findCalendarEvent(action.query);
+    };
+    setTimeout(waitAndFind, 500);
+  } else if (action.type === 'delete_event') {
+    await deleteCalendarEvent(action.event_id);
+  } else if (action.type === 'update_event') {
+    await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
   } else if (action.type === 'list_calendar') {
     // Wait for Claude to finish speaking before reading calendar
     const waitAndList = () => {
@@ -526,6 +550,92 @@ async function createCalendarEvent(title, date, time, duration) {
     if (data.id) speak(`Done. ${title} has been added to your calendar.`);
     else speak('Could not create the event. Please try again.');
   } catch(e) { speak('Could not create calendar event.'); }
+}
+
+async function listUpcomingEvents() {
+  try {
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'upcoming' })
+    });
+    const data = await res.json();
+    const events = data.items || [];
+    if (events.length === 0) { speak("You have no upcoming events this week."); return; }
+    const summary = events.map(e => {
+      const d = new Date(e.start.dateTime || e.start.date);
+      const day = d.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+      const time = e.start.dateTime ? d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
+      return `${day}${time ? ' at ' + time : ''}: ${e.summary}`;
+    }).join('. ');
+    speak(`You have ${events.length} upcoming events. ${summary}.`);
+  } catch(e) { speak('Could not load upcoming events.'); }
+}
+
+// Store last found events for follow-up delete/edit
+let lastFoundEvents = [];
+
+async function findCalendarEvent(query) {
+  try {
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', event: { query } })
+    });
+    const data = await res.json();
+    lastFoundEvents = data.items || [];
+    if (lastFoundEvents.length === 0) { speak(`I could not find any event matching "${query}".`); return; }
+    if (lastFoundEvents.length === 1) {
+      const e = lastFoundEvents[0];
+      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
+      speak(`Found: ${e.summary}${time ? ' at ' + time : ''}. The event ID is saved. You can now say delete it or update it.`);
+    } else {
+      const names = lastFoundEvents.slice(0,3).map(e => e.summary).join(', ');
+      speak(`Found ${lastFoundEvents.length} events: ${names}. Please be more specific.`);
+    }
+  } catch(e) { speak('Could not search calendar.'); }
+}
+
+async function deleteCalendarEvent(eventId) {
+  try {
+    // If no eventId but we have lastFoundEvents, use the first one
+    const id = eventId || (lastFoundEvents[0] && lastFoundEvents[0].id);
+    if (!id) { speak('I do not know which event to delete. Please say find event first.'); return; }
+    const eventName = lastFoundEvents[0] ? lastFoundEvents[0].summary : 'the event';
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', event: { id } })
+    });
+    const data = await res.json();
+    if (data.success) { lastFoundEvents = []; speak(`Done. ${eventName} has been deleted from your calendar.`); }
+    else speak('Could not delete the event. Please try again.');
+  } catch(e) { speak('Could not delete the event.'); }
+}
+
+async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration) {
+  try {
+    const id = eventId || (lastFoundEvents[0] && lastFoundEvents[0].id);
+    const original = lastFoundEvents[0];
+    if (!id || !original) { speak('I do not know which event to update. Please say find event first.'); return; }
+
+    const updates = {};
+    if (newTitle) updates.summary = newTitle;
+
+    const startDate = newDate || (original.start.dateTime ? original.start.dateTime.split('T')[0] : original.start.date);
+    const startTime = newTime || (original.start.dateTime ? original.start.dateTime.split('T')[1].substring(0,5) : '09:00');
+    const duration = newDuration || 60;
+
+    const start = new Date(`${startDate}T${startTime}:00`);
+    const end = new Date(start.getTime() + duration * 60000);
+    updates.start = { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' };
+    updates.end = { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' };
+
+    const res = await fetch('/api/google-calendar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', event: { id, updates } })
+    });
+    const data = await res.json();
+    if (data.id) speak(`Done. ${newTitle || original.summary} has been updated.`);
+    else speak('Could not update the event. Please try again.');
+  } catch(e) { speak('Could not update the event.'); }
 }
 
 // ── VOICE COMMANDS ──
