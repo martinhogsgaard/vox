@@ -467,7 +467,12 @@ async function executeAction(action) {
   } else if (action.type === 'connect_calendar') {
     window.location.href = '/api/google-auth';
   } else if (action.type === 'list_calendar') {
-    await listCalendarEvents();
+    // Wait for Claude to finish speaking before reading calendar
+    const waitAndList = () => {
+      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
+      listCalendarEvents();
+    };
+    setTimeout(waitAndList, 500);
   } else if (action.type === 'create_event') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration);
   } else if (action.type === 'go_home') {
@@ -492,9 +497,11 @@ async function listCalendarEvents() {
     if (events.length === 0) { speak("You have no more events today."); return; }
     const summary = events.map(e => {
       const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
-      return `${time}: ${e.summary}`;
+      return `${time}, ${e.summary}`;
     }).join('. ');
-    speak(`Today you have ${events.length} events. ${summary}`);
+    const msg = `Today you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
+    console.log('Speaking:', msg);
+    speak(msg);
   } catch(e) { 
     console.error('Calendar exception:', e);
     speak('Could not load calendar events.'); 
