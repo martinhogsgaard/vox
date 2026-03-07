@@ -274,14 +274,20 @@ function weatherDesc(code) {
 }
 
 // ── PROJECTS ──
+let hasSeeded = false;
+
 async function loadProjects() {
   const { data, error } = await sb.from('projects').select('*').order('created_at');
-  if (error || !data || data.length === 0) {
+  if ((error || !data || data.length === 0) && !hasSeeded) {
+    hasSeeded = true;
     await seedDefaultProjects();
-    return loadProjects();
+    const { data: seeded } = await sb.from('projects').select('*').order('created_at');
+    renderProjects(seeded || []);
+    document.getElementById('projectsSub').textContent = `${(seeded || []).length} projekter aktive`;
+    return seeded;
   }
-  renderProjects(data);
-  document.getElementById('projectsSub').textContent = `${data.length} projekter aktive`;
+  renderProjects(data || []);
+  document.getElementById('projectsSub').textContent = `${(data || []).length} projekter aktive`;
   return data;
 }
 
