@@ -635,7 +635,9 @@ ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
 ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
+ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
+ACTION:{"type":"confirm_email","index":1}
 ACTION:{"type":"read_inbox"}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
@@ -645,7 +647,9 @@ Rules:
 - For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
-- For send_email: write a full professional email body based on what Martin says.
+- For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
+- For find_contact: use when Martin mentions a person's name. Include subject and body so they're ready after confirmation.
+- For confirm_email: use when Martin says yes/confirmed/number after a contact search. index=1 for first contact.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - Only ONE action per reply. When in doubt — no action.`;
 
@@ -768,8 +772,26 @@ async function executeAction(action) {
     setTimeout(waitAndList, 500);
   } else if (action.type === 'create_event') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
+  } else if (action.type === 'find_contact') {
+    await findContact(action.query, action.subject, action.body);
+  } else if (action.type === 'confirm_email') {
+    // User confirmed which contact to use
+    if (window._pendingEmail && window._foundContacts) {
+      const idx = (action.index || 1) - 1;
+      const contact = window._foundContacts[idx];
+      if (contact) {
+        await sendEmail(contact.emails[0], window._pendingEmail.subject, window._pendingEmail.body);
+        window._pendingEmail = null;
+        window._foundContacts = null;
+      }
+    }
   } else if (action.type === 'send_email') {
-    await sendEmail(action.to, action.subject, action.body);
+    // If to looks like a name (no @), search contacts first
+    if (action.to && !action.to.includes('@')) {
+      await findContact(action.to, action.subject, action.body);
+    } else {
+      await sendEmail(action.to, action.subject, action.body);
+    }
   } else if (action.type === 'read_inbox') {
     const waitAndRead = () => {
       if (isSpeaking) { setTimeout(waitAndRead, 300); return; }
@@ -958,6 +980,50 @@ async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDurat
 }
 
 // ── GMAIL ──
+// Pending email state for contact confirmation flow
+window._pendingEmail = null;
+window._foundContacts = null;
+
+async function findContact(query, subject, body) {
+  try {
+    speak(`Searching for ${query}...`);
+    const res = await fetch('/api/gmail', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'find_contact', query })
+    });
+    const data = await res.json();
+    const contacts = data.contacts || [];
+
+    if (contacts.length === 0) {
+      speak(`I could not find any contact matching "${query}". Please say the email address.`);
+      return;
+    }
+
+    // Store pending email
+    window._pendingEmail = { subject, body };
+    window._foundContacts = contacts;
+
+    if (contacts.length === 1 && contacts[0].emails.length === 1) {
+      // Only one match — confirm directly
+      const name = contacts[0].name || contacts[0].emails[0];
+      const email = contacts[0].emails[0];
+      const msg = `I found ${name} at ${email.replace('@', ' at ')}. Shall I send the email?`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    } else {
+      // Multiple matches — list them
+      const list = contacts.map((c, i) => {
+        const name = c.name || c.emails[0];
+        const email = c.emails[0].replace('@', ' at ');
+        return `${i + 1}: ${name}, ${email}`;
+      }).join('. ');
+      const msg = `I found ${contacts.length} contacts. ${list}. Which one should I use?`;
+      saveToHistory('assistant', msg);
+      speak(msg);
+    }
+  } catch(e) { speak('Could not search contacts.'); }
+}
+
 async function sendEmail(to, subject, body) {
   try {
     speak(`Sending email to ${to}...`);
