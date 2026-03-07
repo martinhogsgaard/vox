@@ -138,49 +138,59 @@ export default async function handler(req, res) {
         }
       } catch(e) { console.log('People API error:', e.message); }
 
-      // 2. Search sent mail for matching addresses
+      // 2. Search sent AND received mail — match on NAME only (not email domain)
       try {
+        const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+
+        function nameMatches(name, email) {
+          // Only match if the NAME contains the query — not just the email domain
+          const nameLower = name.toLowerCase();
+          const emailUser = email.split('@')[0].toLowerCase();
+          return words.every(w => nameLower.includes(w) || emailUser.includes(w));
+        }
+
+        const emailSet = new Set();
+
+        // Search sent mail
         const sentR = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent('in:sent')}`,
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=${encodeURIComponent('in:sent')}`,
           { headers }
         );
-        if (sentR.ok) {
-          const sentData = await sentR.json();
-          if (sentData.messages) {
-            const sentEmails = new Set();
-            await Promise.all(sentData.messages.slice(0, 15).map(async m => {
-              const mr = await fetch(
-                `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=To`,
-                { headers }
-              );
-              if (!mr.ok) return;
-              const md = await mr.json();
-              const toHeader = md.payload?.headers?.find(h => h.name === 'To')?.value || '';
-              const matches = [...toHeader.matchAll(/([^<,]+)<([^>]+)>/g)];
-              for (const match of matches) {
-                const name = match[1].trim();
-                const email = match[2].trim();
-                if (name.toLowerCase().includes(q.toLowerCase()) || email.toLowerCase().includes(q.toLowerCase())) {
-                  sentEmails.add(JSON.stringify({ name, email }));
-                }
+        // Search received mail too
+        const recR = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=30&q=${encodeURIComponent('in:inbox')}`,
+          { headers }
+        );
+
+        for (const [r, headerName] of [[sentR, 'To'], [recR, 'From']]) {
+          if (!r.ok) continue;
+          const data = await r.json();
+          if (!data.messages) continue;
+          await Promise.all(data.messages.slice(0, 20).map(async m => {
+            const mr = await fetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=${headerName}`,
+              { headers }
+            );
+            if (!mr.ok) return;
+            const md = await mr.json();
+            const header = md.payload?.headers?.find(h => h.name === headerName)?.value || '';
+            const matches = [...header.matchAll(/([^<,]+)<([^>]+)>/g)];
+            for (const match of matches) {
+              const name = match[1].trim();
+              const email = match[2].trim().toLowerCase();
+              if (nameMatches(name, email)) {
+                emailSet.add(JSON.stringify({ name, email }));
               }
-              if (!toHeader.includes('<')) {
-                toHeader.split(',').forEach(addr => {
-                  const email = addr.trim();
-                  if (email.toLowerCase().includes(q.toLowerCase())) {
-                    sentEmails.add(JSON.stringify({ name: '', email }));
-                  }
-                });
-              }
-            }));
-            for (const s of sentEmails) {
-              const { name, email } = JSON.parse(s);
-              const exists = allContacts.some(c => c.emails.includes(email));
-              if (!exists) allContacts.push({ name, emails: [email] });
             }
-          }
+          }));
         }
-      } catch(e) { console.log('Sent mail search error:', e.message); }
+
+        for (const s of emailSet) {
+          const { name, email } = JSON.parse(s);
+          const exists = allContacts.some(c => c.emails.includes(email));
+          if (!exists) allContacts.push({ name, emails: [email] });
+        }
+      } catch(e) { console.log('Mail search error:', e.message); }
 
       return res.status(200).json({ contacts: allContacts.slice(0, 5) });
 
