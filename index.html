@@ -265,27 +265,42 @@ setTimeout(loadVoices, 100);
 setTimeout(loadVoices, 500);
 setTimeout(loadVoices, 1500);
 
-// Central speech queue — prevents overlapping and double-increments
+// Central speech queue
 let _speakQueue = [];
 let _speakBusy = false;
+let _stopRequested = false;
+
+function stopSpeaking() {
+  _stopRequested = true;
+  speechSynthesis.cancel();
+  _speakQueue = [];
+  _speakBusy = false;
+  isSpeaking = false;
+  setMicState('idle');
+  setMicHint('Tryk for at tale');
+}
 
 function _processQueue() {
-  if (_speakBusy || _speakQueue.length === 0) return;
+  if (_stopRequested || _speakBusy || _speakQueue.length === 0) return;
   const { text, onDone } = _speakQueue.shift();
   _speakBusy = true;
   isSpeaking = true;
   setMicState('speaking');
 
-  // Split on sentence endings but protect email "dot" sequences
   const safe = text.replace(/ dot /gi, ' DOT ');
   const sentences = safe.match(/[^.!?]+[.!?]*/g) || [safe];
   let idx = 0;
 
   function next() {
+    // Check stop flag before every sentence
+    if (_stopRequested) {
+      _speakBusy = false;
+      return;
+    }
     if (idx >= sentences.length) {
       _speakBusy = false;
       isSpeaking = _speakQueue.length > 0;
-      if (onDone) onDone();
+      if (onDone && !_stopRequested) onDone();
       else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
       _processQueue();
       return;
@@ -298,7 +313,16 @@ function _processQueue() {
     u.rate = isIOS ? 1.0 : 1.1;
     u.pitch = 1.0;
     u.onend = () => { idx++; next(); };
-    u.onerror = (e) => { console.warn('Speech error:', e.error, chunk); idx++; next(); };
+    u.onerror = (e) => {
+      // 'interrupted' means we cancelled intentionally — stop completely
+      if (e.error === 'interrupted' || e.error === 'canceled') {
+        _speakBusy = false;
+        isSpeaking = false;
+        return;
+      }
+      console.warn('Speech error:', e.error, chunk);
+      idx++; next();
+    };
     speechSynthesis.speak(u);
   }
   next();
@@ -306,7 +330,7 @@ function _processQueue() {
 
 function speak(text, onDone) {
   if (!selectedVoice) loadVoices();
-  // Cancel everything and start fresh
+  _stopRequested = false;
   speechSynthesis.cancel();
   _speakQueue = [];
   _speakBusy = false;
@@ -315,7 +339,6 @@ function speak(text, onDone) {
 }
 
 function speakQueued(text, onDone) {
-  // Add to queue without cancelling current speech
   if (!selectedVoice) loadVoices();
   _speakQueue.push({ text, onDone });
   _processQueue();
@@ -1338,7 +1361,7 @@ function startListening() {
   }
 
   // Stop speaking if active
-  if (isSpeaking) { speechSynthesis.cancel(); _speakQueue = []; _speakBusy = false; isSpeaking = false; }
+  if (isSpeaking || _speakBusy) { stopSpeaking(); }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
@@ -1348,7 +1371,7 @@ function startListening() {
   recognition.onstart = () => {
     isListening = true;
     // Stop speaking immediately when user starts talking
-    if (isSpeaking) { speechSynthesis.cancel(); _speakQueue = []; _speakBusy = false; isSpeaking = false; }
+    if (isSpeaking || _speakBusy) { stopSpeaking(); }
     setMicState('listening');
     setMicHint('Tryk igen for at sende');
     setTranscript('');
@@ -1406,12 +1429,7 @@ function stopListening() {
 function handleMicTap() {
   // ALWAYS allow interrupting speech — even while thinking
   if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
-    speechSynthesis.cancel();
-    _speakQueue = [];
-    _speakBusy = false;
-    isSpeaking = false;
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
+    stopSpeaking();
     return;
   }
   if (isThinking) return; // Can't interrupt thinking (API call in progress)
