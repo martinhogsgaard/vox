@@ -239,6 +239,7 @@ function saveToHistory(role, content) {
 }
 let projects = [];
 let isListening = false;
+let listenTimeout = null;
 let isSpeaking = false;
 let driveContext = ''; // File content from Google Drive project folder
 let driveFiles = [];   // List of files in current project folder
@@ -1450,6 +1451,7 @@ function startListening() {
   };
 
   recognition.onend = () => {
+    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
     isListening = false;
     const transcript = finalTranscript.trim();
     finalTranscript = '';
@@ -1462,6 +1464,7 @@ function startListening() {
   };
 
   recognition.onerror = e => {
+    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
     isListening = false;
     finalTranscript = '';
     setMicState('idle');
@@ -1474,7 +1477,17 @@ function startListening() {
 
   // iOS Safari doesn't support continuous recognition reliably
   recognition.continuous = !isIOS;
-  try { recognition.start(); } catch(e) {
+  try {
+    recognition.start();
+    // Safety timeout — if stuck listening for 15s, force reset
+    listenTimeout = setTimeout(() => {
+      if (isListening) {
+        stopListening();
+        setMicState('idle');
+        setMicHint('Tryk for at tale');
+      }
+    }, 15000);
+  } catch(e) {
     console.log('Recognition start error:', e);
     isListening = false;
     setMicState('idle');
@@ -1502,7 +1515,11 @@ function handleMicTap() {
     return;
   }
   if (isThinking) return; // Can't interrupt thinking (API call in progress)
-  if (isListening) { stopListening(); return; }
+  if (isListening) {
+    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
+    stopListening();
+    return;
+  }
   startListening();
 }
 
