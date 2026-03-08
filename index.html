@@ -1483,6 +1483,32 @@ function handleMicTap() {
   startListening();
 }
 
+// ── PAGE VISIBILITY — stop mic when app goes to background ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // App went to background — stop everything
+    if (isListening) {
+      try { recognition.stop(); } catch {}
+      isListening = false;
+    }
+    if (isSpeaking || _speakBusy) {
+      stopSpeaking();
+    }
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
+  }
+});
+
+// Also handle page blur (switching tabs)
+window.addEventListener('blur', () => {
+  if (isListening) {
+    try { recognition.stop(); } catch {}
+    isListening = false;
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
+  }
+});
+
 // ── iOS AUDIO UNLOCK via splash ──
 function startApp() {
   // 1. Unlock AudioContext with user gesture
