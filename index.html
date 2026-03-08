@@ -543,7 +543,7 @@ function speakEvent(title, time) {
 
 function startVoiceCreate() {
   speak("Tell me what to create. For example: create a meeting called WoodUpp Monday at ten.");
-  setTimeout(() => { if (!isListening) handleMicTap(); }, 1500);
+  // Don't auto-start mic — user must tap manually
 }
 
 function setActiveNav(tab) {
@@ -1383,7 +1383,7 @@ function handleCommand(text) {
   for (const p of projects) {
     if (t.includes(p.name.toLowerCase())) {
       openProject(p);
-      speak(`Opening ${p.name}.`, () => { setMicState('idle'); setTimeout(startListening, 600); });
+      speak(`Opening ${p.name}.`);
       return;
     }
   }
@@ -1552,16 +1552,7 @@ function startApp() {
   init();
 }
 
-// Stop mic when page loses focus
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    stopListening();
-    speechSynthesis.cancel();
-    isSpeaking = false;
-    isListening = false;
-    setMicState('idle');
-  }
-});
+
 
 // ── UI ──
 function setMicState(state) {
