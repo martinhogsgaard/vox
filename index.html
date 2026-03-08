@@ -1408,39 +1408,28 @@ function handleCommand(text) {
 
 // ── PUSH TO TALK ──
 function startListening() {
-  // Always destroy old recognition before creating new one
-  if (recognition) {
-    try { recognition.abort(); } catch {}
-    recognition.onstart = null;
-    recognition.onend = null;
-    recognition.onresult = null;
-    recognition.onerror = null;
-    recognition = null;
-  }
   if (isThinking) return;
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     setMicHint('Stemme ikke understøttet — brug Safari');
     return;
   }
-
-  // Stop speaking if active
-  if (isSpeaking || _speakBusy) { stopSpeaking(); }
+  if (isSpeaking || _speakBusy) stopSpeaking();
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
   recognition.lang = 'da-DK';
   recognition.interimResults = true;
+  recognition.continuous = false; // Always false — push to talk
+
+  let finalTranscript = '';
 
   recognition.onstart = () => {
     isListening = true;
-    // Stop speaking immediately when user starts talking
-    if (isSpeaking || _speakBusy) { stopSpeaking(); }
     setMicState('listening');
     setMicHint('Tryk igen for at sende');
     setTranscript('');
   };
 
-  let finalTranscript = '';
   recognition.onresult = e => {
     finalTranscript = '';
     for (let i = 0; i < e.results.length; i++) {
@@ -1451,8 +1440,8 @@ function startListening() {
   };
 
   recognition.onend = () => {
-    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
     isListening = false;
+    recognition = null;
     const transcript = finalTranscript.trim();
     finalTranscript = '';
     if (transcript && transcript.length > 1) {
@@ -1464,8 +1453,8 @@ function startListening() {
   };
 
   recognition.onerror = e => {
-    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
     isListening = false;
+    recognition = null;
     finalTranscript = '';
     setMicState('idle');
     if (e.error === 'not-allowed') {
@@ -1475,21 +1464,12 @@ function startListening() {
     }
   };
 
-  // iOS Safari doesn't support continuous recognition reliably
-  recognition.continuous = !isIOS;
   try {
     recognition.start();
-    // Safety timeout — if stuck listening for 15s, force reset
-    listenTimeout = setTimeout(() => {
-      if (isListening) {
-        stopListening();
-        setMicState('idle');
-        setMicHint('Tryk for at tale');
-      }
-    }, 15000);
   } catch(e) {
     console.log('Recognition start error:', e);
     isListening = false;
+    recognition = null;
     setMicState('idle');
     setMicHint('Tryk for at tale');
   }
@@ -1498,25 +1478,20 @@ function startListening() {
 function stopListening() {
   if (recognition) {
     try { recognition.stop(); } catch {}
-    try { recognition.abort(); } catch {}
-    recognition.onstart = null;
-    recognition.onend = null;
-    recognition.onresult = null;
-    recognition.onerror = null;
     recognition = null;
   }
   isListening = false;
 }
 
 function handleMicTap() {
-  // ALWAYS allow interrupting speech — even while thinking
+  // Interrupt speech
   if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
     stopSpeaking();
     return;
   }
-  if (isThinking) return; // Can't interrupt thinking (API call in progress)
+  if (isThinking) return;
+  // Tap again to send — stop listening, onend will fire and send transcript
   if (isListening) {
-    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
     stopListening();
     return;
   }
