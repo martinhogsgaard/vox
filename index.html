@@ -273,6 +273,11 @@ setTimeout(loadVoices, 100);
 setTimeout(loadVoices, 500);
 setTimeout(loadVoices, 1500);
 
+// HTML escape to prevent XSS from calendar/project data
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // Central speech queue
 let _speakQueue = [];
 let _speakBusy = false;
@@ -401,7 +406,7 @@ function renderProjects(list) {
   list.forEach(p => {
     const d = document.createElement('div');
     d.className = 'project-item';
-    d.innerHTML = `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><div class="project-name">${p.name}</div><div class="project-arrow">›</div>`;
+    d.innerHTML = `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><div class="project-name">${esc(p.name)}</div><div class="project-arrow">›</div>`;
     d.onclick = () => openProject(p);
     el.appendChild(d);
   });
@@ -527,11 +532,11 @@ async function renderCalendarView() {
         } else {
           timeStr = 'Hele<br>dagen';
         }
-        html += `<div class="cal-event" onclick="speakEvent('${e.summary.replace(/'/g,"\'")}', '${timeStr.replace('<br>',' ')}')">
+        html += `<div class="cal-event" onclick="speakEvent('${esc(e.summary)}', '${timeStr.replace('<br>',' ')}')">
           <div class="cal-event-time${isAllDay ? ' allday' : ''}">${timeStr}</div>
           <div class="cal-event-dot ${dotClass}"></div>
           <div class="cal-event-info">
-            <div class="cal-event-title">${e.summary}</div>
+            <div class="cal-event-title">${esc(e.summary)}</div>
             ${durationStr ? `<div class="cal-event-duration">${durationStr}</div>` : ''}
           </div>
         </div>`;
