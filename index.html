@@ -1407,6 +1407,8 @@ function handleCommand(text) {
 }
 
 // ── PUSH TO TALK ──
+let micTranscript = ''; // Accumulates across restarts
+
 function startListening() {
   if (isThinking) return;
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -1414,53 +1416,48 @@ function startListening() {
     return;
   }
   if (isSpeaking || _speakBusy) stopSpeaking();
+  isListening = true;
+  micTranscript = '';
+  setMicState('listening');
+  setMicHint('Tryk igen for at sende');
+  setTranscript('');
+  _startRecognitionInstance();
+}
 
+function _startRecognitionInstance() {
+  if (!isListening) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
   recognition.lang = 'da-DK';
   recognition.interimResults = true;
-  recognition.continuous = false; // Always false — push to talk
-
-  let finalTranscript = '';
-
-  recognition.onstart = () => {
-    isListening = true;
-    setMicState('listening');
-    setMicHint('Tryk igen for at sende');
-    setTranscript('');
-  };
+  recognition.continuous = true;
 
   recognition.onresult = e => {
-    finalTranscript = '';
-    for (let i = 0; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + ' ';
-      else finalTranscript += e.results[i][0].transcript;
+    let interim = micTranscript;
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) micTranscript += e.results[i][0].transcript + ' ';
+      else interim = micTranscript + e.results[i][0].transcript;
     }
-    setTranscript(finalTranscript.trim());
+    setTranscript(interim.trim());
   };
 
   recognition.onend = () => {
-    isListening = false;
     recognition = null;
-    const transcript = finalTranscript.trim();
-    finalTranscript = '';
-    if (transcript && transcript.length > 1) {
-      handleCommand(transcript);
-    } else {
-      setMicState('idle');
-      setMicHint('Tryk for at tale');
+    if (isListening) {
+      // iOS killed it — restart silently to keep mic open
+      setTimeout(_startRecognitionInstance, 100);
     }
   };
 
   recognition.onerror = e => {
-    isListening = false;
     recognition = null;
-    finalTranscript = '';
-    setMicState('idle');
     if (e.error === 'not-allowed') {
+      isListening = false;
+      setMicState('idle');
       setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
-    } else {
-      setMicHint('Tryk for at tale');
+    } else if (isListening) {
+      // Restart on other errors
+      setTimeout(_startRecognitionInstance, 200);
     }
   };
 
@@ -1468,19 +1465,19 @@ function startListening() {
     recognition.start();
   } catch(e) {
     console.log('Recognition start error:', e);
-    isListening = false;
-    recognition = null;
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
+    if (isListening) setTimeout(_startRecognitionInstance, 300);
   }
 }
 
 function stopListening() {
+  isListening = false;
   if (recognition) {
     try { recognition.stop(); } catch {}
     recognition = null;
   }
-  isListening = false;
+  const transcript = micTranscript.trim();
+  micTranscript = '';
+  return transcript;
 }
 
 function handleMicTap() {
@@ -1490,9 +1487,14 @@ function handleMicTap() {
     return;
   }
   if (isThinking) return;
-  // Tap again to send — stop listening, onend will fire and send transcript
   if (isListening) {
-    stopListening();
+    const transcript = stopListening();
+    if (transcript && transcript.length > 1) {
+      handleCommand(transcript);
+    } else {
+      setMicState('idle');
+      setMicHint('Tryk for at tale');
+    }
     return;
   }
   startListening();
