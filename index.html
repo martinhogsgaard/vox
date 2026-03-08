@@ -1400,7 +1400,16 @@ function handleCommand(text) {
 
 // ── PUSH TO TALK ──
 function startListening() {
-  if (isListening || isThinking) return;
+  // Always destroy old recognition before creating new one
+  if (recognition) {
+    try { recognition.abort(); } catch {}
+    recognition.onstart = null;
+    recognition.onend = null;
+    recognition.onresult = null;
+    recognition.onerror = null;
+    recognition = null;
+  }
+  if (isThinking) return;
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     setMicHint('Stemme ikke understøttet — brug Safari');
     return;
@@ -1467,9 +1476,16 @@ function startListening() {
 }
 
 function stopListening() {
-  if (recognition && isListening) {
+  if (recognition) {
     try { recognition.stop(); } catch {}
+    try { recognition.abort(); } catch {}
+    recognition.onstart = null;
+    recognition.onend = null;
+    recognition.onresult = null;
+    recognition.onerror = null;
+    recognition = null;
   }
+  isListening = false;
 }
 
 function handleMicTap() {
@@ -1486,27 +1502,22 @@ function handleMicTap() {
 // ── PAGE VISIBILITY — stop mic when app goes to background ──
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    // App went to background — stop everything
-    if (isListening) {
-      try { recognition.stop(); } catch {}
-      isListening = false;
-    }
-    if (isSpeaking || _speakBusy) {
-      stopSpeaking();
-    }
+    stopListening();
+    stopSpeaking();
     setMicState('idle');
     setMicHint('Tryk for at tale');
   }
 });
 
-// Also handle page blur (switching tabs)
 window.addEventListener('blur', () => {
-  if (isListening) {
-    try { recognition.stop(); } catch {}
-    isListening = false;
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
-  }
+  stopListening();
+  setMicState('idle');
+  setMicHint('Tryk for at tale');
+});
+
+window.addEventListener('pagehide', () => {
+  stopListening();
+  stopSpeaking();
 });
 
 // ── iOS AUDIO UNLOCK via splash ──
