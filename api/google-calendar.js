@@ -130,18 +130,18 @@ export default async function handler(req, res) {
         ? { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }] }
         : { useDefault: true };
 
+      const description = event.description || '';
       if (event.allday) {
         eventBody = {
           summary: isReminder ? `🔔 ${title}` : title,
+          description,
           start: { date: event.date },
           end: { date: event.date },
           reminders: reminderOverrides
         };
       } else {
-        // Build datetime string directly — never convert via Date() which uses server UTC
         const startTime = event.time || '09:00';
         const durationMins = isReminder ? 15 : (event.duration || 60);
-        // Calculate end time by adding duration minutes directly to HH:MM
         const [hours, mins] = startTime.split(':').map(Number);
         const totalMins = hours * 60 + mins + durationMins;
         const endHours = String(Math.floor(totalMins / 60) % 24).padStart(2, '0');
@@ -151,6 +151,7 @@ export default async function handler(req, res) {
           : event.date;
         eventBody = {
           summary: isReminder ? `🔔 ${title}` : title,
+          description,
           start: { dateTime: `${event.date}T${startTime}:00`, timeZone: 'Europe/Copenhagen' },
           end: { dateTime: `${endDate}T${endHours}:${endMins}:00`, timeZone: 'Europe/Copenhagen' },
           reminders: reminderOverrides
