@@ -933,22 +933,11 @@ async function executeAction(action) {
       );
     }
   } else if (action.type === 'create_multiple_events') {
-    // Create several events in sequence
-    const events = action.events || [];
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i];
-      await createCalendarEvent(e.title, e.date, e.time, e.duration || 60, e.allday, false);
-    }
-    const msg = `Done. Added ${events.length} events to your calendar.`;
-    saveToHistory('assistant', msg);
-    speakQueued(msg);
-  } else if (action.type === 'create_multiple_events') {
-    // Create multiple events silently, then confirm with one message
     const events = action.events || [];
     let created = 0;
     for (const e of events) {
       try {
-        await createCalendarEvent(e.title, e.date, e.time, e.duration, e.allday, e.reminder, e.description);
+        await createCalendarEvent(e.title, e.date, e.time, e.duration || 60, e.allday, e.reminder || false, e.description || '', true);
         created++;
       } catch(err) { console.log('Failed to create event:', e.title, err); }
     }
@@ -1071,7 +1060,7 @@ async function listCalendarEvents(date) {
   } catch(e) { speak('Could not load calendar events.'); }
 }
 
-async function createCalendarEvent(title, date, time, duration, allday, reminder, description) {
+async function createCalendarEvent(title, date, time, duration, allday, reminder, description, silent = false) {
   try {
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
@@ -1079,9 +1068,15 @@ async function createCalendarEvent(title, date, time, duration, allday, reminder
       body: JSON.stringify({ action: 'create', event: { title, date, time, duration, allday, reminder, description } })
     });
     const data = await res.json();
-    if (data.id) speak(`Done. ${title} has been added to your calendar.`);
-    else speak('Could not create the event. Please try again.');
-  } catch(e) { speak('Could not create calendar event.'); }
+    if (!silent) {
+      if (data.id) speak(`Done. ${title} has been added to your calendar.`);
+      else speak('Could not create the event. Please try again.');
+    }
+    return data;
+  } catch(e) {
+    if (!silent) speak('Could not create calendar event.');
+    throw e;
+  }
 }
 
 async function listDateEvents(date, timeFrom, timeTo) {
