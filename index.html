@@ -770,6 +770,7 @@ Rules:
 - When deleting events, ALWAYS use list_calendar first to find the correct event IDs. Never guess or reuse old IDs from history.
 - If Martin says "stop", "nok", "hold op" or similar — stop immediately, apologize briefly, and ask what he needs instead. Never repeat content he has already rejected.
 - NEVER read out full recipes, long lists, documents or detailed content aloud — Martin is driving. Instead say "I've added X to your calendar" or "Done — 5 recipes saved". Keep all spoken replies under 3 sentences.
+- When adding ANY content to calendar (recipes, sports activities, tasks, ideas, plans etc): put a short title as the event title, and put ALL detailed content (instructions, equipment lists, shopping lists, notes etc) in the "description" field. Never put long content in the title.
 - When adding multiple calendar events, use create_multiple_events with all events in one action — never create them one by one.
 - If Martin asks to save/add something to calendar, do it — don't describe what you're saving.
 - Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.`;
@@ -875,9 +876,14 @@ async function executeAction(action) {
     let deleted = 0;
     for (const id of ids) {
       try {
-        await callGoogleCalendar('delete_event', { event_id: id });
-        deleted++;
-      } catch(e) { console.log('Failed to delete:', id); }
+        const res = await fetch('/api/google-calendar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', event: { event_id: id } })
+        });
+        const data = await res.json();
+        if (!data.error) deleted++;
+        else console.log('Failed to delete:', id, data.error);
+      } catch(e) { console.log('Failed to delete:', id, e); }
     }
     const msg = `Deleted ${deleted} event${deleted !== 1 ? 's' : ''}.`;
     saveToHistory('assistant', msg);
@@ -942,7 +948,7 @@ async function executeAction(action) {
     let created = 0;
     for (const e of events) {
       try {
-        await createCalendarEvent(e.title, e.date, e.time, e.duration, e.allday, e.reminder);
+        await createCalendarEvent(e.title, e.date, e.time, e.duration, e.allday, e.reminder, e.description);
         created++;
       } catch(err) { console.log('Failed to create event:', e.title, err); }
     }
@@ -1065,12 +1071,12 @@ async function listCalendarEvents(date) {
   } catch(e) { speak('Could not load calendar events.'); }
 }
 
-async function createCalendarEvent(title, date, time, duration, allday, reminder) {
+async function createCalendarEvent(title, date, time, duration, allday, reminder, description) {
   try {
     const res = await fetch('/api/google-calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', event: { title, date, time, duration, allday, reminder } })
+      body: JSON.stringify({ action: 'create', event: { title, date, time, duration, allday, reminder, description } })
     });
     const data = await res.json();
     if (data.id) speak(`Done. ${title} has been added to your calendar.`);
