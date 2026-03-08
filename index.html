@@ -906,7 +906,7 @@ async function executeAction(action) {
     }
   } else if (action.type === 'update_event') {
     if (action.event_id) {
-      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration);
+      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration, action.description);
     } else {
       speak("I could not identify that event. Please try again.");
     }
@@ -945,7 +945,7 @@ async function executeAction(action) {
     saveToHistory('assistant', msg);
     speak(msg);
   } else if (action.type === 'create_event') {
-    await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder);
+    await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder, action.description || '');
   } else if (action.type === 'find_contact') {
     await findContact(action.query, action.subject, action.body);
   } else if (action.type === 'send_confirmed_email') {
@@ -1178,11 +1178,12 @@ async function deleteCalendarEvent(eventId) {
   } catch(e) { speak('Could not delete the event.'); }
 }
 
-async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration) {
+async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration, description) {
   try {
     if (!eventId) { speak('I do not know which event to update.'); return; }
     const updates = {};
     if (newTitle) updates.summary = newTitle;
+    if (description) updates.description = description;
     if (newDate || newTime) {
       // We need the original event to preserve unchanged fields
       const getRes = await fetch('/api/google-calendar', {
