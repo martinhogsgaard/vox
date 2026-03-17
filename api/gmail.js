@@ -126,15 +126,19 @@ export default async function handler(req, res) {
       const q = req.body.query || '';
       const allContacts = [];
 
-      // Helper: only match if name (not just email domain) contains query words
-      // Use only first word (firstname) for matching — handles voice-to-text errors in surname
+      // Strict matching: ALL query words must appear in the name
+      // This prevents "Henrik Høgsgaard" from matching "Henrik Kellberg" or "Martin Høgsgaard"
       const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
       const firstWord = words[0] || q.toLowerCase();
       function nameMatches(name, email) {
         const nameLower = name.toLowerCase();
         const emailUser = email.split('@')[0].toLowerCase();
-        // Match if ANY query word found in name, or first word in email user
-        return words.some(w => nameLower.includes(w)) || emailUser.includes(firstWord);
+        // If multi-word query: ALL words must match name
+        if (words.length > 1) {
+          return words.every(w => nameLower.includes(w));
+        }
+        // Single word: match name or email user part
+        return nameLower.includes(firstWord) || emailUser.includes(firstWord);
       }
 
       // 1. Try Google People API
@@ -201,7 +205,17 @@ export default async function handler(req, res) {
         }
       } catch(e) { console.log('Mail search error:', e.message); }
 
-      return res.status(200).json({ contacts: allContacts.slice(0, 5) });
+      // Group multiple emails per person (same name = same person)
+      const grouped = [];
+      allContacts.forEach(c => {
+        const existing = grouped.find(g => g.name.toLowerCase() === c.name.toLowerCase());
+        if (existing) {
+          c.emails.forEach(e => { if (!existing.emails.includes(e)) existing.emails.push(e); });
+        } else {
+          grouped.push({ name: c.name, emails: [...c.emails] });
+        }
+      });
+      return res.status(200).json({ contacts: grouped.slice(0, 5) });
 
     } else {
       return res.status(400).json({ error: 'Unknown action: ' + action });
