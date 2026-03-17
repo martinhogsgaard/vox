@@ -811,6 +811,8 @@ ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_tim
 ACTION:{"type":"create_event_and_invite","title":"ByAulum møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Martin Høgsgaard"}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
+ACTION:{"type":"send_email","to":"email@example.com","cc":"cc1@example.com,cc2@example.com","subject":"Subject","body":"Email body text"}
+- For CC: only use confirmed addresses. If CC recipients are not yet found, use find_contact for each one first before composing the email.
 ACTION:{"type":"spell_email","email":"mie@example.dk"}
 ACTION:{"type":"confirm_email","index":1}
 ACTION:{"type":"read_inbox"}
@@ -856,6 +858,12 @@ Rules:
       body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, system, messages })
     });
     const data = await res.json();
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      console.error('Unexpected Claude response:', JSON.stringify(data));
+      isThinking = false;
+      speak('Sorry, something went wrong. Please try again.');
+      return;
+    }
     let reply = data.content[0].text;
 
     // Parse action but DON'T run it yet
@@ -898,7 +906,7 @@ Rules:
 }
 
 // ── EMAIL PREVIEW CARD ──
-function showEmailPreview(to, subject, body, onSend, onCancel) {
+function showEmailPreview(to, subject, body, onSend, onCancel, cc) {
   const card = document.getElementById('confirmCard');
   const lbl = document.getElementById('confirmLabel');
   const cardBody = document.getElementById('confirmCardBody');
@@ -909,6 +917,10 @@ function showEmailPreview(to, subject, body, onSend, onCancel) {
       <div class="email-preview-field-label">Til</div>
       <div class="email-preview-field-value">${esc(to)}</div>
     </div>
+    ${cc ? `<div class="email-preview-field">
+      <div class="email-preview-field-label">CC</div>
+      <div class="email-preview-field-value">${esc(cc)}</div>
+    </div>` : ''}
     <div class="email-preview-field">
       <div class="email-preview-field-label">Emne</div>
       <div class="email-preview-field-value">${esc(subject)}</div>
@@ -922,18 +934,20 @@ function showEmailPreview(to, subject, body, onSend, onCancel) {
   card.style.display = 'block';
   window._emailPreviewTo = to;
   window._emailPreviewSubject = subject;
+  window._emailPreviewCc = cc || '';
   window._emailPreviewOnSend = onSend;
   window._emailPreviewOnCancel = onCancel;
 }
 
 function emailPreviewSend() {
-  const body = document.getElementById('emailPreviewBody')?.value || window._emailPreviewBody || '';
+  const body = document.getElementById('emailPreviewBody')?.value || '';
   const to = window._emailPreviewTo;
   const subject = window._emailPreviewSubject;
+  const cc = window._emailPreviewCc || '';
   const onSend = window._emailPreviewOnSend;
   hideConfirmCard();
-  if (onSend) onSend(to, subject, body);
-  else sendEmail(to, subject, body);
+  if (onSend) onSend(to, subject, body, cc);
+  else sendEmail(to, subject, body, cc);
 }
 
 function emailPreviewCancel() {
@@ -1153,8 +1167,8 @@ async function executeAction(action) {
       window._confirmedEmail = null;
       window._foundContacts = null;
       showEmailPreview(to, action.subject, action.body,
-        (t, s, b) => sendEmail(t, s, b),
-        null
+        (t, s, b, c) => sendEmail(t, s, b, c),
+        null, action.cc || ''
       );
     }
   } else if (action.type === 'spell_email') {
@@ -1210,7 +1224,7 @@ async function executeAction(action) {
       const to = window._confirmedEmail || action.to;
       window._confirmedEmail = null;
       showEmailPreview(to, action.subject, action.body,
-        (t, s, b) => sendEmail(t, s, b), null);
+        (t, s, b, c) => sendEmail(t, s, b, c), null, action.cc || '');
     }
   } else if (action.type === 'read_inbox') {
     const waitAndRead = () => {
@@ -1601,11 +1615,11 @@ async function findContact(query, subject, body) {
   } catch(e) { speak('Could not search contacts.'); }
 }
 
-async function sendEmail(to, subject, body) {
+async function sendEmail(to, subject, body, cc) {
   try {
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send', to, subject, body })
+      body: JSON.stringify({ action: 'send', to, subject, body, cc: cc || '' })
     });
     const data = await res.json();
     if (data.id) {
