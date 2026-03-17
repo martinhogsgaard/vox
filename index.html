@@ -68,6 +68,13 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .confirm-card-btns { display:flex; gap:8px; }
 .confirm-yes { flex:1; background:var(--text); color:#fff; border:none; border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
 .confirm-no { flex:1; background:none; color:var(--label); border:1px solid var(--border); border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; }
+/* Multi-email choice card */
+.email-choice-list { display:flex; flex-direction:column; gap:6px; margin-bottom:4px; }
+.email-choice-btn { background:var(--bg); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; text-align:left; font-family:'DM Sans',sans-serif; cursor:pointer; transition:background .15s; }
+.email-choice-btn:active { background:var(--border); }
+.email-choice-name { font-size:12px; color:var(--label); margin-bottom:2px; }
+.email-choice-addr { font-size:14px; font-weight:500; word-break:break-all; }
+.email-choice-cancel { width:100%; background:none; border:none; color:var(--label); font-family:'DM Sans',sans-serif; font-size:14px; padding:8px; margin-top:4px; cursor:pointer; }
 
 /* MIC */
 .mic-section { display:flex; flex-direction:column; align-items:center; padding:6px 0 8px; flex-shrink:0; }
@@ -146,12 +153,8 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
   </div>
   <!-- Confirm card (hidden by default) -->
   <div class="confirm-card" id="confirmCard" style="display:none;">
-    <div class="confirm-card-label" id="confirmLabel">Send mail til</div>
-    <div class="confirm-card-value" id="confirmValue"></div>
-    <div class="confirm-card-btns">
-      <button class="confirm-yes" onclick="confirmCardYes()">✓ Ja, send</button>
-      <button class="confirm-no" onclick="confirmCardNo()">✕ Nej</button>
-    </div>
+    <div class="confirm-card-label" id="confirmLabel">Vælg adresse</div>
+    <div id="confirmCardBody"></div>
   </div>
 </div>
 
@@ -881,16 +884,60 @@ Rules:
 }
 
 // ── CONFIRM CARD ──
+// Show a single yes/no confirm (used for single-address case)
 function showConfirmCard(label, value, onYes, onNo) {
   const card = document.getElementById('confirmCard');
   const lbl = document.getElementById('confirmLabel');
-  const val = document.getElementById('confirmValue');
+  const body = document.getElementById('confirmCardBody');
   if (!card) return;
   lbl.textContent = label;
-  val.textContent = value;
+  body.innerHTML = `
+    <div class="confirm-card-value">${esc(value)}</div>
+    <div class="confirm-card-btns">
+      <button class="confirm-yes" onclick="confirmCardYes()">✓ Ja</button>
+      <button class="confirm-no" onclick="confirmCardNo()">✕ Nej</button>
+    </div>`;
   card.style.display = 'block';
   window._confirmYes = onYes;
   window._confirmNo = onNo;
+}
+
+// Show multiple email addresses as a tap list
+function showEmailChoiceCard(name, emails, onPick, onCancel) {
+  const card = document.getElementById('confirmCard');
+  const lbl = document.getElementById('confirmLabel');
+  const body = document.getElementById('confirmCardBody');
+  if (!card) return;
+  lbl.textContent = name;
+  const btns = emails.map((email, i) => `
+    <button class="email-choice-btn" onclick="emailChoicePick(${i})">
+      <div class="email-choice-addr">${esc(email)}</div>
+    </button>`).join('');
+  body.innerHTML = `
+    <div class="email-choice-list">${btns}</div>
+    <button class="email-choice-cancel" onclick="emailChoiceCancel()">✕ Annuller</button>`;
+  card.style.display = 'block';
+  window._emailChoiceEmails = emails;
+  window._emailChoiceOnPick = onPick;
+  window._emailChoiceOnCancel = onCancel;
+}
+
+function emailChoicePick(idx) {
+  const email = window._emailChoiceEmails[idx];
+  const onPick = window._emailChoiceOnPick;
+  hideConfirmCard();
+  if (onPick) onPick(email);
+}
+
+function emailChoiceCancel() {
+  const onCancel = window._emailChoiceOnCancel;
+  hideConfirmCard();
+  if (onCancel) onCancel();
+  else {
+    const msg = 'Ok, annulleret.';
+    saveToHistory('assistant', msg);
+    speak(msg);
+  }
 }
 
 function hideConfirmCard() {
@@ -898,6 +945,8 @@ function hideConfirmCard() {
   if (card) card.style.display = 'none';
   window._confirmYes = null;
   window._confirmNo = null;
+  window._emailChoiceEmails = null;
+  window._emailChoiceOnPick = null;
 }
 
 function confirmCardYes() {
@@ -1434,14 +1483,52 @@ async function findContact(query, subject, body) {
         );
       });
     } else {
-      // Store flat list so confirm_email index works correctly
-      window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
-      const lines = [`I found ${flat.length} addresses for ${flat[0].name}.`];
-      flat.forEach((c, i) => lines.push(`Number ${i + 1}: ${speakableEmail(c.email)}`));
-      lines.push('Which one should I use?');
-      msg = lines.join(' ');
+      // Multiple emails found — group by person name, show all as tap list
+      // Deduplicate: if same person appears with multiple emails, group them
+      const byName = {};
+      flat.forEach(c => {
+        const key = c.name.toLowerCase();
+        if (!byName[key]) byName[key] = { name: c.name, emails: [] };
+        if (!byName[key].emails.includes(c.email)) byName[key].emails.push(c.email);
+      });
+      const grouped = Object.values(byName);
+
+      // Collect all emails with labels for the choice card
+      const allEmails = [];
+      grouped.forEach(g => g.emails.forEach(e => allEmails.push(e)));
+
+      // Store for voice fallback
+      window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails: [e] }));
+
+      const personName = grouped[0].name;
+      msg = `I found ${allEmails.length} addresses for ${personName}. Tap the right one.`;
       saveToHistory('assistant', msg);
-      lines.forEach(line => speakQueued(line));
+      speakQueued(msg, () => {
+        showEmailChoiceCard(
+          personName,
+          allEmails,
+          (chosenEmail) => {
+            // User tapped an address
+            window._confirmedEmail = chosenEmail;
+            window._foundContacts = null;
+            const draft = window._pendingEmailDraft || {};
+            if (draft.subject && draft.body) {
+              sendEmail(chosenEmail, draft.subject, draft.body);
+              window._pendingEmailDraft = null;
+            } else {
+              const doneMsg = 'Got it. What should the email say?';
+              saveToHistory('assistant', doneMsg);
+              speak(doneMsg);
+            }
+          },
+          () => {
+            window._foundContacts = null;
+            const cancelMsg = 'Ok, cancelled.';
+            saveToHistory('assistant', cancelMsg);
+            speak(cancelMsg);
+          }
+        );
+      });
     }
   } catch(e) { speak('Could not search contacts.'); }
 }
