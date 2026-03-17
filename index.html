@@ -453,8 +453,7 @@ async function loadProjectMemory(projectId) {
 async function saveProjectMemory(projectId, newMessages) {
   if (!newMessages || newMessages.length < 4) return; // Not enough to summarize
   try {
-    const recent = newMessages.slice(-8).map(m => `${m.role}: ${m.content}`).join('
-');
+    const recent = newMessages.slice(-8).map(m => m.role + ': ' + m.content).join('\n');
     const res = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
