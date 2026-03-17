@@ -995,21 +995,34 @@ Rules:
 }
 
 // ── EMAIL PREVIEW CARD ──
-function showEmailPreview(to, subject, body, onSend, onCancel, cc) {
+function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch) {
   const card = document.getElementById('confirmCard');
   const lbl = document.getElementById('confirmLabel');
   const cardBody = document.getElementById('confirmCardBody');
   if (!card) return;
   lbl.textContent = 'Bekræft mail';
+  const ccBlock = cc
+    ? `<div class="email-preview-field">
+        <div class="email-preview-field-label">CC</div>
+        <div class="email-preview-field-value" id="previewCCValue">${esc(cc)}</div>
+       </div>`
+    : `<div class="email-preview-field" id="previewCCRow" style="${showCCSearch ? '' : 'display:none'}">
+        <div class="email-preview-field-label">CC</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+          <input id="previewCCInput" placeholder="Søg navn eller skriv adresse..." 
+            style="flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;"
+            onkeydown="if(event.key==='Enter')previewCCSearch()"/>
+          <button onclick="previewCCSearch()" style="background:var(--text);color:#fff;border:none;border-radius:var(--rs);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Søg</button>
+        </div>
+        <div id="previewCCSuggestions" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
+       </div>`;
   cardBody.innerHTML = `
     <div class="email-preview-field">
       <div class="email-preview-field-label">Til</div>
       <div class="email-preview-field-value">${esc(to)}</div>
     </div>
-    ${cc ? `<div class="email-preview-field">
-      <div class="email-preview-field-label">CC</div>
-      <div class="email-preview-field-value">${esc(cc)}</div>
-    </div>` : ''}
+    ${ccBlock}
+    ${!cc && !showCCSearch ? `<button onclick="document.getElementById('previewCCRow').style.display='block'" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">+ Tilføj CC</button>` : ''}
     <div class="email-preview-field">
       <div class="email-preview-field-label">Emne</div>
       <div class="email-preview-field-value">${esc(subject)}</div>
@@ -1026,6 +1039,44 @@ function showEmailPreview(to, subject, body, onSend, onCancel, cc) {
   window._emailPreviewCc = cc || '';
   window._emailPreviewOnSend = onSend;
   window._emailPreviewOnCancel = onCancel;
+}
+
+async function previewCCSearch() {
+  const input = document.getElementById('previewCCInput');
+  const query = input?.value?.trim();
+  if (!query) return;
+  input.disabled = true;
+  try {
+    const res = await fetch('/api/gmail', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'find_contact', query })
+    });
+    const data = await res.json();
+    const contacts = data.contacts || [];
+    const suggestions = document.getElementById('previewCCSuggestions');
+    if (!suggestions) return;
+    if (contacts.length === 0) {
+      suggestions.innerHTML = `<div style="font-size:12px;color:var(--label)">Ingen fundet — skriv adresse manuelt</div>`;
+    } else {
+      const allEmails = [];
+      contacts.forEach(c => c.emails.forEach(e => allEmails.push({ name: c.name, email: e })));
+      suggestions.innerHTML = allEmails.slice(0, 6).map(c =>
+        `<button onclick="previewCCPick('${esc(c.email)}')" class="email-choice-btn">
+          <div class="email-choice-name">${esc(c.name)}</div>
+          <div class="email-choice-addr">${esc(c.email)}</div>
+        </button>`
+      ).join('');
+    }
+  } catch(e) { console.log('CC search error:', e); }
+  input.disabled = false;
+}
+
+function previewCCPick(email) {
+  window._emailPreviewCc = window._emailPreviewCc
+    ? window._emailPreviewCc + ',' + email
+    : email;
+  const row = document.getElementById('previewCCRow');
+  if (row) row.innerHTML = `<div class="email-preview-field-label">CC</div><div class="email-preview-field-value">${esc(window._emailPreviewCc)}</div>`;
 }
 
 function emailPreviewSend() {
@@ -1689,7 +1740,7 @@ async function findContact(query, subject, body) {
           personName,
           allEmails,
           (chosenEmail) => {
-            // User tapped an address — mark confirmed TO address
+            // User tapped TO address — show preview with CC option
             window._foundContacts = null;
             window._confirmedEmail = chosenEmail;
             window._toEmailConfirmed = chosenEmail;
@@ -1697,7 +1748,7 @@ async function findContact(query, subject, body) {
             if (draft.subject && draft.body) {
               window._pendingEmailDraft = null;
               showEmailPreview(chosenEmail, draft.subject, draft.body,
-                (t, s, b) => sendEmail(t, s, b), null);
+                (t, s, b, c) => sendEmail(t, s, b, c), null, '', true);
             } else {
               const doneMsg = 'Got it. What should the email say?';
               saveToHistory('assistant', doneMsg);
