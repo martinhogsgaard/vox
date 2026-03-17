@@ -141,21 +141,47 @@ export default async function handler(req, res) {
         return nameLower.includes(firstWord) || emailUser.includes(firstWord);
       }
 
-      // 1. Try Google People API
+      // 1. People API — Strategy A: searchContacts, Strategy B: full connections list
       try {
-        const r = await fetch(
-          `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=5`,
+        // A: Fast name search
+        const rA = await fetch(
+          `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=10`,
           { headers }
         );
-        if (r.ok) {
-          const data = await r.json();
-          const results = (data.results || []).map(p => ({
+        if (rA.ok) {
+          const dataA = await rA.json();
+          console.log('searchContacts raw:', JSON.stringify(dataA).substring(0, 600));
+          const results = (dataA.results || []).map(p => ({
             name: p.person?.names?.[0]?.displayName || '',
             emails: (p.person?.emailAddresses || []).map(e => e.value)
           })).filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
           allContacts.push(...results);
+        }
+
+        // B: Full connections list — finds ALL emails stored on contact card
+        const rB = await fetch(
+          `https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses&pageSize=1000`,
+          { headers }
+        );
+        if (rB.ok) {
+          const dataB = await rB.json();
+          const matched = (dataB.connections || [])
+            .map(p => ({
+              name: p.names?.[0]?.displayName || '',
+              emails: (p.emailAddresses || []).map(e => e.value)
+            }))
+            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
+          console.log('connections matched:', JSON.stringify(matched));
+          matched.forEach(c => {
+            const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
+            if (exists) {
+              c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
+            } else {
+              allContacts.push(c);
+            }
+          });
         } else {
-          console.log('People API status:', r.status);
+          console.log('Connections API status:', rB.status, await rB.text());
         }
       } catch(e) { console.log('People API error:', e.message); }
 
