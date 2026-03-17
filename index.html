@@ -75,6 +75,13 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .email-choice-name { font-size:12px; color:var(--label); margin-bottom:2px; }
 .email-choice-addr { font-size:14px; font-weight:500; word-break:break-all; }
 .email-choice-cancel { width:100%; background:none; border:none; color:var(--label); font-family:'DM Sans',sans-serif; font-size:14px; padding:8px; margin-top:4px; cursor:pointer; }
+/* Email preview card */
+.email-preview-field { margin-bottom:10px; }
+.email-preview-field-label { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:4px; }
+.email-preview-field-value { font-size:13px; color:var(--text); word-break:break-all; }
+.email-preview-body { width:100%; border:1px solid var(--border); border-radius:var(--rs); padding:10px 12px; font-family:'DM Sans',sans-serif; font-size:13px; color:var(--text); background:var(--bg); resize:vertical; min-height:80px; margin-top:4px; outline:none; }
+.email-preview-send { width:100%; background:var(--text); color:#fff; border:none; border-radius:var(--rs); padding:12px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-top:8px; }
+.email-preview-cancel { width:100%; background:none; border:none; color:var(--label); font-family:'DM Sans',sans-serif; font-size:14px; padding:8px; cursor:pointer; }
 
 /* MIC */
 .mic-section { display:flex; flex-direction:column; align-items:center; padding:6px 0 8px; flex-shrink:0; }
@@ -767,6 +774,12 @@ async function sendToClaude(text) {
   } catch(err) { console.log('Could not fetch calendar context:', err); }
 
   const weekday = copenhagenWeekday;
+  const confirmedEmailContext = window._confirmedEmail 
+    ? `
+
+IMPORTANT: Martin has already confirmed the email address "${window._confirmedEmail}". Use send_confirmed_email with this address — do NOT use find_contact or send_email.`
+    : '';
+
   const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
 Current projects: ${projectNames}.
 Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
@@ -811,7 +824,8 @@ Rules:
 - For MULTIPLE events (e.g. 5 dinners Mon-Fri), use create_multiple_events with all events in one action. Titles max 5 words each.
 - For all-day events: set allday:true, omit time/duration.
 - For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
-- For send_email: if "to" is a name without @, use find_contact instead. Write a full professional email body.
+- For send_email: ONLY use when Martin has explicitly confirmed an address via the confirm card. NEVER guess or invent an email address. If unsure, always use find_contact first.
+- NEVER use send_email with a made-up or guessed address like "henrik@hogsgaard.dk" — always find_contact first.
 - For create_event_and_invite: ONLY use when Martin explicitly says BOTH "opret møde" AND "send invitation/mødeindkaldelse til [person]" in the SAME request. Never combine them unless both are clearly stated.
 - For find_contact: ONLY use when you have NOT yet searched for this person. Martin's own name is "Martin Høgsgaard" — if he says his own name with any spelling variation (høstgaard, høesgaard, høsgaard etc), use "Martin Høgsgaard". Common contacts: Mie Priess-Sørensen (his wife). Always use the correct Danish spelling. If you already found a contact and said so, do NOT search again — use confirm_email instead.
 - For confirm_email: use when Martin says yes/ja/correct/that one/number, OR when you already found a contact and Martin says anything that isn't a clear rejection. index=1 for first result.
@@ -827,7 +841,7 @@ Rules:
 - When adding ANY content to calendar (recipes, sports activities, tasks, ideas, plans etc): put a short title as the event title, and put ALL detailed content (instructions, equipment lists, shopping lists, notes etc) in the "description" field. Never put long content in the title.
 - When adding multiple calendar events, use create_multiple_events with all events in one action — never create them one by one.
 - If Martin asks to save/add something to calendar, do it — don't describe what you're saving.
-- Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.`;
+- Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.${confirmedEmailContext}`;
 
   // Send last 10 messages to Claude (keeps context without exceeding token limits)
   const messages = activeProject
@@ -881,6 +895,54 @@ Rules:
     isThinking = false;
     speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
   }
+}
+
+// ── EMAIL PREVIEW CARD ──
+function showEmailPreview(to, subject, body, onSend, onCancel) {
+  const card = document.getElementById('confirmCard');
+  const lbl = document.getElementById('confirmLabel');
+  const cardBody = document.getElementById('confirmCardBody');
+  if (!card) return;
+  lbl.textContent = 'Bekræft mail';
+  cardBody.innerHTML = `
+    <div class="email-preview-field">
+      <div class="email-preview-field-label">Til</div>
+      <div class="email-preview-field-value">${esc(to)}</div>
+    </div>
+    <div class="email-preview-field">
+      <div class="email-preview-field-label">Emne</div>
+      <div class="email-preview-field-value">${esc(subject)}</div>
+    </div>
+    <div class="email-preview-field">
+      <div class="email-preview-field-label">Besked — ret hvis nødvendigt</div>
+      <textarea class="email-preview-body" id="emailPreviewBody">${esc(body)}</textarea>
+    </div>
+    <button class="email-preview-send" onclick="emailPreviewSend()">✓ Send mail</button>
+    <button class="email-preview-cancel" onclick="emailPreviewCancel()">✕ Annuller</button>`;
+  card.style.display = 'block';
+  window._emailPreviewTo = to;
+  window._emailPreviewSubject = subject;
+  window._emailPreviewOnSend = onSend;
+  window._emailPreviewOnCancel = onCancel;
+}
+
+function emailPreviewSend() {
+  const body = document.getElementById('emailPreviewBody')?.value || window._emailPreviewBody || '';
+  const to = window._emailPreviewTo;
+  const subject = window._emailPreviewSubject;
+  const onSend = window._emailPreviewOnSend;
+  hideConfirmCard();
+  if (onSend) onSend(to, subject, body);
+  else sendEmail(to, subject, body);
+}
+
+function emailPreviewCancel() {
+  hideConfirmCard();
+  const onCancel = window._emailPreviewOnCancel;
+  window._emailPreviewTo = null;
+  window._emailPreviewSubject = null;
+  if (onCancel) onCancel();
+  else { const msg = 'Ok, mailen er annulleret.'; saveToHistory('assistant', msg); speak(msg); }
 }
 
 // ── CONFIRM CARD ──
@@ -1087,9 +1149,13 @@ async function executeAction(action) {
     await findContact(action.query, action.subject, action.body);
   } else if (action.type === 'send_confirmed_email') {
     if (window._confirmedEmail) {
-      await sendEmail(window._confirmedEmail, action.subject, action.body);
+      const to = window._confirmedEmail;
       window._confirmedEmail = null;
       window._foundContacts = null;
+      showEmailPreview(to, action.subject, action.body,
+        (t, s, b) => sendEmail(t, s, b),
+        null
+      );
     }
   } else if (action.type === 'spell_email') {
     // User spelled out an email address — confirm and send
@@ -1108,17 +1174,14 @@ async function executeAction(action) {
       if (contact) {
         const draft = window._pendingEmailDraft || {};
         if (draft.subject && draft.body) {
-          // We already have content — wait for speech then send
+          // Address confirmed + draft exists — show preview before sending
+          const emailTo = contact.emails[0];
           window._pendingEmail = null;
           window._pendingEmailDraft = null;
-          const emailTo = contact.emails[0];
           window._foundContacts = null;
           hideConfirmCard();
-          const waitAndSend = () => {
-            if (isSpeaking) { setTimeout(waitAndSend, 300); return; }
-            sendEmail(emailTo, draft.subject, draft.body);
-          };
-          setTimeout(waitAndSend, 300);
+          setTimeout(() => showEmailPreview(emailTo, draft.subject, draft.body,
+            (t, s, b) => sendEmail(t, s, b), null), 300);
         } else {
           // Address confirmed — ask for content
           window._confirmedEmail = contact.emails[0];
@@ -1131,19 +1194,23 @@ async function executeAction(action) {
       }
     }
   } else if (action.type === 'send_email') {
-    // Always search contacts if address looks fake/guessed (example.com, placeholder, no real domain)
-    const looksReal = action.to && action.to.includes('@') && 
-      !action.to.includes('example.com') && 
+    // NEVER send directly — always verify address first, then show preview
+    const looksReal = action.to && action.to.includes('@') &&
+      !action.to.includes('example.com') &&
       !action.to.includes('placeholder') &&
       action.to.split('@')[1]?.includes('.');
-    if (!looksReal) {
-      // Extract name from fake address or use as-is
-      const query = action.to?.includes('@') 
-        ? action.to.split('@')[0].replace(/[._]/g,' ') 
-        : action.to;
+    if (!looksReal || !window._confirmedEmail) {
+      // Address not confirmed — search contacts first
+      const query = action.to?.includes('@')
+        ? action.to.split('@')[0].replace(/[._]/g,' ')
+        : (action.to || '');
       await findContact(query, action.subject, action.body);
     } else {
-      await sendEmail(action.to, action.subject, action.body);
+      // Address was confirmed via card — show preview before sending
+      const to = window._confirmedEmail || action.to;
+      window._confirmedEmail = null;
+      showEmailPreview(to, action.subject, action.body,
+        (t, s, b) => sendEmail(t, s, b), null);
     }
   } else if (action.type === 'read_inbox') {
     const waitAndRead = () => {
@@ -1509,13 +1576,14 @@ async function findContact(query, subject, body) {
           allEmails,
           (chosenEmail) => {
             // User tapped an address
-            window._confirmedEmail = chosenEmail;
             window._foundContacts = null;
             const draft = window._pendingEmailDraft || {};
             if (draft.subject && draft.body) {
-              sendEmail(chosenEmail, draft.subject, draft.body);
               window._pendingEmailDraft = null;
+              showEmailPreview(chosenEmail, draft.subject, draft.body,
+                (t, s, b) => sendEmail(t, s, b), null);
             } else {
+              window._confirmedEmail = chosenEmail;
               const doneMsg = 'Got it. What should the email say?';
               saveToHistory('assistant', doneMsg);
               speak(doneMsg);
