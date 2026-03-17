@@ -56,6 +56,19 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 /* TRANSCRIPT */
 .transcript-box { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:8px 14px; font-size:13px; color:var(--label); font-style:italic; margin:8px 20px; text-align:center; min-height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
+/* HOME CHAT */
+.home-chat-wrap { flex:1; overflow-y:auto; padding:0 20px 8px; display:flex; flex-direction:column; gap:8px; }
+.home-chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--label); font-size:13px; padding-bottom:20px; }
+.home-chat-empty svg { width:32px; height:32px; stroke:var(--border); fill:none; stroke-width:1.5; }
+
+/* CONFIRM CARD */
+.confirm-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin:0 20px 8px; flex-shrink:0; }
+.confirm-card-label { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:6px; }
+.confirm-card-value { font-size:15px; font-weight:500; margin-bottom:12px; word-break:break-all; }
+.confirm-card-btns { display:flex; gap:8px; }
+.confirm-yes { flex:1; background:var(--text); color:#fff; border:none; border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
+.confirm-no { flex:1; background:none; color:var(--label); border:1px solid var(--border); border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; }
+
 /* MIC */
 .mic-section { display:flex; flex-direction:column; align-items:center; padding:6px 0 8px; flex-shrink:0; }
 .mic-status { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:10px; }
@@ -122,29 +135,23 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 
 <!-- HOME -->
-<div class="content" id="homeView">
-  <div>
-    <div class="section-label">Morgenoverblik</div>
-    <div class="brief-card">
-      <div class="brief-item">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <div class="brief-title">Vejr</div>
-        <div class="brief-sub" id="weatherSub">Henter...</div>
-      </div>
-      <div class="brief-item">
-        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <div class="brief-title">Projekter</div>
-        <div class="brief-sub" id="projectsSub">Henter...</div>
-      </div>
+<div class="content" id="homeView" style="display:flex;flex-direction:column;padding:0;gap:0;">
+  <!-- Home chat area -->
+  <div class="home-chat-wrap" id="homeChatWrap">
+    <div class="home-chat-empty" id="homeChatEmpty">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Tryk på mikrofon og tal til Vox
     </div>
-    <button class="play-btn" onclick="playMorningBrief()">
-      <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
-      Afspil morgenoverblik
-    </button>
+    <div class="chat-area" id="homeChatArea"></div>
   </div>
-  <div>
-    <div class="section-label">Projekter</div>
-    <div class="projects-card" id="projectsList"><div style="padding:14px;font-size:13px;color:var(--label)">Henter...</div></div>
+  <!-- Confirm card (hidden by default) -->
+  <div class="confirm-card" id="confirmCard" style="display:none;">
+    <div class="confirm-card-label" id="confirmLabel">Send mail til</div>
+    <div class="confirm-card-value" id="confirmValue"></div>
+    <div class="confirm-card-btns">
+      <button class="confirm-yes" onclick="confirmCardYes()">✓ Ja, send</button>
+      <button class="confirm-no" onclick="confirmCardNo()">✕ Nej</button>
+    </div>
   </div>
 </div>
 
@@ -374,7 +381,7 @@ async function fetchWeather() {
     const temp = Math.round(d.current.temperature_2m);
     const descs = {0:'klart vejr',1:'let skyet',2:'skyet',3:'overskyet',45:'tåge',61:'let regn',63:'regn',71:'let sne',80:'byger'};
     const desc = descs[d.current.weathercode] || 'skiftende vejr';
-    document.getElementById('weatherSub').textContent = `${temp}° · ${desc}`;
+    // weatherSub removed from home view
     return `${temp} grader, ${desc}`;
   } catch { return 'vejret ikke tilgængeligt'; }
 }
@@ -397,11 +404,11 @@ async function loadProjects() {
   }
   
   renderProjects(projects);
-  document.getElementById('projectsSub').textContent = `${projects.length} aktive projekter`;
+  // projectsSub removed from home view
 }
 
 function renderProjects(list) {
-  const el = document.getElementById('projectsList');
+  const el = document.getElementById('projekterList') || document.getElementById('projectsList');
   el.innerHTML = '';
   list.forEach(p => {
     const d = document.createElement('div');
@@ -580,6 +587,7 @@ function navTo(tab) {
 
   if (tab === 'hjem') {
     homeHistory = [];
+    hideConfirmCard();
     showView('homeView');
   } else if (tab === 'projekter') {
     showView('projekterView');
@@ -602,6 +610,7 @@ function goHome() {
   document.getElementById('homeView').style.display = 'flex';
   setTranscript('Tryk på mikrofon for at tale');
   setMicHint('Altid lyttende');
+  hideConfirmCard();
 }
 
 async function createProject() {
@@ -627,12 +636,47 @@ function closeModal() { document.getElementById('modal').classList.remove('visib
 
 // ── CHAT ──
 function addBubble(role, text, scroll = true) {
-  const chat = document.getElementById('chatArea');
+  // Project chat OR home chat
+  const chatId = activeProject ? 'chatArea' : 'homeChatArea';
+  const chat = document.getElementById(chatId);
+  if (!chat) return;
+  // Hide empty state
+  const empty = document.getElementById('homeChatEmpty');
+  if (empty) empty.style.display = 'none';
   const d = document.createElement('div');
   d.className = `bubble ${role}`;
   d.textContent = text;
   chat.appendChild(d);
-  if (scroll) chat.scrollTop = chat.scrollHeight;
+  // Scroll home wrap or project content
+  const wrap = activeProject
+    ? document.getElementById('projectView')
+    : document.getElementById('homeChatWrap');
+  if (scroll && wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+// Show live transcript as a typing bubble in home chat
+let _liveBubble = null;
+function setLiveTranscript(text) {
+  if (activeProject) {
+    // In project: use existing transcript box
+    setTranscript(text);
+    return;
+  }
+  const wrap = document.getElementById('homeChatWrap');
+  const empty = document.getElementById('homeChatEmpty');
+  if (!text) {
+    if (_liveBubble) { _liveBubble.remove(); _liveBubble = null; }
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  if (!_liveBubble) {
+    _liveBubble = document.createElement('div');
+    _liveBubble.className = 'bubble user';
+    _liveBubble.style.opacity = '0.5';
+    wrap.appendChild(_liveBubble);
+  }
+  _liveBubble.textContent = text;
+  if (wrap) wrap.scrollTop = wrap.scrollHeight;
 }
 
 // ── CLAUDE ──
@@ -655,6 +699,7 @@ async function sendToClaude(text) {
   console.log('sendToClaude called, text:', text, 'activeProject:', activeProject ? activeProject.name : 'null');
   isThinking = true;
   setMicState('thinking');
+  setLiveTranscript(''); // clear live bubble when sending
   if (activeProject) {
     addBubble('user', text);
     conversationHistory.push({ role:'user', content:text });
@@ -662,6 +707,7 @@ async function sendToClaude(text) {
     if (msgErr) console.error('Save user message failed:', msgErr);
     else console.log('Saved user message to project:', activeProject.id);
   } else {
+    addBubble('user', text);
     homeHistory.push({ role:'user', content:text });
     if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
   }
@@ -813,6 +859,7 @@ Rules:
       else console.log('Saved assistant message to project:', activeProject.id);
       conversationHistory.push({ role:'assistant', content:reply });
     } else {
+      addBubble('assistant', reply);
       homeHistory.push({ role:'assistant', content:reply });
       if (homeHistory.length > 20) homeHistory = homeHistory.slice(-20);
     }
@@ -830,6 +877,42 @@ Rules:
     console.log('Claude error:', e);
     isThinking = false;
     speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
+  }
+}
+
+// ── CONFIRM CARD ──
+function showConfirmCard(label, value, onYes, onNo) {
+  const card = document.getElementById('confirmCard');
+  const lbl = document.getElementById('confirmLabel');
+  const val = document.getElementById('confirmValue');
+  if (!card) return;
+  lbl.textContent = label;
+  val.textContent = value;
+  card.style.display = 'block';
+  window._confirmYes = onYes;
+  window._confirmNo = onNo;
+}
+
+function hideConfirmCard() {
+  const card = document.getElementById('confirmCard');
+  if (card) card.style.display = 'none';
+  window._confirmYes = null;
+  window._confirmNo = null;
+}
+
+function confirmCardYes() {
+  hideConfirmCard();
+  if (window._confirmYes) window._confirmYes();
+}
+
+function confirmCardNo() {
+  hideConfirmCard();
+  stopSpeaking();
+  if (window._confirmNo) window._confirmNo();
+  else {
+    const msg = 'Ok, cancelled.';
+    saveToHistory('assistant', msg);
+    speak(msg);
   }
 }
 
@@ -981,6 +1064,7 @@ async function executeAction(action) {
           window._pendingEmailDraft = null;
           const emailTo = contact.emails[0];
           window._foundContacts = null;
+          hideConfirmCard();
           const waitAndSend = () => {
             if (isSpeaking) { setTimeout(waitAndSend, 300); return; }
             sendEmail(emailTo, draft.subject, draft.body);
@@ -990,6 +1074,7 @@ async function executeAction(action) {
           // Address confirmed — ask for content
           window._confirmedEmail = contact.emails[0];
           window._foundContacts = null;
+          hideConfirmCard();
           const msg = `Got it. What should the email say?`;
           saveToHistory('assistant', msg);
           speak(msg);
@@ -1322,9 +1407,32 @@ async function findContact(query, subject, body) {
     });
 
     if (flat.length === 1) {
-      msg = `I found ${flat[0].name}. Address: ${speakableEmail(flat[0].email)}. Correct?`;
+      msg = `I found ${flat[0].name}. Is this the right address?`;
       saveToHistory('assistant', msg);
-      speakQueued(msg);
+      speakQueued(msg, () => {
+        // Show confirm card after speech
+        showConfirmCard(
+          `Send mail til ${flat[0].name}`,
+          flat[0].email,
+          () => {
+            // Yes — confirm
+            window._confirmedEmail = flat[0].email;
+            window._foundContacts = null;
+            hideConfirmCard();
+            const doneMsg = `Got it. What should the email say?`;
+            saveToHistory('assistant', doneMsg);
+            speak(doneMsg);
+          },
+          () => {
+            // No — ask to spell
+            window._foundContacts = null;
+            hideConfirmCard();
+            const noMsg = `Ok. Please say the correct email address.`;
+            saveToHistory('assistant', noMsg);
+            speak(noMsg);
+          }
+        );
+      });
     } else {
       // Store flat list so confirm_email index works correctly
       window._foundContacts = flat.map(c => ({ name: c.name, emails: [c.email] }));
@@ -1459,7 +1567,9 @@ function _startRecognitionInstance() {
       if (e.results[i].isFinal) micTranscript += e.results[i][0].transcript + ' ';
       else interim = micTranscript + e.results[i][0].transcript;
     }
-    setTranscript(interim.trim());
+    const t = interim.trim();
+    setTranscript(t);
+    setLiveTranscript(t);
   };
 
   recognition.onend = () => {
@@ -1498,6 +1608,7 @@ function stopListening() {
   }
   const transcript = micTranscript.trim();
   micTranscript = '';
+  setLiveTranscript(''); // clear live bubble
   return transcript;
 }
 
