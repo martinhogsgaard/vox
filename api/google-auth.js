@@ -8,6 +8,7 @@ export default function handler(req, res) {
     'https://www.googleapis.com/auth/gmail.send',
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/contacts.readonly',
+    'https://www.googleapis.com/auth/contacts.other.readonly',
     'https://www.googleapis.com/auth/drive.file'
   ].join(' ');
 
