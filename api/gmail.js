@@ -158,7 +158,7 @@ export default async function handler(req, res) {
           allContacts.push(...results);
         }
 
-        // B: Full connections list — finds ALL emails stored on contact card
+        // B: Full connections list — saved contacts with ALL their emails
         const rB = await fetch(
           `https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses&pageSize=1000`,
           { headers }
@@ -171,7 +171,6 @@ export default async function handler(req, res) {
               emails: (p.emailAddresses || []).map(e => e.value)
             }))
             .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
-          console.log('connections matched:', JSON.stringify(matched));
           matched.forEach(c => {
             const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
             if (exists) {
@@ -181,7 +180,34 @@ export default async function handler(req, res) {
             }
           });
         } else {
-          console.log('Connections API status:', rB.status, await rB.text());
+          console.log('Connections API status:', rB.status);
+        }
+
+        // C: Other Contacts — Gmail's auto-saved addresses (everyone you've emailed)
+        const rC = await fetch(
+          `https://people.googleapis.com/v1/otherContacts:search?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=10`,
+          { headers }
+        );
+        if (rC.ok) {
+          const dataC = await rC.json();
+          console.log('otherContacts raw:', JSON.stringify(dataC).substring(0, 600));
+          const otherMatched = (dataC.results || [])
+            .map(p => ({
+              name: p.person?.names?.[0]?.displayName || '',
+              emails: (p.person?.emailAddresses || []).map(e => e.value)
+            }))
+            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
+          otherMatched.forEach(c => {
+            const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
+            if (exists) {
+              c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
+            } else {
+              allContacts.push(c);
+            }
+          });
+          console.log('otherContacts matched:', JSON.stringify(otherMatched));
+        } else {
+          console.log('Other contacts status:', rC.status);
         }
       } catch(e) { console.log('People API error:', e.message); }
 
