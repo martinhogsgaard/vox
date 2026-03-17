@@ -253,7 +253,7 @@ function saveToHistory(role, content) {
     if (role === 'assistant') conversationHistory.push({ role, content });
   } else {
     homeHistory.push({ role, content });
-    if (homeHistory.length > 6) homeHistory = homeHistory.slice(-6);
+    if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
   }
 }
 let projects = [];
@@ -795,7 +795,7 @@ async function sendToClaude(text) {
   } else {
     addBubble('user', text);
     homeHistory.push({ role:'user', content:text });
-    if (homeHistory.length > 6) homeHistory = homeHistory.slice(-6);
+    if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
   }
 
   const projectNames = projects.map(p => p.name).join(', ');
@@ -877,7 +877,7 @@ ${driveFiles.length > 0 ? `\n\nPROJECT FILES in Google Drive (${driveFiles.lengt
 ${Object.keys(userProfile).length > 0 ? `USER PROFILE:
 ${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}
 
-` : ''}Martin often speaks Danish and you always reply in English. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
+` : ''}Martin speaks Danish but you ALWAYS reply in English — never switch to Danish under any circumstances. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
 When Martin is brainstorming or asking for ideas, give real, concrete suggestions. Never say you "can't search" or "don't have access to information" — use your built-in knowledge.
 
 ACTIONS — append ONE on the last line when Martin asks you to act:
@@ -934,7 +934,7 @@ Rules:
   // Project: use memory summary + last 8 messages. Home: last 6 messages.
   const messages = activeProject
     ? (conversationHistory.length > 0 ? conversationHistory.slice(-8) : [{ role:'user', content:text }])
-    : (homeHistory.length > 0 ? homeHistory.slice(-6) : [{ role:'user', content:text }]);
+    : (homeHistory.length > 0 ? homeHistory.slice(-12) : [{ role:'user', content:text }]);
   console.log('Sending', messages.length, 'messages to Claude:', messages.map(m => m.role + ': ' + m.content.substring(0,60)));
 
   try {
@@ -975,7 +975,7 @@ Rules:
     } else {
       addBubble('assistant', reply);
       homeHistory.push({ role:'assistant', content:reply });
-      if (homeHistory.length > 6) homeHistory = homeHistory.slice(-6);
+      if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
     }
     isThinking = false;
 
@@ -1620,7 +1620,12 @@ async function findContact(query, subject, body) {
     // Store pending email — but NOT subject/body yet, confirm address first
     window._pendingEmail = { subject: '', body: '' };
     window._pendingEmailDraft = { subject, body };
-    window._foundContacts = contacts;
+    // If _toEmailConfirmed already set, this search is for CC
+    if (window._toEmailConfirmed) {
+      window._foundContactsCC = contacts;
+    } else {
+      window._foundContacts = contacts;
+    }
     window._awaitingEmailContent = false;
 
     let msg;
@@ -1639,8 +1644,9 @@ async function findContact(query, subject, body) {
           `Send mail til ${flat[0].name}`,
           flat[0].email,
           () => {
-            // Yes — confirm
+            // Yes — confirm TO address
             window._confirmedEmail = flat[0].email;
+            window._toEmailConfirmed = flat[0].email;
             window._foundContacts = null;
             hideConfirmCard();
             const doneMsg = `Got it. What should the email say?`;
@@ -1683,15 +1689,16 @@ async function findContact(query, subject, body) {
           personName,
           allEmails,
           (chosenEmail) => {
-            // User tapped an address
+            // User tapped an address — mark confirmed TO address
             window._foundContacts = null;
+            window._confirmedEmail = chosenEmail;
+            window._toEmailConfirmed = chosenEmail;
             const draft = window._pendingEmailDraft || {};
             if (draft.subject && draft.body) {
               window._pendingEmailDraft = null;
               showEmailPreview(chosenEmail, draft.subject, draft.body,
                 (t, s, b) => sendEmail(t, s, b), null);
             } else {
-              window._confirmedEmail = chosenEmail;
               const doneMsg = 'Got it. What should the email say?';
               saveToHistory('assistant', doneMsg);
               speak(doneMsg);
@@ -1710,6 +1717,7 @@ async function findContact(query, subject, body) {
 }
 
 async function sendEmail(to, subject, body, cc) {
+  window._toEmailConfirmed = null;
   try {
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
