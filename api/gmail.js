@@ -32,7 +32,7 @@ async function refreshAccessToken(refreshToken) {
   return tokens;
 }
 
-function makeEmail({ to, subject, body }) {
+function makeEmail({ to, subject, body, cc }) {
   // Encode subject with RFC2047 for non-ASCII characters (æøå etc)
   const encodeSubject = (str) => {
     const encoded = Buffer.from(str, 'utf-8').toString('base64');
@@ -40,6 +40,7 @@ function makeEmail({ to, subject, body }) {
   };
   const lines = [
     `To: ${to}`,
+    ...(cc ? [`Cc: ${cc}`] : []),
     `Subject: ${encodeSubject(subject)}`,
     `MIME-Version: 1.0`,
     `Content-Type: text/plain; charset=utf-8`,
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { action, to, subject, body, query, messageId, threadId } = req.body;
+  const { action, to, subject, body, cc, query, messageId, threadId } = req.body;
 
   let tokenData = await getTokens();
   if (!tokenData) return res.status(401).json({ error: 'Not connected' });
@@ -75,7 +76,7 @@ export default async function handler(req, res) {
     console.log('Gmail action:', action);
 
     if (action === 'send') {
-      const raw = makeEmail({ to, subject, body });
+      const raw = makeEmail({ to, subject, body, cc });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST', headers,
         body: JSON.stringify({ raw })
