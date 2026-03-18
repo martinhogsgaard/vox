@@ -886,6 +886,10 @@ ACTION:{"type":"open_project","name":"ProjectName"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
 ACTION:{"type":"go_home"}
 ACTION:{"type":"open_drive_folder"}
+ACTION:{"type":"process_inbox_file","task":"kort resumé","save_to":"ByAulum"}
+ACTION:{"type":"process_inbox_file","task":"fyldestgørende resumé","save_to":"ByAulum","send_email":true}
+ACTION:{"type":"process_inbox_file","task":"skriv et svar","save_to":"ByAulum"}
+ACTION:{"type":"list_inbox"}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
 ACTION:{"type":"create_multiple_events","events":[{"title":"Pasta","date":"2026-03-09","time":"18:00","duration":30},{"title":"Pizza","date":"2026-03-10","time":"18:00","duration":30}]}
 ACTION:{"type":"delete_multiple_events","event_ids":["id1","id2","id3"]}
@@ -924,6 +928,8 @@ Rules:
 - For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
+- For list_inbox: use when Martin asks what files are in his inbox or Vox folder.
+- For process_inbox_file: use when Martin asks to read, summarize, analyze or process a file. task = what to do ("kort resumé", "fyldestgørende resumé", "skriv et svar", "handlingsplan" etc). save_to = project name to save result in. send_email=true if Martin wants it emailed.
 - Only ONE action per reply — EXCEPT create_multiple_events and delete_multiple_events which handle batches.
 - When deleting events, ALWAYS use list_calendar first to find the correct event IDs. Never guess or reuse old IDs from history.
 - If Martin says "stop", "nok", "hold op" or similar — stop immediately, apologize briefly, and ask what he needs instead. Never repeat content he has already rejected.
@@ -1385,7 +1391,6 @@ async function executeAction(action) {
     };
     setTimeout(waitAndRead, 500);
   } else if (action.type === 'open_drive_folder') {
-    // Refresh drive context for current project
     if (activeProject) {
       await fetchDriveContext(activeProject.name);
       const msg = driveFiles.length > 0
@@ -1394,6 +1399,10 @@ async function executeAction(action) {
       saveToHistory('assistant', msg);
       speak(msg);
     }
+  } else if (action.type === 'list_inbox') {
+    await listInbox();
+  } else if (action.type === 'process_inbox_file') {
+    await processInboxFile(action.task, action.save_to, action.file_name, action.send_email);
   } else if (action.type === 'go_home') {
     goHome();
   }
@@ -2169,6 +2178,108 @@ async function playMorningBrief() {
   const pNames = projects.map(p => p.name).join(', ');
   const brief = `Good morning Martin. Today is ${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}. Weather in Denmark: ${weather}. You have ${projects.length} active projects: ${pNames}. What would you like to start with today?`;
   speak(brief);
+}
+
+// ── INBOX FILE PROCESSING ──
+async function listInbox() {
+  speak('Checking your inbox.');
+  try {
+    const res = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_inbox' })
+    });
+    const data = await res.json();
+    const files = data.files || [];
+    if (files.length === 0) {
+      const msg = 'Your Vox inbox is empty. Add files to the Vox/Inbox folder in Google Drive.';
+      saveToHistory('assistant', msg); speak(msg); return;
+    }
+    const names = files.map(f => f.name).join(', ');
+    const msg = `You have ${files.length} file${files.length>1?'s':''} in your inbox: ${names}.`;
+    saveToHistory('assistant', msg);
+    window._inboxFiles = files;
+    speak(msg);
+  } catch(e) { speak('Could not read your inbox.'); }
+}
+
+async function processInboxFile(task, saveTo, fileName, sendEmail) {
+  speak('Reading your file, one moment.');
+  try {
+    // 1. Read file from inbox
+    const readRes = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read_inbox_file', fileName: fileName || null })
+    });
+    const fileData = await readRes.json();
+    if (fileData.error) { speak('Could not read the file. ' + fileData.error); return; }
+
+    const { fileName: name, mimeType, content: fileContent } = fileData;
+    speak(`Got it. Processing "${name}" now.`);
+
+    // 2. Build Claude request — text or base64 document
+    let userContent;
+    if (fileContent.type === 'text') {
+      userContent = `Here is the document "${name}":
+
+${fileContent.content}
+
+Task: ${task}`;
+    } else if (fileContent.type === 'base64') {
+      // Send as document to Claude
+      const isPDF = mimeType === 'application/pdf';
+      userContent = [
+        {
+          type: isPDF ? 'document' : 'image',
+          source: { type: 'base64', media_type: mimeType, data: fileContent.content }
+        },
+        { type: 'text', text: `Task: ${task}. Be thorough and well-structured. Write in the same language as the document.` }
+      ];
+    }
+
+    // 3. Send to Claude
+    const claudeRes = await fetch('/api/claude', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: 'You are processing a document for Martin Høgsgaard. Complete the requested task thoroughly. Write in the same language as the document unless instructed otherwise.',
+        messages: [{ role: 'user', content: userContent }]
+      })
+    });
+    const claudeData = await claudeRes.json();
+    const result = claudeData.content?.[0]?.text || '';
+    if (!result) { speak('Could not process the file.'); return; }
+
+    // 4. Read a short version aloud
+    const sentences = result.split(/[.!?]+/).filter(s => s.trim()).slice(0, 3);
+    const spoken = sentences.join('. ') + '.';
+    saveToHistory('assistant', result);
+    speak(spoken);
+
+    // 5. Save to project folder in Drive
+    const projectFolder = saveTo || (activeProject ? activeProject.name : 'Nye idéer');
+    const today = new Date().toLocaleDateString('da-DK');
+    const docName = `${task} — ${name} — ${today}`;
+    const saveRes = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_to_project', projectName: projectFolder, content: result, docName })
+    });
+    const saveData = await saveRes.json();
+    if (saveData.success) {
+      const saveMsg = `Saved to your ${projectFolder} folder in Drive.`;
+      saveToHistory('assistant', saveMsg);
+      speakQueued(saveMsg);
+    }
+
+    // 6. Send email if requested
+    if (sendEmail && window._confirmedEmail) {
+      await sendEmail(window._confirmedEmail, docName, result);
+    }
+
+  } catch(e) {
+    console.error('processInboxFile error:', e);
+    speak('Something went wrong processing the file.');
+  }
 }
 
 // ── INIT ──
