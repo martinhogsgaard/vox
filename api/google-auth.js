@@ -9,7 +9,8 @@ export default function handler(req, res) {
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/contacts.readonly',
     'https://www.googleapis.com/auth/contacts.other.readonly',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/documents'
   ].join(' ');
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
