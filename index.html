@@ -443,10 +443,9 @@ async function loadProjectMemory(projectId) {
       .select('summary')
       .eq('project_id', projectId)
       .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
-    projectMemory = data?.summary || '';
-    console.log('Loaded project memory:', projectMemory.substring(0, 100));
+      .limit(1);
+    projectMemory = data?.[0]?.summary || '';
+    if (projectMemory) console.log('Loaded project memory:', projectMemory.substring(0, 100));
   } catch(e) { projectMemory = ''; }
 }
 
@@ -1976,12 +1975,17 @@ function handleCommand(text) {
     return;
   }
 
-  // From home screen: check if user said a project name to navigate
-  for (const p of projects) {
-    if (t.includes(p.name.toLowerCase())) {
-      openProject(p);
-      speak(`Opening ${p.name}.`);
-      return;
+  // From home screen: only navigate to project if the command is ONLY about opening it
+  // Not if there are other instructions (resumé, mail, inbox etc.)
+  const TASK_WORDS = ['resumé', 'resume', 'opsummer', 'analyser', 'skriv', 'send', 'mail', 'inbox', 'fil', 'hent', 'lav', 'opret', 'slet', 'find', 'vis', 'læs'];
+  const hasTaskWords = TASK_WORDS.some(w => t.includes(w));
+  if (!hasTaskWords) {
+    for (const p of projects) {
+      if (t.includes(p.name.toLowerCase())) {
+        openProject(p);
+        speak(`Opening ${p.name}.`);
+        return;
+      }
     }
   }
 
