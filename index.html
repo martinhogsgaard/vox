@@ -896,9 +896,11 @@ ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
 ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
 ACTION:{"type":"create_event_and_invite","title":"ByAulum møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Martin Høgsgaard"}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
+ACTION:{"type":"find_contacts","to":"Henrik Høgsgaard","cc":["Martin Høgsgaard","Søren Herold"],"subject":"Subject","body":"Email body text"}
 ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
 ACTION:{"type":"send_email","to":"email@example.com","cc":"cc1@example.com,cc2@example.com","subject":"Subject","body":"Email body text"}
-- For CC: only use confirmed addresses. If CC recipients are not yet found, use find_contact for each one first before composing the email.
+- Use find_contacts (plural) when a TO recipient AND one or more CC recipients are named. cc is an array of names e.g. ["Martin Høgsgaard","Søren Herold"]. Searches all in parallel.
+- Use find_contact (singular) when only a TO recipient is named with no CC.
 ACTION:{"type":"spell_email","email":"mie@example.dk"}
 ACTION:{"type":"confirm_email","index":1}
 ACTION:{"type":"read_inbox"}
@@ -1301,6 +1303,10 @@ async function executeAction(action) {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder, action.description || '');
   } else if (action.type === 'find_contact') {
     await findContact(action.query, action.subject, action.body);
+  } else if (action.type === 'find_contacts') {
+    // cc can be string or array — normalize to array
+    const ccArr = Array.isArray(action.cc) ? action.cc : (action.cc ? [action.cc] : []);
+    await findContactsWithCC(action.to, ccArr, action.subject, action.body);
   } else if (action.type === 'send_confirmed_email') {
     if (window._confirmedEmail) {
       const to = window._confirmedEmail;
@@ -1637,6 +1643,129 @@ Martin`;
 window._pendingEmail = null;
 window._foundContacts = null;
 
+// ── FIND CONTACTS WITH CC — searches TO and CC in parallel ──
+async function findContactsWithCC(toQuery, ccQueries, subject, body) {
+  // ccQueries can be a string or array
+  const ccList = Array.isArray(ccQueries) ? ccQueries : (ccQueries ? [ccQueries] : []);
+  const count = 1 + ccList.length;
+  speak(`Looking up ${count} addresses.`);
+
+  // Search TO + all CC recipients in parallel
+  const [toRes, ...ccResArr] = await Promise.all([
+    fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'find_contact', query: toQuery }) }),
+    ...ccList.map(q => fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'find_contact', query: q }) }))
+  ]);
+
+  const toData = await toRes.json();
+  const ccDataArr = await Promise.all(ccResArr.map(r => r.json()));
+
+  // Flatten TO emails
+  const toEmails = [];
+  (toData.contacts || []).forEach(c => (c.emails||[]).forEach(e => toEmails.push({ name: c.name, email: e })));
+
+  // Build CC groups — one group per person searched
+  const ccGroups = await Promise.all(ccDataArr.map(async (d, i) => {
+    const emails = [];
+    (d.contacts || []).forEach(c => (c.emails||[]).forEach(e => emails.push({ name: c.name, email: e })));
+    return { query: ccList[i], emails, chosen: null };
+  }));
+
+  window._pendingEmailDraft = { subject, body };
+  window._multiContactState = { toEmails, ccGroups, chosenTo: null, subject, body };
+  showMultiContactCard();
+}
+
+function showMultiContactCard() {
+  const state = window._multiContactState;
+  if (!state) return;
+  const card = document.getElementById('confirmCard');
+  const lbl = document.getElementById('confirmLabel');
+  const cardBody = document.getElementById('confirmCardBody');
+  if (!card) return;
+  lbl.textContent = 'Vælg mailadresser';
+
+  const renderGroup = (label, emails, chosen, pickFnName, groupIdx) => {
+    if (emails.length === 0) {
+      return `<div class="email-preview-field">
+        <div class="email-preview-field-label">${label}</div>
+        <div style="font-size:13px;color:var(--label);margin-top:4px;">Ikke fundet</div>
+      </div>`;
+    }
+    const btns = emails.map((c, i) => {
+      const isChosen = chosen === c.email;
+      return `<button onclick="${pickFnName}(${groupIdx !== undefined ? groupIdx + ',' : ''}${i})" class="email-choice-btn" style="${isChosen ? 'background:var(--text);' : ''}">
+        <div class="email-choice-name" style="${isChosen ? 'color:rgba(255,255,255,.7)' : ''}">${esc(c.name)}</div>
+        <div class="email-choice-addr" style="${isChosen ? 'color:#fff' : ''}">${esc(c.email)}</div>
+      </button>`;
+    }).join('');
+    return `<div class="email-preview-field">
+      <div class="email-preview-field-label">${label}</div>
+      <div class="email-choice-list">${btns}</div>
+    </div>`;
+  };
+
+  // TO group
+  let html = renderGroup('TIL', state.toEmails, state.chosenTo, 'multiPickTo', undefined);
+
+  // CC groups — one per person
+  (state.ccGroups || []).forEach((g, gi) => {
+    html += renderGroup(`CC — ${esc(g.query)}`, g.emails, g.chosen, 'multiPickCC', gi);
+  });
+
+  const allCCChosen = (state.ccGroups || []).every(g => g.emails.length === 0 || g.chosen);
+  const canSend = state.chosenTo;
+
+  html += `<div style="margin-top:4px;font-size:12px;color:var(--label)">Tryk på en adresse for at vælge</div>`;
+  if (canSend) html += `<button class="email-preview-send" style="margin-top:12px" onclick="multiContactProceed()">✓ Fortsæt</button>`;
+  html += `<button class="email-preview-cancel" onclick="multiContactCancel()">✕ Annuller</button>`;
+
+  cardBody.innerHTML = html;
+  card.style.display = 'block';
+}
+
+function multiPickTo(idx) {
+  if (!window._multiContactState) return;
+  window._multiContactState.chosenTo = window._multiContactState.toEmails[idx]?.email || null;
+  showMultiContactCard();
+}
+
+function multiPickCC(groupIdx, emailIdx) {
+  if (!window._multiContactState) return;
+  const g = window._multiContactState.ccGroups[groupIdx];
+  if (g) g.chosen = g.emails[emailIdx]?.email || null;
+  showMultiContactCard();
+}
+
+function multiContactProceed() {
+  const state = window._multiContactState;
+  if (!state || !state.chosenTo) return;
+  // Build CC string from all chosen CC addresses
+  const ccAddresses = (state.ccGroups || [])
+    .map(g => g.chosen)
+    .filter(Boolean)
+    .join(',');
+  window._multiContactState = null;
+  hideConfirmCard();
+  showEmailPreview(
+    state.chosenTo,
+    state.subject,
+    state.body,
+    (t, s, b, c) => sendEmail(t, s, b, c),
+    null,
+    ccAddresses
+  );
+}
+
+function multiContactCancel() {
+  window._multiContactState = null;
+  hideConfirmCard();
+  const msg = 'Ok, cancelled.';
+  saveToHistory('assistant', msg);
+  speak(msg);
+}
+
 async function findContact(query, subject, body) {
   console.log('findContact called with query:', query);
   try {
@@ -1935,6 +2064,13 @@ function stopListening() {
 }
 
 function handleMicTap() {
+  // Don't interrupt if email preview card is showing — user should use card buttons
+  const card = document.getElementById('confirmCard');
+  if (card && card.style.display !== 'none') {
+    // Still allow stopping speech
+    if (isSpeaking || _speakBusy) { stopSpeaking(); return; }
+    return; // Ignore mic taps while card is visible
+  }
   // Interrupt speech
   if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
     stopSpeaking();
@@ -2040,7 +2176,12 @@ async function init() {
   setDate();
   fetchWeather();
   await loadProjects();
-  loadUserProfile();
+  await loadUserProfile();
+  // Seed Martin's own emails into profile if not already there
+  if (!userProfile['own_emails']) {
+    saveToUserProfile('own_emails', 'mh@weproduce.dk, mh@firtal.com, m_hoegsgaard@hotmail.com');
+    saveToUserProfile('name', 'Martin Høgsgaard');
+  }
   setMicState('idle');
   setMicHint('Tryk for at tale');
 
