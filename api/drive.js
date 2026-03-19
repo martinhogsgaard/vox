@@ -34,10 +34,24 @@ async function refreshAccessToken(refreshToken) {
 }
 
 async function findOrCreateFolder(name, parentId, headers) {
-  const q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
-  const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`, { headers });
-  const data = await search.json();
-  if (data.files && data.files.length > 0) return data.files[0].id;
+  // First: search with parent constraint
+  const q1 = `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+  const r1 = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q1)}&fields=files(id,name)`, { headers });
+  const d1 = await r1.json();
+  if (d1.files && d1.files.length > 0) {
+    console.log(`Found "${name}" under parent: ${d1.files[0].id}`);
+    return d1.files[0].id;
+  }
+  // Second: search globally (finds folders user created manually)
+  const q2 = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const r2 = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q2)}&fields=files(id,name,parents)`, { headers });
+  const d2 = await r2.json();
+  if (d2.files && d2.files.length > 0) {
+    console.log(`Found "${name}" globally: ${d2.files[0].id}`);
+    return d2.files[0].id;
+  }
+  // Not found — create it
+  console.log(`Creating "${name}" under ${parentId}`);
   const create = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST', headers,
     body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
