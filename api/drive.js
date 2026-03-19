@@ -191,15 +191,20 @@ export default async function handler(req, res) {
     } else if (action === 'list_inbox') {
       // List files in Vox/Inbox
       const rootId = await getRootId(headers);
+      console.log('Root ID:', rootId);
       const voxId = await findOrCreateFolder(VOX_FOLDER_NAME, rootId, headers);
+      console.log('Vox folder ID:', voxId);
       const inboxId = await findOrCreateFolder(INBOX_FOLDER_NAME, voxId, headers);
+      console.log('Inbox folder ID:', inboxId);
       const q = `'${inboxId}' in parents and trashed=false`;
+      console.log('Query:', q);
       const listRes = await fetch(
         `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=modifiedTime desc`,
         { headers }
       );
       const data = await listRes.json();
-      return res.status(200).json({ files: data.files || [], folderId: inboxId });
+      console.log('Inbox files response:', JSON.stringify(data));
+      return res.status(200).json({ files: data.files || [], folderId: inboxId, debug: { rootId, voxId, inboxId } });
 
     } else if (action === 'read_inbox_file') {
       // Read a specific file from inbox (or by id) and return content for Claude
