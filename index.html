@@ -926,7 +926,8 @@ Rules:
 - IMPORTANT: Once a contact has been found and spoken aloud, treat all subsequent replies as confirmation or rejection — never search again for the same person.
 - For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
-- For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
+- For open_drive_folder: ONLY use when Martin explicitly asks about files in the current PROJECT folder. Never use this for inbox.
+- INBOX keywords: "inbox", "indbakke", "box", "boks", "den fil", "filen", "PDF", "dokument", "rapport", "læs", "resume", "resumé", "opsummer", "hvad handler", "hvad står der". When ANY of these appear with a task → use process_inbox_file.
 - For list_inbox: ONLY use when Martin explicitly asks to LIST or SEE what files are in inbox.
 - For process_inbox_file: use whenever Martin says anything about reading, summarizing, analyzing, processing, or doing anything with a file/PDF/document. This includes "læs filen", "lav et resumé", "hvad står der i", "åbn PDF", "behandl filen" etc. task = what to do. save_to = project name. ALWAYS use process_inbox_file when a task is mentioned — never use list_inbox for this.
 - Only ONE action per reply — EXCEPT create_multiple_events and delete_multiple_events which handle batches.
