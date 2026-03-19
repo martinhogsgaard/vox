@@ -203,22 +203,38 @@ export default async function handler(req, res) {
       return res.status(200).json({ files: data.files || [], folderId: projectId });
 
     } else if (action === 'list_inbox') {
-      // List files in Vox/Inbox
-      const rootId = await getRootId(headers);
-      console.log('Root ID:', rootId);
-      const voxId = await findOrCreateFolder(VOX_FOLDER_NAME, rootId, headers);
-      console.log('Vox folder ID:', voxId);
-      const inboxId = await findOrCreateFolder(INBOX_FOLDER_NAME, voxId, headers);
-      console.log('Inbox folder ID:', inboxId);
-      const q = `'${inboxId}' in parents and trashed=false`;
-      console.log('Query:', q);
+      // Direct search for Inbox folder — find by name, verify parent is Vox
+      const inboxSearch = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent("name='Inbox' and mimeType='application/vnd.google-apps.folder' and trashed=false")}&fields=files(id,name,parents)`,
+        { headers }
+      );
+      const inboxSearchData = await inboxSearch.json();
+      console.log('Inbox folders found:', JSON.stringify(inboxSearchData));
+
+      let inboxId = null;
+      for (const folder of (inboxSearchData.files || [])) {
+        for (const parentId of (folder.parents || [])) {
+          const parentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${parentId}?fields=id,name`, { headers });
+          const parentData = await parentRes.json();
+          console.log('Parent:', parentData.name, parentData.id);
+          if (parentData.name === 'Vox') { inboxId = folder.id; break; }
+        }
+        if (inboxId) break;
+      }
+      // Fallback: use first Inbox found
+      if (!inboxId && inboxSearchData.files?.length > 0) {
+        inboxId = inboxSearchData.files[0].id;
+        console.log('Fallback inbox:', inboxId);
+      }
+      if (!inboxId) return res.status(200).json({ files: [], error: 'Inbox folder not found' });
+
       const listRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=modifiedTime desc`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${inboxId}' in parents and trashed=false`)}&fields=files(id,name,mimeType,size,modifiedTime)&orderBy=modifiedTime desc`,
         { headers }
       );
       const data = await listRes.json();
-      console.log('Inbox files response:', JSON.stringify(data));
-      return res.status(200).json({ files: data.files || [], folderId: inboxId, debug: { rootId, voxId, inboxId } });
+      console.log('Inbox contents:', JSON.stringify(data));
+      return res.status(200).json({ files: data.files || [], folderId: inboxId });
 
     } else if (action === 'read_inbox_file') {
       // Read a specific file from inbox (or by id) and return content for Claude
@@ -227,17 +243,30 @@ export default async function handler(req, res) {
       let targetName = fileName;
       let targetMime = req.body.mimeType;
 
-      // If no fileId, get first file from inbox
+      // If no fileId, find inbox and get first file
       if (!targetId) {
-        const rootId = await getRootId(headers);
-        const voxId = await findOrCreateFolder(VOX_FOLDER_NAME, rootId, headers);
-        const inboxId = await findOrCreateFolder(INBOX_FOLDER_NAME, voxId, headers);
-        const q = `'${inboxId}' in parents and trashed=false`;
+        // Find Inbox folder directly by name
+        const inboxSearch = await fetch(
+          `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent("name='Inbox' and mimeType='application/vnd.google-apps.folder' and trashed=false")}&fields=files(id,name,parents)`,
+          { headers }
+        );
+        const inboxSearchData = await inboxSearch.json();
+        let inboxId = inboxSearchData.files?.[0]?.id;
+        // Prefer the one under Vox
+        for (const folder of (inboxSearchData.files || [])) {
+          for (const parentId of (folder.parents || [])) {
+            const pr = await fetch(`https://www.googleapis.com/drive/v3/files/${parentId}?fields=name`, { headers });
+            const pd = await pr.json();
+            if (pd.name === 'Vox') { inboxId = folder.id; break; }
+          }
+        }
+        if (!inboxId) return res.status(200).json({ error: 'Inbox folder not found' });
         const listRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)&orderBy=modifiedTime desc&pageSize=1`,
+          `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${inboxId}' in parents and trashed=false`)}&fields=files(id,name,mimeType)&orderBy=modifiedTime desc&pageSize=5`,
           { headers }
         );
         const listData = await listRes.json();
+        console.log('Files in inbox for reading:', JSON.stringify(listData));
         const first = listData.files?.[0];
         if (!first) return res.status(200).json({ error: 'Inbox is empty' });
         targetId = first.id;
