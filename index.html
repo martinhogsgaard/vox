@@ -927,8 +927,8 @@ Rules:
 - For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
 - For read_inbox: reads Martin's 5 latest emails aloud.
 - For open_drive_folder: use when Martin asks about project files, documents, or wants to refresh file context.
-- For list_inbox: use when Martin asks what files are in his inbox or Vox folder.
-- For process_inbox_file: use when Martin asks to read, summarize, analyze or process a file. task = what to do ("kort resumé", "fyldestgørende resumé", "skriv et svar", "handlingsplan" etc). save_to = project name to save result in. send_email=true if Martin wants it emailed.
+- For list_inbox: ONLY use when Martin explicitly asks to LIST or SEE what files are in inbox.
+- For process_inbox_file: use whenever Martin says anything about reading, summarizing, analyzing, processing, or doing anything with a file/PDF/document. This includes "læs filen", "lav et resumé", "hvad står der i", "åbn PDF", "behandl filen" etc. task = what to do. save_to = project name. ALWAYS use process_inbox_file when a task is mentioned — never use list_inbox for this.
 - Only ONE action per reply — EXCEPT create_multiple_events and delete_multiple_events which handle batches.
 - When deleting events, ALWAYS use list_calendar first to find the correct event IDs. Never guess or reuse old IDs from history.
 - If Martin says "stop", "nok", "hold op" or similar — stop immediately, apologize briefly, and ask what he needs instead. Never repeat content he has already rejected.
@@ -2185,8 +2185,7 @@ async function playMorningBrief() {
 }
 
 // ── INBOX FILE PROCESSING ──
-async function listInbox() {
-  speak('Checking your inbox.');
+async function listInbox(autoTask, autoSaveTo) {
   try {
     const res = await fetch('/api/drive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2195,13 +2194,18 @@ async function listInbox() {
     const data = await res.json();
     const files = data.files || [];
     if (files.length === 0) {
-      const msg = 'Your Vox inbox is empty. Add files to the Vox/Inbox folder in Google Drive.';
+      const msg = 'Your Vox inbox is empty. Add a file to the Vox/Inbox folder in Google Drive.';
       saveToHistory('assistant', msg); speak(msg); return;
+    }
+    window._inboxFiles = files;
+    // If only 1 file and a task is given, process immediately
+    if (files.length === 1 && autoTask) {
+      await processInboxFile(autoTask, autoSaveTo, files[0].name, false);
+      return;
     }
     const names = files.map(f => f.name).join(', ');
     const msg = `You have ${files.length} file${files.length>1?'s':''} in your inbox: ${names}.`;
     saveToHistory('assistant', msg);
-    window._inboxFiles = files;
     speak(msg);
   } catch(e) { speak('Could not read your inbox.'); }
 }
