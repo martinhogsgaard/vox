@@ -1016,7 +1016,7 @@ Rules:
 }
 
 // ── EMAIL PREVIEW CARD ──
-function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch) {
+function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch, attachment) {
   const card = document.getElementById('confirmCard');
   const lbl = document.getElementById('confirmLabel');
   const cardBody = document.getElementById('confirmCardBody');
@@ -1044,6 +1044,14 @@ function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch)
     </div>
     ${ccBlock}
     ${!cc && !showCCSearch ? `<button onclick="document.getElementById('previewCCRow').style.display='block'" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">+ Tilføj CC</button>` : ''}
+    ${attachment ? `<div class="email-preview-field">
+      <div class="email-preview-field-label">Vedhæftning</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--label);fill:none;stroke-width:2;flex-shrink:0"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(attachment.filename)}</span>
+        <button onclick="removeAttachment()" style="background:none;border:none;color:var(--label);font-size:12px;cursor:pointer;">✕</button>
+      </div>
+    </div>` : `<button onclick="pickAttachmentFromInbox()" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">📎 Vedhæft fil fra inbox</button>`}
     <div class="email-preview-field">
       <div class="email-preview-field-label">Emne</div>
       <div class="email-preview-field-value">${esc(subject)}</div>
@@ -1058,8 +1066,65 @@ function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch)
   window._emailPreviewTo = to;
   window._emailPreviewSubject = subject;
   window._emailPreviewCc = cc || '';
+  window._emailPreviewAttachment = attachment || null;
   window._emailPreviewOnSend = onSend;
   window._emailPreviewOnCancel = onCancel;
+}
+
+async function pickAttachmentFromInbox() {
+  try {
+    const res = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_inbox' })
+    });
+    const data = await res.json();
+    const files = data.files || [];
+    if (files.length === 0) { speak('Your inbox is empty.'); return; }
+    // Show file picker in preview card
+    const suggestions = document.getElementById('previewCCSuggestions');
+    const row = document.getElementById('previewCCRow');
+    // Insert file list above send button
+    const card = document.getElementById('confirmCardBody');
+    const existingPicker = document.getElementById('attachmentPicker');
+    if (existingPicker) existingPicker.remove();
+    const picker = document.createElement('div');
+    picker.id = 'attachmentPicker';
+    picker.style.cssText = 'margin-bottom:10px;';
+    picker.innerHTML = `<div class="email-preview-field-label" style="margin-bottom:6px;">Vælg fil at vedhæfte</div>` +
+      files.map((f, i) => `<button onclick="selectAttachment(${i})" class="email-choice-btn" style="margin-bottom:4px;">
+        <div class="email-choice-addr">${esc(f.name)}</div>
+      </button>`).join('');
+    window._inboxFilesForAttach = files;
+    const sendBtn = card.querySelector('.email-preview-send');
+    if (sendBtn) card.insertBefore(picker, sendBtn);
+    else card.appendChild(picker);
+  } catch(e) { speak('Could not load inbox files.'); }
+}
+
+function selectAttachment(idx) {
+  const file = window._inboxFilesForAttach?.[idx];
+  if (!file) return;
+  window._emailPreviewAttachment = { driveFileId: file.id, filename: file.name, mimeType: file.mimeType };
+  // Remove picker and refresh preview
+  const picker = document.getElementById('attachmentPicker');
+  if (picker) picker.remove();
+  // Update attachment display
+  showEmailPreview(
+    window._emailPreviewTo, window._emailPreviewSubject,
+    document.getElementById('emailPreviewBody')?.value || '',
+    window._emailPreviewOnSend, window._emailPreviewOnCancel,
+    window._emailPreviewCc, false, window._emailPreviewAttachment
+  );
+}
+
+function removeAttachment() {
+  window._emailPreviewAttachment = null;
+  showEmailPreview(
+    window._emailPreviewTo, window._emailPreviewSubject,
+    document.getElementById('emailPreviewBody')?.value || '',
+    window._emailPreviewOnSend, window._emailPreviewOnCancel,
+    window._emailPreviewCc, false, null
+  );
 }
 
 async function previewCCSearch() {
@@ -1105,10 +1170,11 @@ function emailPreviewSend() {
   const to = window._emailPreviewTo;
   const subject = window._emailPreviewSubject;
   const cc = window._emailPreviewCc || '';
+  const attachment = window._emailPreviewAttachment || null;
   const onSend = window._emailPreviewOnSend;
   hideConfirmCard();
-  if (onSend) onSend(to, subject, body, cc);
-  else sendEmail(to, subject, body, cc);
+  if (onSend) onSend(to, subject, body, cc, attachment);
+  else sendEmail(to, subject, body, cc, attachment);
 }
 
 function emailPreviewCancel() {
@@ -1331,9 +1397,14 @@ async function executeAction(action) {
       const to = window._confirmedEmail;
       window._confirmedEmail = null;
       window._foundContacts = null;
+      // Check if attachment requested
+      let attachment = null;
+      if (action.attach_from_inbox) {
+        attachment = window._lastInboxFile || null;
+      }
       showEmailPreview(to, action.subject, action.body,
-        (t, s, b, c) => sendEmail(t, s, b, c),
-        null, action.cc || ''
+        (t, s, b, c, a) => sendEmail(t, s, b, c, a),
+        null, action.cc || '', false, attachment
       );
     }
   } else if (action.type === 'spell_email') {
@@ -1918,12 +1989,15 @@ async function findContact(query, subject, body) {
   } catch(e) { speak('Could not search contacts.'); }
 }
 
-async function sendEmail(to, subject, body, cc) {
+async function sendEmail(to, subject, body, cc, attachment) {
   window._toEmailConfirmed = null;
   try {
+    const payload = { action: 'send', to, subject, body, cc: cc || '' };
+    if (attachment?.driveFileId) payload.driveFileId = attachment.driveFileId;
+    else if (attachment?.data) payload.attachment = attachment;
     const res = await fetch('/api/gmail', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send', to, subject, body, cc: cc || '' })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.id) {
@@ -2280,6 +2354,8 @@ Task: ${task}`;
     const today = new Date().toLocaleDateString('da-DK');
     const docName = `${task} — ${name} — ${today}`;
     saveToHistory('assistant', result);
+    // Store reference to processed file for potential email attachment
+    window._lastInboxFile = { driveFileId: fileData.fileId, filename: fileData.fileName, mimeType: fileData.mimeType };
     const saveRes = await fetch('/api/drive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save_to_project', projectName: projectFolder, content: result, docName })
