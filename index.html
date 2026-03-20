@@ -970,6 +970,23 @@ Rules:
       return;
     }
     let reply = data.content[0].text;
+    // Hard block: if reply contains Danish words, force re-ask in English
+    const danishWords = ['jeg ', 'det ', 'og ', 'er ', 'til ', 'den ', 'du ', 'har ', 'ikke ', 'med ', 'på ', 'som ', 'ved ', 'vil ', 'kan ', 'skal ', 'også ', 'hvor ', 'hvad ', 'din ', 'dit '];
+    const lowerReply = reply.toLowerCase();
+    const danishCount = danishWords.filter(w => lowerReply.includes(w)).length;
+    if (danishCount >= 3) {
+      console.warn('Danish detected in reply, forcing English rewrite');
+      const rewriteRes = await fetch('/api/claude', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 500,
+          system: 'Translate the following text to English. Output ONLY the English translation, nothing else.',
+          messages: [{ role: 'user', content: reply }]
+        })
+      });
+      const rewriteData = await rewriteRes.json();
+      if (rewriteData.content?.[0]?.text) reply = rewriteData.content[0].text;
+    }
 
     // Parse action but DON'T run it yet
     const actionLineMatch = reply.match(/ACTION:(\{[^\n]+\})/);
@@ -1051,7 +1068,7 @@ function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch,
         <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(attachment.filename)}</span>
         <button onclick="removeAttachment()" style="background:none;border:none;color:var(--label);font-size:12px;cursor:pointer;">✕</button>
       </div>
-    </div>` : `<button onclick="pickAttachmentFromInbox()" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">📎 Vedhæft fil fra inbox</button>`}
+    </div>` : `<button onclick="showAttachmentPicker()" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">📎 Vedhæft fil</button>`}
     <div class="email-preview-field">
       <div class="email-preview-field-label">Emne</div>
       <div class="email-preview-field-value">${esc(subject)}</div>
@@ -1069,6 +1086,59 @@ function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch,
   window._emailPreviewAttachment = attachment || null;
   window._emailPreviewOnSend = onSend;
   window._emailPreviewOnCancel = onCancel;
+}
+
+async function pickFileFromProject(projectName) {
+  try {
+    const res = await fetch('/api/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_project_files', projectName })
+    });
+    const data = await res.json();
+    const files = data.files || [];
+    if (files.length === 0) return null;
+    if (files.length === 1) {
+      return { driveFileId: files[0].id, filename: files[0].name, mimeType: files[0].mimeType };
+    }
+    // Multiple files — store for picker, return null and show picker after preview
+    window._projectFilesForAttach = files;
+    window._projectFilesForAttachName = projectName;
+    return null; // Will be picked via UI
+  } catch(e) { return null; }
+}
+
+async function showAttachmentPicker() {
+  // Fetch both inbox and recent project files
+  try {
+    const [inboxRes, projectRes] = await Promise.all([
+      fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_inbox' }) }),
+      window._emailPreviewSaveTo
+        ? fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_project_files', projectName: window._emailPreviewSaveTo }) })
+        : Promise.resolve({ json: async () => ({ files: [] }) })
+    ]);
+    const inboxData = await inboxRes.json();
+    const projectData = await projectRes.json();
+    const allFiles = [
+      ...(inboxData.files || []).map(f => ({ ...f, _source: 'Inbox' })),
+      ...(projectData.files || []).map(f => ({ ...f, _source: window._emailPreviewSaveTo || 'Projekt' }))
+    ];
+    window._inboxFilesForAttach = allFiles;
+    const card = document.getElementById('confirmCardBody');
+    const existingPicker = document.getElementById('attachmentPicker');
+    if (existingPicker) existingPicker.remove();
+    if (allFiles.length === 0) { speak('No files found.'); return; }
+    const picker = document.createElement('div');
+    picker.id = 'attachmentPicker';
+    picker.style.cssText = 'margin-bottom:10px;';
+    picker.innerHTML = `<div class="email-preview-field-label" style="margin-bottom:6px;">Vælg fil</div>` +
+      allFiles.map((f, i) => `<button onclick="selectAttachment(${i})" class="email-choice-btn" style="margin-bottom:4px;">
+        <div class="email-choice-name">${esc(f._source)}</div>
+        <div class="email-choice-addr">${esc(f.name)}</div>
+      </button>`).join('');
+    const sendBtn = card.querySelector('.email-preview-send');
+    if (sendBtn) card.insertBefore(picker, sendBtn);
+    else card.appendChild(picker);
+  } catch(e) { speak('Could not load files.'); }
 }
 
 async function pickAttachmentFromInbox() {
@@ -1401,6 +1471,9 @@ async function executeAction(action) {
       let attachment = null;
       if (action.attach_from_inbox) {
         attachment = window._lastInboxFile || null;
+      } else if (action.attach_from_project) {
+        // Fetch files from project folder and show picker
+        attachment = await pickFileFromProject(action.attach_from_project);
       }
       showEmailPreview(to, action.subject, action.body,
         (t, s, b, c, a) => sendEmail(t, s, b, c, a),
