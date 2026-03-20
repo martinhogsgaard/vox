@@ -32,25 +32,57 @@ async function refreshAccessToken(refreshToken) {
   return tokens;
 }
 
-function makeEmail({ to, subject, body, cc }) {
-  // Encode subject with RFC2047 for non-ASCII characters (æøå etc)
-  const encodeSubject = (str) => {
-    const encoded = Buffer.from(str, 'utf-8').toString('base64');
-    return `=?UTF-8?B?${encoded}?=`;
-  };
-  const lines = [
+function encodeSubject(str) {
+  const encoded = Buffer.from(str, 'utf-8').toString('base64');
+  return `=?UTF-8?B?${encoded}?=`;
+}
+
+function makeEmail({ to, subject, body, cc, attachment }) {
+  // attachment = { filename, mimeType, data (base64) }
+  const boundary = 'vox_' + Date.now();
+
+  if (!attachment) {
+    // Simple plain text email
+    const lines = [
+      `To: ${to}`,
+      ...(cc ? [`Cc: ${cc}`] : []),
+      `Subject: ${encodeSubject(subject)}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/plain; charset=utf-8`,
+      `Content-Transfer-Encoding: base64`,
+      '',
+      Buffer.from(body, 'utf-8').toString('base64')
+    ];
+    const raw = lines.join('\r\n');
+    return Buffer.from(raw).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  // Multipart email with attachment
+  const encodedFilename = encodeSubject(attachment.filename);
+  const parts = [
     `To: ${to}`,
     ...(cc ? [`Cc: ${cc}`] : []),
     `Subject: ${encodeSubject(subject)}`,
     `MIME-Version: 1.0`,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
     `Content-Type: text/plain; charset=utf-8`,
     `Content-Transfer-Encoding: base64`,
     '',
-    Buffer.from(body, 'utf-8').toString('base64')
+    Buffer.from(body, 'utf-8').toString('base64'),
+    '',
+    `--${boundary}`,
+    `Content-Type: ${attachment.mimeType}; name="${encodedFilename}"`,
+    `Content-Transfer-Encoding: base64`,
+    `Content-Disposition: attachment; filename="${encodedFilename}"`,
+    '',
+    attachment.data,
+    '',
+    `--${boundary}--`
   ];
-  const raw = lines.join('\r\n');
-  return Buffer.from(raw).toString('base64')
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const raw = parts.join('\r\n');
+  return Buffer.from(raw).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export default async function handler(req, res) {
@@ -76,7 +108,33 @@ export default async function handler(req, res) {
     console.log('Gmail action:', action);
 
     if (action === 'send') {
-      const raw = makeEmail({ to, subject, body, cc });
+      const { attachment } = req.body; // { filename, mimeType, data (base64), driveFileId }
+
+      let attachmentData = attachment || null;
+
+      // If driveFileId provided, fetch from Drive
+      if (!attachmentData && req.body.driveFileId) {
+        const driveToken = tokenData.access_token;
+        const fileMetaRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${req.body.driveFileId}?fields=name,mimeType`,
+          { headers: { Authorization: `Bearer ${driveToken}` } }
+        );
+        const fileMeta = await fileMetaRes.json();
+        const fileRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${req.body.driveFileId}?alt=media`,
+          { headers: { Authorization: `Bearer ${driveToken}` } }
+        );
+        if (fileRes.ok) {
+          const buffer = await fileRes.arrayBuffer();
+          attachmentData = {
+            filename: fileMeta.name,
+            mimeType: fileMeta.mimeType || 'application/octet-stream',
+            data: Buffer.from(buffer).toString('base64')
+          };
+        }
+      }
+
+      const raw = makeEmail({ to, subject, body, cc, attachment: attachmentData });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST', headers,
         body: JSON.stringify({ raw })
