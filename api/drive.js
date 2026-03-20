@@ -94,7 +94,7 @@ async function getFileBase64(fileId, mimeType, headers) {
     );
     if (res.ok) {
       const text = await res.text();
-      return { type: 'text', content: text.substring(0, 50000) };
+      return { type: 'text', content: text.substring(0, 15000) };
     }
   }
   // For PDF and images: download as base64
@@ -103,37 +103,48 @@ async function getFileBase64(fileId, mimeType, headers) {
   });
   if (!res.ok) return null;
   const buffer = await res.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString('base64');
+  // Limit to 3MB to avoid token overflow
+  const limited = buffer.byteLength > 3000000 ? buffer.slice(0, 3000000) : buffer;
+  const base64 = Buffer.from(limited).toString('base64');
   return { type: 'base64', content: base64, mimeType };
 }
 
-// Create a Google Doc with text content in a folder
+// Upload a plain text file to Drive (simpler and more reliable than Docs API)
 async function createDoc(name, content, folderId, headers) {
-  // Create empty doc
-  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      name,
-      mimeType: 'application/vnd.google-apps.document',
-      parents: [folderId]
-    })
+  const boundary = 'vox_boundary_' + Date.now();
+  const metadata = JSON.stringify({
+    name: name + '.txt',
+    mimeType: 'text/plain',
+    parents: [folderId]
   });
-  const doc = await createRes.json();
-  if (!doc.id) return null;
 
-  // Insert content via Docs API
-  const updateRes = await fetch(
-    `https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`,
+  const body = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    metadata,
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    '',
+    content,
+    `--${boundary}--`
+  ].join('\r\n');
+
+  const uploadRes = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
     {
       method: 'POST',
-      headers,
-      body: JSON.stringify({
-        requests: [{ insertText: { location: { index: 1 }, text: content } }]
-      })
+      headers: {
+        'Authorization': headers.Authorization,
+        'Content-Type': `multipart/related; boundary=${boundary}`
+      },
+      body
     }
   );
-  return { id: doc.id, name, url: `https://docs.google.com/document/d/${doc.id}/edit` };
+  const file = await uploadRes.json();
+  console.log('Upload result:', JSON.stringify(file));
+  if (!file.id) return null;
+  return { id: file.id, name: file.name, url: `https://drive.google.com/file/d/${file.id}/view` };
 }
 
 export default async function handler(req, res) {
@@ -278,10 +289,10 @@ export default async function handler(req, res) {
       let fileContent = null;
       if (targetMime === 'application/vnd.google-apps.document') {
         const text = await getDocText(targetId, headers);
-        fileContent = { type: 'text', content: text.substring(0, 50000) };
+        fileContent = { type: 'text', content: text.substring(0, 15000) };
       } else if (targetMime === 'application/vnd.google-apps.spreadsheet') {
         const text = await getSheetText(targetId, headers);
-        fileContent = { type: 'text', content: text.substring(0, 50000) };
+        fileContent = { type: 'text', content: text.substring(0, 15000) };
       } else {
         fileContent = await getFileBase64(targetId, targetMime, headers);
       }
