@@ -784,6 +784,7 @@ async function sendToClaude(text) {
   console.log('sendToClaude called, text:', text, 'activeProject:', activeProject ? activeProject.name : 'null');
   isThinking = true;
   setMicState('thinking');
+  setMicHint('Arbejder...');
   setLiveTranscript(''); // clear live bubble when sending
   if (activeProject) {
     addBubble('user', text);
@@ -876,7 +877,7 @@ ${driveFiles.length > 0 ? `\n\nPROJECT FILES in Google Drive (${driveFiles.lengt
 ${Object.keys(userProfile).length > 0 ? `USER PROFILE:
 ${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}
 
-` : ''}Martin speaks Danish but you ALWAYS reply in English — never switch to Danish under any circumstances. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
+` : ''}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Not even one Danish word. If you find yourself writing Danish, stop and rewrite in English. This rule overrides everything else. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
 When Martin is brainstorming or asking for ideas, give real, concrete suggestions. Never say you "can't search" or "don't have access to information" — use your built-in knowledge.
 
 ACTIONS — append ONE on the last line when Martin asks you to act:
@@ -955,7 +956,17 @@ Rules:
     if (!data.content || !data.content[0] || !data.content[0].text) {
       console.error('Unexpected Claude response:', JSON.stringify(data));
       isThinking = false;
-      speak('Sorry, something went wrong. Please try again.');
+      const errType = data?.error?.type || '';
+      const errMsg = data?.error?.message || '';
+      if (errType === 'rate_limit_error') {
+        speak('I am out of capacity right now. Please wait about 60 seconds and try again.');
+      } else if (errType === 'authentication_error' || errType === 'permission_error') {
+        speak('Authentication error. Please reload the app.');
+      } else if (errMsg.includes('credit')) {
+        speak('I have run out of credits. Please top up in the Anthropic console.');
+      } else {
+        speak('Something went wrong. Please try again.');
+      }
       return;
     }
     let reply = data.content[0].text;
@@ -991,6 +1002,7 @@ Rules:
     speak(reply, async () => {
       setMicState('idle');
       setMicHint('Tryk for at tale');
+      isThinking = false;
       if (parsedAction) {
         await executeAction(parsedAction);
       }
@@ -998,7 +1010,8 @@ Rules:
   } catch(e) {
     console.log('Claude error:', e);
     isThinking = false;
-    speak('Sorry, something went wrong. Please try again.', () => { setMicState('idle'); setMicHint('Tryk for at tale'); });
+    setMicState('idle'); setMicHint('Tryk for at tale');
+    speak('Something went wrong. Please try again.');
   }
 }
 
@@ -2212,7 +2225,9 @@ async function listInbox(autoTask, autoSaveTo) {
 }
 
 async function processInboxFile(task, saveTo, fileName, sendEmail) {
-  speak('Reading your file, one moment.');
+  setMicState('thinking');
+  setMicHint('Læser fil...');
+  speak('Reading your file.');
   try {
     // 1. Read file from inbox
     const readRes = await fetch('/api/drive', {
@@ -2223,6 +2238,7 @@ async function processInboxFile(task, saveTo, fileName, sendEmail) {
     if (fileData.error) { speak('Could not read the file. ' + fileData.error); return; }
 
     const { fileName: name, mimeType, content: fileContent } = fileData;
+    setMicHint(`Behandler "${name}"...`);
     speak(`Got it. Processing "${name}" now.`);
 
     // 2. Build Claude request — text or base64 document
@@ -2259,26 +2275,22 @@ Task: ${task}`;
     const result = claudeData.content?.[0]?.text || '';
     if (!result) { speak('Could not process the file.'); return; }
 
-    // 4. Read a short version aloud
-    const sentences = result.split(/[.!?]+/).filter(s => s.trim()).slice(0, 3);
-    const spoken = sentences.join('. ') + '.';
-    saveToHistory('assistant', result);
-    speak(spoken);
-
-    // 5. Save to project folder in Drive
+    // 4. Save to project folder in Drive first, then confirm
     const projectFolder = saveTo || (activeProject ? activeProject.name : 'Nye idéer');
     const today = new Date().toLocaleDateString('da-DK');
     const docName = `${task} — ${name} — ${today}`;
+    saveToHistory('assistant', result);
     const saveRes = await fetch('/api/drive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save_to_project', projectName: projectFolder, content: result, docName })
     });
     const saveData = await saveRes.json();
-    if (saveData.success) {
-      const saveMsg = `Saved to your ${projectFolder} folder in Drive.`;
-      saveToHistory('assistant', saveMsg);
-      speakQueued(saveMsg);
-    }
+    // Only speak confirmation — never read the full content aloud
+    const confirmMsg = saveData.success
+      ? `Done. Saved to your ${projectFolder} folder in Drive.`
+      : `Done. Could not save to Drive — but the summary is ready.`;
+    saveToHistory('assistant', confirmMsg);
+    speak(confirmMsg);
 
     // 6. Send email if requested
     if (sendEmail && window._confirmedEmail) {
@@ -2287,6 +2299,8 @@ Task: ${task}`;
 
   } catch(e) {
     console.error('processInboxFile error:', e);
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
     speak('Something went wrong processing the file.');
   }
 }
