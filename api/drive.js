@@ -315,6 +315,30 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, ...doc });
     }
 
+    } else if (action === 'list_project_files') {
+      // List files in Vox/ProjectName for attachment selection
+      const inboxSearch = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name='${projectName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`)}&fields=files(id,name,parents)`,
+        { headers }
+      );
+      const folderData = await inboxSearch.json();
+      // Prefer folder whose parent is named Vox
+      let folderId = folderData.files?.[0]?.id;
+      for (const folder of (folderData.files || [])) {
+        for (const parentId of (folder.parents || [])) {
+          const pr = await fetch(`https://www.googleapis.com/drive/v3/files/${parentId}?fields=name`, { headers });
+          const pd = await pr.json();
+          if (pd.name === 'Vox') { folderId = folder.id; break; }
+        }
+      }
+      if (!folderId) return res.status(200).json({ files: [] });
+      const listRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${folderId}' in parents and trashed=false`)}&fields=files(id,name,mimeType,modifiedTime)&orderBy=modifiedTime desc`,
+        { headers }
+      );
+      const listData = await listRes.json();
+      return res.status(200).json({ files: listData.files || [], folderId });
+
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
     console.error('Drive error:', err);
