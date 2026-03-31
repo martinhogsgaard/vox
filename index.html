@@ -1573,7 +1573,7 @@ function showMultiContactCard() {
   document.getElementById('confirmLabel').textContent = 'Vælg mailadresser';
   const renderGroup = (label, emails, chosen, pickFn, gi) => {
     if (emails.length === 0) return `<div class="email-preview-field"><div class="email-preview-field-label">${label}</div><div style="font-size:13px;color:var(--label);margin-top:4px;">Ikke fundet</div></div>`;
-    const btns = emails.map((c, i) => { const sel = chosen === c.email; return `<button onclick="${pickFn}(${gi!==undefined?gi+',':''}${i})" class="email-choice-btn" style="${sel?'background:var(--text);':''}"><div class="email-choice-name" style="${sel?'color:rgba(255,255,255,.7)':'''}">${esc(c.name)}</div><div class="email-choice-addr" style="${sel?'color:#fff':''}">${esc(c.email)}</div></button>`; }).join('');
+    const btns = emails.map((c, i) => { const sel = chosen === c.email; return `<button onclick="${pickFn}(${gi!==undefined?gi+',':''}${i})" class="email-choice-btn" style="${sel?'background:var(--text);':''}"><div class="email-choice-name" style="${sel?'color:rgba(255,255,255,.7)':''}">${esc(c.name)}</div><div class="email-choice-addr" style="${sel?'color:#fff':''}">${esc(c.email)}</div></button>`; }).join('');
     return `<div class="email-preview-field"><div class="email-preview-field-label">${label}</div><div class="email-choice-list">${btns}</div></div>`;
   };
   let html = renderGroup('TIL', state.toEmails, state.chosenTo, 'multiPickTo', undefined);
