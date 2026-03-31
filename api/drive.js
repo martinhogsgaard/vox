@@ -313,7 +313,6 @@ export default async function handler(req, res) {
       const doc = await createDoc(name, content, projectId, headers);
       if (!doc) return res.status(500).json({ error: 'Could not create document' });
       return res.status(200).json({ success: true, ...doc });
-    }
 
     } else if (action === 'list_project_files') {
       // List files in Vox/ProjectName for attachment selection
@@ -339,7 +338,10 @@ export default async function handler(req, res) {
       const listData = await listRes.json();
       return res.status(200).json({ files: listData.files || [], folderId });
 
-    return res.status(400).json({ error: 'Unknown action' });
+    } else {
+      return res.status(400).json({ error: 'Unknown action' });
+    }
+
   } catch (err) {
     console.error('Drive error:', err);
     return res.status(500).json({ error: err.message });
