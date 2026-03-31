@@ -53,29 +53,24 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .bubble.assistant { background:var(--card); color:var(--text); align-self:flex-start; border:1px solid var(--border); border-bottom-left-radius:4px; }
 .back-btn { font-size:13px; color:var(--label); cursor:pointer; padding:4px 0; margin-bottom:8px; }
 
-/* TRANSCRIPT */
 .transcript-box { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:8px 14px; font-size:13px; color:var(--label); font-style:italic; margin:8px 20px; text-align:center; min-height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-/* HOME CHAT */
 .home-chat-wrap { flex:1; overflow-y:auto; padding:0 20px 8px; display:flex; flex-direction:column; gap:8px; }
 .home-chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--label); font-size:13px; padding-bottom:20px; }
 .home-chat-empty svg { width:32px; height:32px; stroke:var(--border); fill:none; stroke-width:1.5; }
 
-/* CONFIRM CARD */
 .confirm-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; margin:0 20px 8px; flex-shrink:0; }
 .confirm-card-label { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:6px; }
 .confirm-card-value { font-size:15px; font-weight:500; margin-bottom:12px; word-break:break-all; }
 .confirm-card-btns { display:flex; gap:8px; }
 .confirm-yes { flex:1; background:var(--text); color:#fff; border:none; border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; }
 .confirm-no { flex:1; background:none; color:var(--label); border:1px solid var(--border); border-radius:var(--rs); padding:11px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; }
-/* Multi-email choice card */
 .email-choice-list { display:flex; flex-direction:column; gap:6px; margin-bottom:4px; }
 .email-choice-btn { background:var(--bg); border:1px solid var(--border); border-radius:var(--rs); padding:10px 14px; text-align:left; font-family:'DM Sans',sans-serif; cursor:pointer; transition:background .15s; }
 .email-choice-btn:active { background:var(--border); }
 .email-choice-name { font-size:12px; color:var(--label); margin-bottom:2px; }
 .email-choice-addr { font-size:14px; font-weight:500; word-break:break-all; }
 .email-choice-cancel { width:100%; background:none; border:none; color:var(--label); font-family:'DM Sans',sans-serif; font-size:14px; padding:8px; margin-top:4px; cursor:pointer; }
-/* Email preview card */
 .email-preview-field { margin-bottom:10px; }
 .email-preview-field-label { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:4px; }
 .email-preview-field-value { font-size:13px; color:var(--text); word-break:break-all; }
@@ -83,7 +78,6 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .email-preview-send { width:100%; background:var(--text); color:#fff; border:none; border-radius:var(--rs); padding:12px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; margin-top:8px; }
 .email-preview-cancel { width:100%; background:none; border:none; color:var(--label); font-family:'DM Sans',sans-serif; font-size:14px; padding:8px; cursor:pointer; }
 
-/* MIC */
 .mic-section { display:flex; flex-direction:column; align-items:center; padding:6px 0 8px; flex-shrink:0; }
 .mic-status { font-size:10px; font-weight:500; letter-spacing:.08em; color:var(--label); text-transform:uppercase; margin-bottom:10px; }
 .mic-outer { width:76px; height:76px; border-radius:50%; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .25s; box-shadow:0 2px 8px rgba(0,0,0,.06); }
@@ -98,7 +92,6 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 @keyframes speakPulse { 0%,100%{box-shadow:0 0 0 6px rgba(28,28,30,.05)} 50%{box-shadow:0 0 0 14px rgba(28,28,30,.03)} }
 .mic-hint { font-size:11px; color:var(--label); margin-top:8px; text-align:center; min-height:16px; }
 
-/* BOTTOM NAV */
 .bottom-nav { background:rgba(242,242,247,.95); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding:8px 0 24px; flex-shrink:0; }
 .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; cursor:pointer; }
 .nav-item svg { width:22px; height:22px; stroke:var(--label); fill:none; stroke-width:1.5; }
@@ -106,7 +99,6 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .nav-label { font-size:9px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; color:var(--label); }
 .nav-item.active .nav-label { color:var(--text); }
 
-/* CALENDAR VIEW */
 .cal-day-group { margin-bottom:14px; }
 .cal-day-header { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--label); margin-bottom:6px; padding:0 2px; }
 .cal-day-header.today { color:var(--text); }
@@ -150,7 +142,6 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 
 <!-- HOME -->
 <div class="content" id="homeView" style="display:flex;flex-direction:column;padding:0;gap:0;">
-  <!-- Home chat area -->
   <div class="home-chat-wrap" id="homeChatWrap">
     <div class="home-chat-empty" id="homeChatEmpty">
       <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -158,7 +149,6 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
     </div>
     <div class="chat-area" id="homeChatArea"></div>
   </div>
-  <!-- Confirm card (hidden by default) -->
   <div class="confirm-card" id="confirmCard" style="display:none;">
     <div class="confirm-card-label" id="confirmLabel">Vælg adresse</div>
     <div id="confirmCardBody"></div>
@@ -238,15 +228,54 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════
+// TTS ADAPTER
+// Skift TTS_ENGINE for at skifte motor uden anden kodeændring.
+// 'browser'  → gratis, kræver ingen API-nøgle
+// 'openai'   → kræver OPENAI_KEY i .env, ~1 øre/svar
+// 'elevenlabs' → kræver ELEVENLABS_KEY i .env, bedste kvalitet
+// ═══════════════════════════════════════════════════════
+const TTS_ENGINE = 'browser'; // 'browser' | 'openai' | 'elevenlabs'
+const TTS_VOICE  = 'onyx';    // OpenAI: alloy|echo|fable|onyx|nova|shimmer
+const TTS_ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // ElevenLabs: Adam (English)
+
+// ═══════════════════════════════════════════════════════
+// STT ADAPTER
+// Skift STT_ENGINE for at skifte transskriptionsmotor.
+// 'browser'  → gratis, bruger Web Speech API
+// 'whisper'  → kræver OPENAI_KEY eller GROQ_KEY i .env
+// ═══════════════════════════════════════════════════════
+const STT_ENGINE = 'whisper'; // 'browser' | 'whisper'
+
+// ═══════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://kahpdsismxckxljddxya.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthaHBkc2lzbXhja3hsamRkeHlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE1OTMsImV4cCI6MjA4ODQwNzU5M30.KzFNs2rhbatc4u8Ec1ZcfDVKykZnkLfV2K_cvSakSxc';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ═══════════════════════════════════════════════════════
+// DEVICE DETECTION
+// ═══════════════════════════════════════════════════════
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
 let activeProject = null;
 let conversationHistory = [];
-let homeHistory = []; // Conversation history when on home screen
-let projectMemory = ''; // Loaded from Supabase project_memory table
-let userProfile = {}; // Loaded from Supabase user_profile table
+let homeHistory = [];
+let projectMemory = '';
+let userProfile = {};
+let projects = [];
+let isListening = false;
+let isSpeaking = false;
+let driveContext = '';
+let driveFiles = [];
+let isThinking = false;
+let recognition = null;
+let calendarConnected = false;
 
 function saveToHistory(role, content) {
   if (activeProject) {
@@ -256,60 +285,104 @@ function saveToHistory(role, content) {
     if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
   }
 }
-let projects = [];
-let isListening = false;
-let listenTimeout = null;
-let isSpeaking = false;
-let driveContext = ''; // File content from Google Drive project folder
-let driveFiles = [];   // List of files in current project folder
-let isThinking = false;
-let recognition = null;
-let hasSeeded = false;
-let selectedVoice = null;
-let calendarConnected = false;
 
-// ── VOICE ──
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-function loadVoices() {
-  const voices = speechSynthesis.getVoices();
-  if (!voices.length) return;
-  // iOS/Safari: prefer built-in English voices
-  const priority = isIOS
-    ? ['Daniel', 'Arthur', 'Oliver', 'Karen', 'Samantha', 'Alex']
-    : ['Google UK English Male', 'Google US English 1 (Natural)', 'Google UK English Female', 'Daniel', 'Alex', 'Samantha'];
-  for (const name of priority) {
-    const v = voices.find(v => v.name === name);
-    if (v) { selectedVoice = v; console.log('Voice selected:', v.name); return; }
-  }
-  // Fallback: first English voice
-  selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-  console.log('Voice fallback:', selectedVoice?.name);
-}
-speechSynthesis.onvoiceschanged = loadVoices;
-setTimeout(loadVoices, 100);
-setTimeout(loadVoices, 500);
-setTimeout(loadVoices, 1500);
-
-// HTML escape to prevent XSS from calendar/project data
 function esc(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// Central speech queue
+// ═══════════════════════════════════════════════════════
+// TTS — BROWSER ENGINE
+// Robust voice selection der virker på tværs af iOS-versioner
+// ═══════════════════════════════════════════════════════
+let selectedVoice = null;
+
+function loadVoices() {
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+
+  // Prioriteret liste — dækker iOS 15, 16, 17, 18 + macOS + Android + Chrome
+  // iOS Enhanced-stemmer er markant bedre — forsøg dem først
+  const priority = [
+    // iOS Enhanced (bedste kvalitet, kræver download)
+    'Daniel (Enhanced)', 'Arthur (Enhanced)', 'Oliver (Enhanced)',
+    // iOS standard
+    'Daniel', 'Arthur', 'Oliver', 'Karen',
+    // macOS / Safari
+    'Alex', 'Samantha',
+    // Chrome desktop
+    'Google UK English Male', 'Google UK English Female',
+    'Google US English', 'Google US English 1 (Natural)',
+    // Android
+    'en-GB-SMTf00', 'en-US-SMTf00',
+  ];
+
+  for (const name of priority) {
+    const v = voices.find(v => v.name === name);
+    if (v) {
+      selectedVoice = v;
+      console.log('[TTS] Voice selected:', v.name, v.lang);
+      return;
+    }
+  }
+
+  // Fallback 1: første engelske Enhanced-stemme
+  const enhanced = voices.find(v => v.lang.startsWith('en') && v.name.includes('Enhanced'));
+  if (enhanced) { selectedVoice = enhanced; console.log('[TTS] Enhanced fallback:', enhanced.name); return; }
+
+  // Fallback 2: første engelske stemme overhovedet
+  const anyEn = voices.find(v => v.lang.startsWith('en'));
+  if (anyEn) { selectedVoice = anyEn; console.log('[TTS] English fallback:', anyEn.name); return; }
+
+  // Fallback 3: første stemme
+  selectedVoice = voices[0];
+  console.log('[TTS] Last resort fallback:', selectedVoice?.name);
+}
+
+// Forsøg voice load på flere tidspunkter — iOS loader dem asynkront
+speechSynthesis.onvoiceschanged = loadVoices;
+[100, 500, 1000, 2000].forEach(t => setTimeout(loadVoices, t));
+
+// ═══════════════════════════════════════════════════════
+// TTS — CENTRAL SPEAK FUNKTION (adapter-pattern)
+// speak() og stopSpeaking() er de eneste funktioner
+// resten af koden kalder. Motoren skiftes her.
+// ═══════════════════════════════════════════════════════
 let _speakQueue = [];
 let _speakBusy = false;
 let _stopRequested = false;
+let _currentAudio = null; // bruges af OpenAI/ElevenLabs
 
 function stopSpeaking() {
   _stopRequested = true;
-  speechSynthesis.cancel();
   _speakQueue = [];
   _speakBusy = false;
   isSpeaking = false;
+
+  // Stop browser TTS
+  try { speechSynthesis.cancel(); } catch {}
+
+  // Stop OpenAI/ElevenLabs audio
+  if (_currentAudio) {
+    try { _currentAudio.pause(); _currentAudio.src = ''; } catch {}
+    _currentAudio = null;
+  }
+
   setMicState('idle');
   setMicHint('Tryk for at tale');
+}
+
+function speak(text, onDone) {
+  if (!text) { if (onDone) onDone(); return; }
+  _stopRequested = false;
+  stopSpeaking();
+  _stopRequested = false;
+  _speakQueue = [{ text, onDone }];
+  setTimeout(_processQueue, 50);
+}
+
+function speakQueued(text, onDone) {
+  _speakQueue.push({ text, onDone });
+  _processQueue();
 }
 
 function _processQueue() {
@@ -319,16 +392,25 @@ function _processQueue() {
   isSpeaking = true;
   setMicState('speaking');
 
+  if (TTS_ENGINE === 'openai') {
+    _speakOpenAI(text, onDone);
+  } else if (TTS_ENGINE === 'elevenlabs') {
+    _speakElevenLabs(text, onDone);
+  } else {
+    _speakBrowser(text, onDone);
+  }
+}
+
+// ── BROWSER TTS ──
+function _speakBrowser(text, onDone) {
+  if (!selectedVoice) loadVoices();
+
   const safe = text.replace(/ dot /gi, ' DOT ');
   const sentences = safe.match(/[^.!?]+[.!?]*/g) || [safe];
   let idx = 0;
 
   function next() {
-    // Check stop flag before every sentence
-    if (_stopRequested) {
-      _speakBusy = false;
-      return;
-    }
+    if (_stopRequested) { _speakBusy = false; return; }
     if (idx >= sentences.length) {
       _speakBusy = false;
       isSpeaking = _speakQueue.length > 0;
@@ -339,20 +421,20 @@ function _processQueue() {
     }
     const chunk = sentences[idx].trim().replace(/ DOT /g, ' dot ');
     if (!chunk) { idx++; next(); return; }
+
     const u = new SpeechSynthesisUtterance(chunk);
     u.voice = selectedVoice || null;
     u.lang = 'en-GB';
     u.rate = isIOS ? 1.0 : 1.1;
     u.pitch = 1.0;
+    u.volume = 1.0;
+
     u.onend = () => { idx++; next(); };
     u.onerror = (e) => {
-      // 'interrupted' means we cancelled intentionally — stop completely
       if (e.error === 'interrupted' || e.error === 'canceled') {
-        _speakBusy = false;
-        isSpeaking = false;
-        return;
+        _speakBusy = false; isSpeaking = false; return;
       }
-      console.warn('Speech error:', e.error, chunk);
+      console.warn('[TTS] Browser error:', e.error, chunk);
       idx++; next();
     };
     speechSynthesis.speak(u);
@@ -360,1808 +442,167 @@ function _processQueue() {
   next();
 }
 
-function speak(text, onDone) {
-  if (!selectedVoice) loadVoices();
-  _stopRequested = false;
-  speechSynthesis.cancel();
-  _speakQueue = [];
-  _speakBusy = false;
-  _speakQueue.push({ text, onDone });
-  setTimeout(_processQueue, 50);
-}
-
-function speakQueued(text, onDone) {
-  if (!selectedVoice) loadVoices();
-  _speakQueue.push({ text, onDone });
-  _processQueue();
-}
-
-
-// ── DATE ──
-function setDate() {
-  const d = new Date();
-  const days = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
-  const months = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
-  document.getElementById('dateDisplay').innerHTML = `${days[d.getDay()]}<span>, ${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()}</span>`;
-}
-
-// ── WEATHER ──
-async function fetchWeather() {
+// ── OPENAI TTS (klar til brug — sæt TTS_ENGINE = 'openai') ──
+async function _speakOpenAI(text, onDone) {
   try {
-    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m,weathercode&timezone=Europe/Copenhagen');
-    const d = await r.json();
-    const temp = Math.round(d.current.temperature_2m);
-    const descs = {0:'klart vejr',1:'let skyet',2:'skyet',3:'overskyet',45:'tåge',61:'let regn',63:'regn',71:'let sne',80:'byger'};
-    const desc = descs[d.current.weathercode] || 'skiftende vejr';
-    // weatherSub removed from home view
-    return `${temp} grader, ${desc}`;
-  } catch { return 'vejret ikke tilgængeligt'; }
-}
-
-// ── PROJECTS ──
-async function loadProjects() {
-  const { data, error } = await sb.from('projects').select('*');
-  if (error) { console.log('Projects error:', error); return; }
-  
-  // Only seed if table is genuinely empty — never seed if there are already rows
-  if (!data || data.length === 0) {
-    console.log('No projects found — seeding defaults once');
-    for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer']) {
-      await sb.from('projects').insert({ name });
-    }
-    const { data: s } = await sb.from('projects').select('*');
-    projects = s || [];
-  } else {
-    projects = data;
-  }
-  
-  renderProjects(projects);
-  // projectsSub removed from home view
-}
-
-function renderProjects(list) {
-  const el = document.getElementById('projekterList') || document.getElementById('projectsList');
-  el.innerHTML = '';
-  list.forEach(p => {
-    const d = document.createElement('div');
-    d.className = 'project-item';
-    d.innerHTML = `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><div class="project-name">${esc(p.name)}</div><div class="project-arrow">›</div>`;
-    d.onclick = () => openProject(p);
-    el.appendChild(d);
-  });
-  const n = document.createElement('div');
-  n.className = 'new-project';
-  n.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Nyt projekt</span>`;
-  n.onclick = () => document.getElementById('modal').classList.add('visible');
-  el.appendChild(n);
-}
-
-// ── SUPABASE MEMORY ──
-async function loadProjectMemory(projectId) {
-  try {
-    const { data } = await sb.from('project_memory')
-      .select('summary')
-      .eq('project_id', projectId)
-      .order('updated_at', { ascending: false })
-      .limit(1);
-    projectMemory = data?.[0]?.summary || '';
-    if (projectMemory) console.log('Loaded project memory:', projectMemory.substring(0, 100));
-  } catch(e) { projectMemory = ''; }
-}
-
-async function saveProjectMemory(projectId, newMessages) {
-  if (!newMessages || newMessages.length < 4) return; // Not enough to summarize
-  try {
-    const recent = newMessages.slice(-8).map(m => m.role + ': ' + m.content).join('\n');
-    const res = await fetch('/api/claude', {
+    const res = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: 'Summarize this conversation in 2-3 sentences. Focus on decisions made, key information, and next steps. Be extremely concise.',
-        messages: [{ role: 'user', content: recent }]
-      })
+      body: JSON.stringify({ engine: 'openai', text, voice: TTS_VOICE })
     });
-    const data = await res.json();
-    const summary = data.content?.[0]?.text || '';
-    if (!summary) return;
-    await sb.from('project_memory')
-      .upsert({ project_id: projectId, summary, updated_at: new Date().toISOString() },
-               { onConflict: 'project_id' });
-    projectMemory = summary;
-    console.log('Saved project memory:', summary.substring(0, 80));
-  } catch(e) { console.log('Memory save failed:', e.message); }
-}
-
-async function loadUserProfile() {
-  try {
-    const { data } = await sb.from('user_profile').select('key, value');
-    if (data) data.forEach(row => { userProfile[row.key] = row.value; });
-    console.log('Loaded user profile:', Object.keys(userProfile).length, 'keys');
-  } catch(e) { userProfile = {}; }
-}
-
-async function saveToUserProfile(key, value) {
-  try {
-    await sb.from('user_profile')
-      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-    userProfile[key] = value;
-  } catch(e) { console.log('Profile save failed:', e.message); }
-}
-
-async function loadContactCache(name) {
-  try {
-    const { data } = await sb.from('contact_cache')
-      .select('emails').eq('name', name).single();
-    return data?.emails || null;
-  } catch(e) { return null; }
-}
-
-async function saveContactCache(name, emails) {
-  try {
-    await sb.from('contact_cache')
-      .upsert({ name, emails, updated_at: new Date().toISOString() }, { onConflict: 'name' });
-  } catch(e) { console.log('Contact cache save failed:', e.message); }
-}
-
-async function openProject(p) {
-  activeProject = p;
-  projectMemory = '';
-  showView('projectView');
-  document.getElementById('projectViewLabel').textContent = p.name.toUpperCase();
-  
-  // Load project memory summary from Supabase
-  await loadProjectMemory(p.id);
-
-  // Load message history for this project
-  const { data, error } = await sb.from('messages').select('*').eq('project_id', p.id);
-  if (error) console.log('Messages error:', error);
-  
-  // Sort by created_at if available, otherwise use insertion order
-  const sorted = (data || []).sort((a, b) => {
-    if (a.created_at && b.created_at) return new Date(a.created_at) - new Date(b.created_at);
-    return 0;
-  });
-  
-  conversationHistory = sorted.map(m => ({ role: m.role, content: m.content }));
-  console.log(`Loaded ${conversationHistory.length} messages for ${p.name}`);
-  
-  const chat = document.getElementById('chatArea');
-  chat.innerHTML = '';
-  
-  if (conversationHistory.length === 0) {
-    addBubble('assistant', `You are now in ${p.name}. What would you like to talk about?`);
-  } else {
-    // Show last 20 messages in UI
-    const recent = conversationHistory.slice(-20);
-    recent.forEach(m => addBubble(m.role, m.content, false));
-    chat.scrollTop = chat.scrollHeight;
+    if (!res.ok) throw new Error('TTS API error');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    _currentAudio = new Audio(url);
+    _currentAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      _currentAudio = null;
+      _speakBusy = false;
+      isSpeaking = _speakQueue.length > 0;
+      if (onDone && !_stopRequested) onDone();
+      else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      _processQueue();
+    };
+    _currentAudio.onerror = () => {
+      console.warn('[TTS] OpenAI audio error — falling back to browser');
+      _currentAudio = null;
+      _speakBrowser(text, onDone);
+    };
+    await _currentAudio.play();
+  } catch(e) {
+    console.warn('[TTS] OpenAI failed, falling back to browser:', e.message);
+    _speakBrowser(text, onDone);
   }
-  setMicHint(`Aktiv: ${p.name}`);
 }
 
-// ── CENTRAL NAVIGATION ──
-function showView(viewId) {
-  const views = ['homeView', 'projectView', 'calendarView', 'projekterView'];
-  views.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = id === viewId ? 'flex' : 'none';
-  });
-}
-
-function renderProjekterView() {
-  const list = document.getElementById('projekterList');
-  if (!projects || projects.length === 0) {
-    list.innerHTML = '<div class="cal-empty">Ingen projekter endnu</div>';
-    return;
-  }
-  list.innerHTML = projects.map(p => `
-    <div class="project-item" onclick="openProjectFromNav('${p.id}')">
-      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      <span class="project-name">${p.name}</span>
-      <span class="project-arrow">›</span>
-    </div>
-  `).join('');
-}
-
-function openProjectFromNav(id) {
-  const p = projects.find(p => p.id === id);
-  if (p) openProject(p);
-}
-
-async function renderCalendarView() {
-  const list = document.getElementById('calendarList');
-  list.innerHTML = '<div class="cal-loading">Henter kalender...</div>';
+// ── ELEVENLABS TTS (klar til brug — sæt TTS_ENGINE = 'elevenlabs') ──
+async function _speakElevenLabs(text, onDone) {
   try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'upcoming_14' })
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engine: 'elevenlabs', text, voiceId: TTS_ELEVENLABS_VOICE_ID })
     });
-    const data = await res.json();
-    const events = data.items || [];
+    if (!res.ok) throw new Error('ElevenLabs API error');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    _currentAudio = new Audio(url);
+    _currentAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      _currentAudio = null;
+      _speakBusy = false;
+      isSpeaking = _speakQueue.length > 0;
+      if (onDone && !_stopRequested) onDone();
+      else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      _processQueue();
+    };
+    _currentAudio.onerror = () => {
+      console.warn('[TTS] ElevenLabs audio error — falling back to browser');
+      _currentAudio = null;
+      _speakBrowser(text, onDone);
+    };
+    await _currentAudio.play();
+  } catch(e) {
+    console.warn('[TTS] ElevenLabs failed, falling back to browser:', e.message);
+    _speakBrowser(text, onDone);
+  }
+}
 
-    if (events.length === 0) {
-      list.innerHTML = '<div class="cal-empty">Ingen kommende aftaler</div>';
-      return;
-    }
+// ═══════════════════════════════════════════════════════
+// BIL KEEP-ALIVE
+// Tre lag: WakeLock (skærm), silent audio heartbeat (audio session),
+// og visibilitychange reconnect.
+// ═══════════════════════════════════════════════════════
+let _wakeLock = null;
+let _heartbeatInterval = null;
+let _heartbeatCtx = null;
 
-    // Group by date
-    const groups = {};
-    events.forEach(e => {
-      const dateKey = (e.start.dateTime || e.start.date).split('T')[0];
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(e);
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => {
+      console.log('[WakeLock] Released — reacquiring');
+      setTimeout(acquireWakeLock, 500);
     });
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]; })();
-
-    let html = '';
-    Object.keys(groups).sort().forEach(dateKey => {
-      const isToday = dateKey === todayStr;
-      const isTomorrow = dateKey === tomorrowStr;
-      const d = new Date(dateKey + 'T12:00:00');
-      let label;
-      if (isToday) label = 'I dag';
-      else if (isTomorrow) label = 'I morgen';
-      else label = d.toLocaleDateString('da', { weekday:'long', day:'numeric', month:'long' });
-      label = label.charAt(0).toUpperCase() + label.slice(1);
-
-      html += `<div class="cal-day-group">
-        <div class="cal-day-header${isToday ? ' today' : ''}">${label}</div>`;
-
-      groups[dateKey].forEach(e => {
-        const isAllDay = !!e.start.date;
-        let timeStr = '', durationStr = '';
-        let dotClass = isToday ? 'today' : '';
-        if (!isAllDay) {
-          const start = new Date(e.start.dateTime);
-          const end = new Date(e.end.dateTime);
-          timeStr = start.toLocaleTimeString('da', { hour:'2-digit', minute:'2-digit' });
-          const mins = Math.round((end - start) / 60000);
-          durationStr = mins >= 60 ? `${Math.floor(mins/60)}t${mins%60 ? ' '+mins%60+'m' : ''}` : `${mins}m`;
-        } else {
-          timeStr = 'Hele<br>dagen';
-        }
-        html += `<div class="cal-event" onclick="speakEvent('${esc(e.summary)}', '${timeStr.replace('<br>',' ')}')">
-          <div class="cal-event-time${isAllDay ? ' allday' : ''}">${timeStr}</div>
-          <div class="cal-event-dot ${dotClass}"></div>
-          <div class="cal-event-info">
-            <div class="cal-event-title">${esc(e.summary)}</div>
-            ${durationStr ? `<div class="cal-event-duration">${durationStr}</div>` : ''}
-          </div>
-        </div>`;
-      });
-      html += '</div>';
-    });
-
-    list.innerHTML = html;
-  } catch(err) {
-    list.innerHTML = '<div class="cal-empty">Kunne ikke hente kalender</div>';
+    console.log('[WakeLock] Acquired');
+  } catch(e) {
+    console.log('[WakeLock] Not available:', e.message);
   }
 }
 
-function speakEvent(title, time) {
-  speak(time && time !== 'Hele dagen' ? `${title} kl. ${time}` : title);
-}
-
-function startVoiceCreate() {
-  speak("Tell me what to create. For example: create a meeting called WoodUpp Monday at ten.");
-  // Don't auto-start mic — user must tap manually
-}
-
-function setActiveNav(tab) {
-  ['hjem','projekter','kalender','konto'].forEach(t => {
-    const el = document.getElementById('nav-' + t);
-    if (el) el.classList.toggle('active', t === tab);
-  });
-}
-
-function navTo(tab) {
-  const home = document.getElementById('homeScreen');
-  const proj = document.getElementById('projectScreen');
-  // Hide all screens first
-  if (home) home.style.display = 'none';
-  if (proj) proj.style.display = 'none';
-
-  setActiveNav(tab);
-
-  activeProject = null;
-  conversationHistory = [];
-
-  if (tab === 'hjem') {
-    homeHistory = [];
-    hideConfirmCard();
-    showView('homeView');
-  } else if (tab === 'projekter') {
-    showView('projekterView');
-    renderProjekterView();
-  } else if (tab === 'kalender') {
-    showView('calendarView');
-    renderCalendarView();
-  } else if (tab === 'konto') {
-    showView('homeView'); // placeholder
+function startAudioHeartbeat() {
+  // Spiller en lyd der er for stille til at høre (~0.001 volume)
+  // men holder audio session aktiv på iOS/Bluetooth
+  if (_heartbeatInterval) return;
+  try {
+    _heartbeatCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _heartbeatInterval = setInterval(() => {
+      if (isSpeaking || isListening) return; // Ikke nødvendigt mens vi er aktive
+      try {
+        const buf = _heartbeatCtx.createBuffer(1, 1, 22050);
+        const src = _heartbeatCtx.createBufferSource();
+        const gain = _heartbeatCtx.createGain();
+        gain.gain.value = 0.001; // næsten uhørlig
+        src.buffer = buf;
+        src.connect(gain);
+        gain.connect(_heartbeatCtx.destination);
+        src.start(0);
+      } catch {}
+    }, 20000); // hvert 20. sekund
+    console.log('[Heartbeat] Started');
+  } catch(e) {
+    console.log('[Heartbeat] AudioContext not available:', e.message);
   }
 }
 
-function goHome() {
-  activeProject = null;
-  conversationHistory = [];
-  homeHistory = [];
-  setActiveNav('hjem');
-  showView('homeView');
-  document.getElementById('projectView').style.display = 'none';
-  document.getElementById('homeView').style.display = 'flex';
-  setTranscript('Tryk på mikrofon for at tale');
-  setMicHint('Altid lyttende');
-  hideConfirmCard();
+function stopAudioHeartbeat() {
+  if (_heartbeatInterval) { clearInterval(_heartbeatInterval); _heartbeatInterval = null; }
+  if (_heartbeatCtx) { try { _heartbeatCtx.close(); } catch {} _heartbeatCtx = null; }
 }
 
-async function createProject() {
-  const name = document.getElementById('newProjectName').value.trim();
-  if (!name) return;
-  console.log('Creating project:', name);
-  const { data, error } = await sb.from('projects').insert({ name }).select();
-  console.log('Create result:', data, error);
-  closeModal();
-  document.getElementById('newProjectName').value = '';
-  await loadProjects();
-  if (!error && data && data.length > 0) {
-    openProject(data[0]);
-    speak(`Project ${name} created. You are now in ${name}.`);
-    ensureProjectFolder(name); // Create matching Drive folder
-  } else if (error) {
-    console.error('Project create error:', error);
-    alert('Fejl ved oprettelse: ' + error.message);
-  }
-}
-
-function closeModal() { document.getElementById('modal').classList.remove('visible'); }
-
-// ── CHAT ──
-function addBubble(role, text, scroll = true) {
-  // Project chat OR home chat
-  const chatId = activeProject ? 'chatArea' : 'homeChatArea';
-  const chat = document.getElementById(chatId);
-  if (!chat) return;
-  // Hide empty state
-  const empty = document.getElementById('homeChatEmpty');
-  if (empty) empty.style.display = 'none';
-  const d = document.createElement('div');
-  d.className = `bubble ${role}`;
-  d.textContent = text;
-  chat.appendChild(d);
-  // Scroll home wrap or project content
-  const wrap = activeProject
-    ? document.getElementById('projectView')
-    : document.getElementById('homeChatWrap');
-  if (scroll && wrap) wrap.scrollTop = wrap.scrollHeight;
-}
-
-// Show live transcript as a typing bubble in home chat
-let _liveBubble = null;
-function setLiveTranscript(text) {
-  if (activeProject) {
-    // In project: use existing transcript box
-    setTranscript(text);
-    return;
-  }
-  const wrap = document.getElementById('homeChatWrap');
-  const empty = document.getElementById('homeChatEmpty');
-  if (!text) {
-    if (_liveBubble) { _liveBubble.remove(); _liveBubble = null; }
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-  if (!_liveBubble) {
-    _liveBubble = document.createElement('div');
-    _liveBubble.className = 'bubble user';
-    _liveBubble.style.opacity = '0.5';
-    wrap.appendChild(_liveBubble);
-  }
-  _liveBubble.textContent = text;
-  if (wrap) wrap.scrollTop = wrap.scrollHeight;
-}
-
-// ── CLAUDE ──
-// Words that mean "stop what you're doing"
-const STOP_WORDS = ['stop', 'hold op', 'nok', 'stilhed', 'quiet', 'shut up', 'enough', 'lad være'];
-
-function isStopCommand(text) {
-  const t = text.toLowerCase().trim();
-  return STOP_WORDS.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w));
-}
-
-async function sendToClaude(text) {
-  if (isStopCommand(text)) {
+// Gendan forbindelsen når app kommer i forgrunden igen
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) {
+    // Gå i dvale — stop aktiv lytning
+    if (isListening) { stopListening(); setMicState('idle'); setMicHint('Tryk for at tale'); }
     stopSpeaking();
-    if (activeProject) conversationHistory = conversationHistory.slice(0, -2);
-    else homeHistory = homeHistory.slice(0, -2);
-    speak('Ok.');
-    return;
-  }
-  console.log('sendToClaude called, text:', text, 'activeProject:', activeProject ? activeProject.name : 'null');
-  isThinking = true;
-  setMicState('thinking');
-  setMicHint('Arbejder...');
-  setLiveTranscript(''); // clear live bubble when sending
-  if (activeProject) {
-    addBubble('user', text);
-    conversationHistory.push({ role:'user', content:text });
-    const { error: msgErr } = await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
-    if (msgErr) console.error('Save user message failed:', msgErr);
-    else console.log('Saved user message to project:', activeProject.id);
   } else {
-    addBubble('user', text);
-    homeHistory.push({ role:'user', content:text });
-    if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
+    // Kom tilbage i forgrunden — gendan WakeLock og audio session
+    console.log('[Visibility] App active again — restoring');
+    await acquireWakeLock();
+    // Resume AudioContext hvis den er suspended (sker på iOS)
+    if (_heartbeatCtx && _heartbeatCtx.state === 'suspended') {
+      try { await _heartbeatCtx.resume(); console.log('[Heartbeat] Resumed'); } catch {}
+    }
+    setMicState('idle');
+    setMicHint('Tryk for at tale');
   }
+});
 
-  const projectNames = projects.map(p => p.name).join(', ');
-  // Always use Danish timezone (Europe/Copenhagen) for date calculations
-  const now = new Date();
-  const copenhagenDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(now);
-  const todayStr = copenhagenDate; // 'sv-SE' gives YYYY-MM-DD format
-  const weekDayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  // Calculate weekday in Copenhagen timezone
-  const copenhagenWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Copenhagen', weekday: 'long' }).format(now);
-
-  // Generate next 60 days with ISO week numbers so Claude never miscalculates
-  function getISOWeek(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+// Reacquire WakeLock hvis den tabes (skærmtimeout, opkald, mm.)
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden && _wakeLock === null) {
+    await acquireWakeLock();
   }
-  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const next60 = Array.from({length: 60}, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(d);
-    const week = getISOWeek(d);
-    const dayName = dayNames[d.getDay()];
-    return `W${week} ${dayName} = ${dateStr}`;
-  });
-  const calendarMap = next60.join(', ');
-  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowDate2 = new Date(now);
-  tomorrowDate2.setDate(tomorrowDate2.getDate() + 1);
-  const tomorrowStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(tomorrowDate2);
+});
 
-  // Fetch calendar only when relevant — saves tokens on non-calendar requests
-  const CAL_KEYWORDS = ['møde','kalender','aftale','event','begivenhed','tid','tidspunkt','opret','slet','flyt','hvad sker','har jeg','schedule','calendar','meeting','appointment','create event','delete event','update event','mandag','tirsdag','onsdag','torsdag','fredag','lørdag','søndag','i dag','imorgen','næste uge','denne uge'];
-  const needsCalendar = CAL_KEYWORDS.some(k => text.toLowerCase().includes(k));
-  let calendarContext = '';
-  if (needsCalendar) {
-    try {
-      const calRes = await fetch('/api/google-calendar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'upcoming_14' })
-      });
-      const calData = await calRes.json();
-      const calEvents = calData.items || [];
-      if (calEvents.length > 0) {
-        calendarContext = '\n\nCALENDAR (next 12 months, up to 100 events):\n' + calEvents.map(e => {
-          const start = e.start.dateTime || e.start.date;
-          const end = e.end.dateTime || e.end.date;
-          return `- id:${e.id} | "${e.summary}" | start:${start} | end:${end}`;
-        }).join('\n');
-      } else {
-        calendarContext = '\n\nCALENDAR: No upcoming events.';
-      }
-    } catch(err) { console.log('Could not fetch calendar context:', err); }
-  }
+window.addEventListener('blur', () => {
+  // Blur ≠ app lukket — bare fokus væk (f.eks. notifikation)
+  // Stop lytning men behold heartbeat
+  if (isListening) { stopListening(); setMicState('idle'); }
+});
 
-  const weekday = copenhagenWeekday;
-  const confirmedEmailContext = window._confirmedEmail 
-    ? `
-
-IMPORTANT: Martin has already confirmed the email address "${window._confirmedEmail}". Use send_confirmed_email with this address — do NOT use find_contact or send_email.`
-    : '';
-
-  const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
-Current projects: ${projectNames}.
-Today: ${todayStr} (${weekday}). Tomorrow: ${tomorrowStr}.
-ALWAYS use Europe/Copenhagen timezone for all dates and times. Today in Copenhagen is ${todayStr} (${weekday}).
-DATE REFERENCE — use this exact map, never calculate yourself:
-${calendarMap}
-For dates beyond 60 days, calculate from today (${todayStr}).
-${activeProject ? `Active project: "${activeProject.name}". When in a project, help Martin think, plan, brainstorm, and solve problems related to that project.${projectMemory ? `
-
-PREVIOUS CONVERSATION SUMMARY:
-${projectMemory}` : ''}` : 'No active project — general conversation mode.'}${calendarContext}
-
-You have full knowledge of the world — geography, business, technology, Danish culture and language, logistics, packaging, software development, and more. Use this knowledge freely.
-${driveFiles.length > 0 ? `\n\nPROJECT FILES in Google Drive (${driveFiles.length} file${driveFiles.length>1?'s':''}):\n${driveFiles.map(f=>f.name).join(', ')}${driveContext ? '\n\nFILE CONTENTS:\n' + driveContext : ''}` : ''}
-${Object.keys(userProfile).length > 0 ? `USER PROFILE:
-${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}
-
-` : ''}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Not even one Danish word. If you find yourself writing Danish, stop and rewrite in English. This rule overrides everything else. Martin is frequently driving, so your replies are read aloud. Be conversational and helpful — like a knowledgeable colleague, not a command processor.
-When Martin is brainstorming or asking for ideas, give real, concrete suggestions. Never say you "can't search" or "don't have access to information" — use your built-in knowledge.
-
-ACTIONS — append ONE on the last line when Martin asks you to act:
-ACTION:{"type":"create_project","name":"ProjectName"}
-ACTION:{"type":"open_project","name":"ProjectName"}
-ACTION:{"type":"delete_project","name":"ProjectName"}
-ACTION:{"type":"go_home"}
-ACTION:{"type":"open_drive_folder"}
-ACTION:{"type":"process_inbox_file","task":"kort resumé","save_to":"ByAulum"}
-ACTION:{"type":"process_inbox_file","task":"fyldestgørende resumé","save_to":"ByAulum","send_email":true}
-ACTION:{"type":"process_inbox_file","task":"skriv et svar","save_to":"ByAulum"}
-ACTION:{"type":"list_inbox"}
-ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
-ACTION:{"type":"create_multiple_events","events":[{"title":"Pasta","date":"2026-03-09","time":"18:00","duration":30},{"title":"Pizza","date":"2026-03-10","time":"18:00","duration":30}]}
-ACTION:{"type":"delete_multiple_events","event_ids":["id1","id2","id3"]}
-ACTION:{"type":"create_multiple_events","events":[{"title":"Pasta","date":"2026-03-10","time":"18:00","duration":60},{"title":"Risotto","date":"2026-03-11","time":"18:00","duration":60}]}
-ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
-ACTION:{"type":"create_event","title":"Reminder text","date":"2026-03-28","time":"12:00","reminder":true}
-ACTION:{"type":"delete_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE"}
-ACTION:{"type":"update_event","event_id":"EXACT_ID_FROM_CALENDAR_ABOVE","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
-ACTION:{"type":"create_event_and_invite","title":"ByAulum møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Martin Høgsgaard"}
-ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
-ACTION:{"type":"find_contacts","to":"Henrik Høgsgaard","cc":["Martin Høgsgaard","Søren Herold"],"subject":"Subject","body":"Email body text"}
-ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Email body text"}
-ACTION:{"type":"send_email","to":"email@example.com","cc":"cc1@example.com,cc2@example.com","subject":"Subject","body":"Email body text"}
-- Use find_contacts (plural) when a TO recipient AND one or more CC recipients are named. cc is an array of names e.g. ["Martin Høgsgaard","Søren Herold"]. Searches all in parallel.
-- Use find_contact (singular) when only a TO recipient is named with no CC.
-ACTION:{"type":"spell_email","email":"mie@example.dk"}
-ACTION:{"type":"confirm_email","index":1}
-ACTION:{"type":"read_inbox"}
-ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
-
-Rules:
-- Reply in English. If Martin asks a factual or informational question (addresses, directions, information, advice), give a complete helpful answer. For action confirmations and small talk, keep it to 1-2 sentences. Martin is often driving so be concise but never refuse to answer a question due to length.
-- For calendar READ requests ("har jeg møder", "hvad sker der", "vis mig", "er der noget"): answer directly from CALENDAR above. NO action. Never create an event when asked a question about existing events.
-- For calendar WRITE requests: use the exact event_id from CALENDAR. Never guess or omit event_id.
-- Event titles must be SHORT — max 5 words. NEVER put recipes, shopping lists, or instructions in the title. Just the dish name e.g. "Chicken Tikka Masala" not the full recipe.
-- For MULTIPLE events (e.g. 5 dinners Mon-Fri), use create_multiple_events with all events in one action. Titles max 5 words each.
-- For all-day events: set allday:true, omit time/duration.
-- For reminders/notes: set reminder:true — creates a 15-min popup event with 🔔 prefix.
-- For send_email: ONLY use when Martin has explicitly confirmed an address via the confirm card. NEVER guess or invent an email address. If unsure, always use find_contact first.
-- NEVER use send_email with a made-up or guessed address like "henrik@hogsgaard.dk" — always find_contact first.
-- For create_event_and_invite: ONLY use when Martin explicitly says BOTH "opret møde" AND "send invitation/mødeindkaldelse til [person]" in the SAME request. Never combine them unless both are clearly stated.
-- For find_contact: ONLY use when you have NOT yet searched for this person. Martin's own name is "Martin Høgsgaard" — if he says his own name with any spelling variation (høstgaard, høesgaard, høsgaard etc), use "Martin Høgsgaard". Common contacts: Mie Priess-Sørensen (his wife). Always use the correct Danish spelling. If you already found a contact and said so, do NOT search again — use confirm_email instead.
-- For confirm_email: use when Martin says yes/ja/correct/that one/number, OR when you already found a contact and Martin says anything that isn't a clear rejection. index=1 for first result.
-- For spell_email: use when Martin spells out an email address letter by letter (e.g. "m i e at w e p r o d u c e dot d k" → "mie@weproduce.dk"). Parse it into a proper email address.
-- IMPORTANT: Once a contact has been found and spoken aloud, treat all subsequent replies as confirmation or rejection — never search again for the same person.
-- For send_confirmed_email: use when Martin has confirmed an address and now provides subject and body content. Write the full email body.
-- For read_inbox: reads Martin's 5 latest emails aloud.
-- For open_drive_folder: ONLY use when Martin explicitly asks about files in the current PROJECT folder. Never use this for inbox.
-- INBOX keywords: "inbox", "indbakke", "box", "boks", "den fil", "filen", "PDF", "dokument", "rapport", "læs", "resume", "resumé", "opsummer", "hvad handler", "hvad står der". When ANY of these appear with a task → use process_inbox_file.
-- For list_inbox: ONLY use when Martin explicitly asks to LIST or SEE what files are in inbox.
-- For process_inbox_file: use whenever Martin says anything about reading, summarizing, analyzing, processing, or doing anything with a file/PDF/document. This includes "læs filen", "lav et resumé", "hvad står der i", "åbn PDF", "behandl filen" etc. task = what to do. save_to = project name. ALWAYS use process_inbox_file when a task is mentioned — never use list_inbox for this.
-- Only ONE action per reply — EXCEPT create_multiple_events and delete_multiple_events which handle batches.
-- When deleting events, ALWAYS use list_calendar first to find the correct event IDs. Never guess or reuse old IDs from history.
-- If Martin says "stop", "nok", "hold op" or similar — stop immediately, apologize briefly, and ask what he needs instead. Never repeat content he has already rejected.
-- NEVER read out full recipes, long lists, documents or detailed content aloud — Martin is driving. Instead say "I've added X to your calendar" or "Done — 5 recipes saved". Keep all spoken replies under 3 sentences.
-- When adding ANY content to calendar (recipes, sports activities, tasks, ideas, plans etc): put a short title as the event title, and put ALL detailed content (instructions, equipment lists, shopping lists, notes etc) in the "description" field. Never put long content in the title.
-- When adding multiple calendar events, use create_multiple_events with all events in one action — never create them one by one.
-- If Martin asks to save/add something to calendar, do it — don't describe what you're saving.
-- Only use web search for questions about current events, prices, addresses, weather, news or facts you don't know. NEVER search when creating events, sending emails, managing projects, or answering from calendar context.${confirmedEmailContext}`;
-
-  // Project: use memory summary + last 8 messages. Home: last 6 messages.
-  const messages = activeProject
-    ? (conversationHistory.length > 0 ? conversationHistory.slice(-8) : [{ role:'user', content:text }])
-    : (homeHistory.length > 0 ? homeHistory.slice(-12) : [{ role:'user', content:text }]);
-  console.log('Sending', messages.length, 'messages to Claude:', messages.map(m => m.role + ': ' + m.content.substring(0,60)));
-
-  try {
-    const res = await fetch('/api/claude', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, system, messages })
-    });
-    const data = await res.json();
-    if (!data.content || !data.content[0] || !data.content[0].text) {
-      console.error('Unexpected Claude response:', JSON.stringify(data));
-      isThinking = false;
-      const errType = data?.error?.type || '';
-      const errMsg = data?.error?.message || '';
-      if (errType === 'rate_limit_error') {
-        speak('I am out of capacity right now. Please wait about 60 seconds and try again.');
-      } else if (errType === 'authentication_error' || errType === 'permission_error') {
-        speak('Authentication error. Please reload the app.');
-      } else if (errMsg.includes('credit')) {
-        speak('I have run out of credits. Please top up in the Anthropic console.');
-      } else {
-        speak('Something went wrong. Please try again.');
-      }
-      return;
-    }
-    let reply = data.content[0].text;
-    // Hard block: if reply contains Danish words, force re-ask in English
-    const danishWords = ['jeg ', 'det ', 'og ', 'er ', 'til ', 'den ', 'du ', 'har ', 'ikke ', 'med ', 'på ', 'som ', 'ved ', 'vil ', 'kan ', 'skal ', 'også ', 'hvor ', 'hvad ', 'din ', 'dit '];
-    const lowerReply = reply.toLowerCase();
-    const danishCount = danishWords.filter(w => lowerReply.includes(w)).length;
-    if (danishCount >= 3) {
-      console.warn('Danish detected in reply, forcing English rewrite');
-      const rewriteRes = await fetch('/api/claude', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 500,
-          system: 'Translate the following text to English. Output ONLY the English translation, nothing else.',
-          messages: [{ role: 'user', content: reply }]
-        })
-      });
-      const rewriteData = await rewriteRes.json();
-      if (rewriteData.content?.[0]?.text) reply = rewriteData.content[0].text;
-    }
-
-    // Parse action but DON'T run it yet
-    const actionLineMatch = reply.match(/ACTION:(\{[^\n]+\})/);
-    let parsedAction = null;
-    if (actionLineMatch) {
-      reply = reply.replace(/\nACTION:\{[^\n]+\}/, '').trim();
-      try {
-        parsedAction = JSON.parse(actionLineMatch[1]);
-        console.log('Parsed action:', JSON.stringify(parsedAction));
-      } catch(e) { console.log('Action parse error:', e, 'Raw:', actionLineMatch[1]); }
-    }
-
-    if (activeProject) {
-      addBubble('assistant', reply);
-      const { error: aErr } = await sb.from('messages').insert({ project_id: activeProject.id, role:'assistant', content:reply });
-      if (aErr) console.error('Save assistant message failed:', aErr);
-      conversationHistory.push({ role:'assistant', content:reply });
-      // Save memory summary every 4 exchanges
-      if (conversationHistory.length % 8 === 0) {
-        saveProjectMemory(activeProject.id, conversationHistory);
-      }
-    } else {
-      addBubble('assistant', reply);
-      homeHistory.push({ role:'assistant', content:reply });
-      if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
-    }
-    isThinking = false;
-
-    // Speak reply first — then execute action when speech is done
-    speak(reply, async () => {
-      setMicState('idle');
-      setMicHint('Tryk for at tale');
-      isThinking = false;
-      if (parsedAction) {
-        await executeAction(parsedAction);
-      }
-    });
-  } catch(e) {
-    console.log('Claude error:', e);
-    isThinking = false;
-    setMicState('idle'); setMicHint('Tryk for at tale');
-    speak('Something went wrong. Please try again.');
-  }
-}
-
-// ── EMAIL PREVIEW CARD ──
-function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch, attachment) {
-  const card = document.getElementById('confirmCard');
-  const lbl = document.getElementById('confirmLabel');
-  const cardBody = document.getElementById('confirmCardBody');
-  if (!card) return;
-  lbl.textContent = 'Bekræft mail';
-  const ccBlock = cc
-    ? `<div class="email-preview-field">
-        <div class="email-preview-field-label">CC</div>
-        <div class="email-preview-field-value" id="previewCCValue">${esc(cc)}</div>
-       </div>`
-    : `<div class="email-preview-field" id="previewCCRow" style="${showCCSearch ? '' : 'display:none'}">
-        <div class="email-preview-field-label">CC</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
-          <input id="previewCCInput" placeholder="Søg navn eller skriv adresse..." 
-            style="flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;"
-            onkeydown="if(event.key==='Enter')previewCCSearch()"/>
-          <button onclick="previewCCSearch()" style="background:var(--text);color:#fff;border:none;border-radius:var(--rs);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Søg</button>
-        </div>
-        <div id="previewCCSuggestions" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
-       </div>`;
-  cardBody.innerHTML = `
-    <div class="email-preview-field">
-      <div class="email-preview-field-label">Til</div>
-      <div class="email-preview-field-value">${esc(to)}</div>
-    </div>
-    ${ccBlock}
-    ${!cc && !showCCSearch ? `<button onclick="document.getElementById('previewCCRow').style.display='block'" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">+ Tilføj CC</button>` : ''}
-    ${attachment ? `<div class="email-preview-field">
-      <div class="email-preview-field-label">Vedhæftning</div>
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);">
-        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--label);fill:none;stroke-width:2;flex-shrink:0"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-        <span style="font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(attachment.filename)}</span>
-        <button onclick="removeAttachment()" style="background:none;border:none;color:var(--label);font-size:12px;cursor:pointer;">✕</button>
-      </div>
-    </div>` : `<button onclick="showAttachmentPicker()" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">📎 Vedhæft fil</button>`}
-    <div class="email-preview-field">
-      <div class="email-preview-field-label">Emne</div>
-      <div class="email-preview-field-value">${esc(subject)}</div>
-    </div>
-    <div class="email-preview-field">
-      <div class="email-preview-field-label">Besked — ret hvis nødvendigt</div>
-      <textarea class="email-preview-body" id="emailPreviewBody">${esc(body)}</textarea>
-    </div>
-    <button class="email-preview-send" onclick="emailPreviewSend()">✓ Send mail</button>
-    <button class="email-preview-cancel" onclick="emailPreviewCancel()">✕ Annuller</button>`;
-  card.style.display = 'block';
-  window._emailPreviewTo = to;
-  window._emailPreviewSubject = subject;
-  window._emailPreviewCc = cc || '';
-  window._emailPreviewAttachment = attachment || null;
-  window._emailPreviewOnSend = onSend;
-  window._emailPreviewOnCancel = onCancel;
-}
-
-async function pickFileFromProject(projectName) {
-  try {
-    const res = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list_project_files', projectName })
-    });
-    const data = await res.json();
-    const files = data.files || [];
-    if (files.length === 0) return null;
-    if (files.length === 1) {
-      return { driveFileId: files[0].id, filename: files[0].name, mimeType: files[0].mimeType };
-    }
-    // Multiple files — store for picker, return null and show picker after preview
-    window._projectFilesForAttach = files;
-    window._projectFilesForAttachName = projectName;
-    return null; // Will be picked via UI
-  } catch(e) { return null; }
-}
-
-async function showAttachmentPicker() {
-  // Fetch both inbox and recent project files
-  try {
-    const [inboxRes, projectRes] = await Promise.all([
-      fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_inbox' }) }),
-      window._emailPreviewSaveTo
-        ? fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_project_files', projectName: window._emailPreviewSaveTo }) })
-        : Promise.resolve({ json: async () => ({ files: [] }) })
-    ]);
-    const inboxData = await inboxRes.json();
-    const projectData = await projectRes.json();
-    const allFiles = [
-      ...(inboxData.files || []).map(f => ({ ...f, _source: 'Inbox' })),
-      ...(projectData.files || []).map(f => ({ ...f, _source: window._emailPreviewSaveTo || 'Projekt' }))
-    ];
-    window._inboxFilesForAttach = allFiles;
-    const card = document.getElementById('confirmCardBody');
-    const existingPicker = document.getElementById('attachmentPicker');
-    if (existingPicker) existingPicker.remove();
-    if (allFiles.length === 0) { speak('No files found.'); return; }
-    const picker = document.createElement('div');
-    picker.id = 'attachmentPicker';
-    picker.style.cssText = 'margin-bottom:10px;';
-    picker.innerHTML = `<div class="email-preview-field-label" style="margin-bottom:6px;">Vælg fil</div>` +
-      allFiles.map((f, i) => `<button onclick="selectAttachment(${i})" class="email-choice-btn" style="margin-bottom:4px;">
-        <div class="email-choice-name">${esc(f._source)}</div>
-        <div class="email-choice-addr">${esc(f.name)}</div>
-      </button>`).join('');
-    const sendBtn = card.querySelector('.email-preview-send');
-    if (sendBtn) card.insertBefore(picker, sendBtn);
-    else card.appendChild(picker);
-  } catch(e) { speak('Could not load files.'); }
-}
-
-async function pickAttachmentFromInbox() {
-  try {
-    const res = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list_inbox' })
-    });
-    const data = await res.json();
-    const files = data.files || [];
-    if (files.length === 0) { speak('Your inbox is empty.'); return; }
-    // Show file picker in preview card
-    const suggestions = document.getElementById('previewCCSuggestions');
-    const row = document.getElementById('previewCCRow');
-    // Insert file list above send button
-    const card = document.getElementById('confirmCardBody');
-    const existingPicker = document.getElementById('attachmentPicker');
-    if (existingPicker) existingPicker.remove();
-    const picker = document.createElement('div');
-    picker.id = 'attachmentPicker';
-    picker.style.cssText = 'margin-bottom:10px;';
-    picker.innerHTML = `<div class="email-preview-field-label" style="margin-bottom:6px;">Vælg fil at vedhæfte</div>` +
-      files.map((f, i) => `<button onclick="selectAttachment(${i})" class="email-choice-btn" style="margin-bottom:4px;">
-        <div class="email-choice-addr">${esc(f.name)}</div>
-      </button>`).join('');
-    window._inboxFilesForAttach = files;
-    const sendBtn = card.querySelector('.email-preview-send');
-    if (sendBtn) card.insertBefore(picker, sendBtn);
-    else card.appendChild(picker);
-  } catch(e) { speak('Could not load inbox files.'); }
-}
-
-function selectAttachment(idx) {
-  const file = window._inboxFilesForAttach?.[idx];
-  if (!file) return;
-  window._emailPreviewAttachment = { driveFileId: file.id, filename: file.name, mimeType: file.mimeType };
-  // Remove picker and refresh preview
-  const picker = document.getElementById('attachmentPicker');
-  if (picker) picker.remove();
-  // Update attachment display
-  showEmailPreview(
-    window._emailPreviewTo, window._emailPreviewSubject,
-    document.getElementById('emailPreviewBody')?.value || '',
-    window._emailPreviewOnSend, window._emailPreviewOnCancel,
-    window._emailPreviewCc, false, window._emailPreviewAttachment
-  );
-}
-
-function removeAttachment() {
-  window._emailPreviewAttachment = null;
-  showEmailPreview(
-    window._emailPreviewTo, window._emailPreviewSubject,
-    document.getElementById('emailPreviewBody')?.value || '',
-    window._emailPreviewOnSend, window._emailPreviewOnCancel,
-    window._emailPreviewCc, false, null
-  );
-}
-
-async function previewCCSearch() {
-  const input = document.getElementById('previewCCInput');
-  const query = input?.value?.trim();
-  if (!query) return;
-  input.disabled = true;
-  try {
-    const res = await fetch('/api/gmail', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'find_contact', query })
-    });
-    const data = await res.json();
-    const contacts = data.contacts || [];
-    const suggestions = document.getElementById('previewCCSuggestions');
-    if (!suggestions) return;
-    if (contacts.length === 0) {
-      suggestions.innerHTML = `<div style="font-size:12px;color:var(--label)">Ingen fundet — skriv adresse manuelt</div>`;
-    } else {
-      const allEmails = [];
-      contacts.forEach(c => c.emails.forEach(e => allEmails.push({ name: c.name, email: e })));
-      suggestions.innerHTML = allEmails.slice(0, 6).map(c =>
-        `<button onclick="previewCCPick('${esc(c.email)}')" class="email-choice-btn">
-          <div class="email-choice-name">${esc(c.name)}</div>
-          <div class="email-choice-addr">${esc(c.email)}</div>
-        </button>`
-      ).join('');
-    }
-  } catch(e) { console.log('CC search error:', e); }
-  input.disabled = false;
-}
-
-function previewCCPick(email) {
-  window._emailPreviewCc = window._emailPreviewCc
-    ? window._emailPreviewCc + ',' + email
-    : email;
-  const row = document.getElementById('previewCCRow');
-  if (row) row.innerHTML = `<div class="email-preview-field-label">CC</div><div class="email-preview-field-value">${esc(window._emailPreviewCc)}</div>`;
-}
-
-function emailPreviewSend() {
-  const body = document.getElementById('emailPreviewBody')?.value || '';
-  const to = window._emailPreviewTo;
-  const subject = window._emailPreviewSubject;
-  const cc = window._emailPreviewCc || '';
-  const attachment = window._emailPreviewAttachment || null;
-  const onSend = window._emailPreviewOnSend;
-  hideConfirmCard();
-  if (onSend) onSend(to, subject, body, cc, attachment);
-  else sendEmail(to, subject, body, cc, attachment);
-}
-
-function emailPreviewCancel() {
-  hideConfirmCard();
-  const onCancel = window._emailPreviewOnCancel;
-  window._emailPreviewTo = null;
-  window._emailPreviewSubject = null;
-  if (onCancel) onCancel();
-  else { const msg = 'Ok, mailen er annulleret.'; saveToHistory('assistant', msg); speak(msg); }
-}
-
-// ── CONFIRM CARD ──
-// Show a single yes/no confirm (used for single-address case)
-function showConfirmCard(label, value, onYes, onNo) {
-  const card = document.getElementById('confirmCard');
-  const lbl = document.getElementById('confirmLabel');
-  const body = document.getElementById('confirmCardBody');
-  if (!card) return;
-  lbl.textContent = label;
-  body.innerHTML = `
-    <div class="confirm-card-value">${esc(value)}</div>
-    <div class="confirm-card-btns">
-      <button class="confirm-yes" onclick="confirmCardYes()">✓ Ja</button>
-      <button class="confirm-no" onclick="confirmCardNo()">✕ Nej</button>
-    </div>`;
-  card.style.display = 'block';
-  window._confirmYes = onYes;
-  window._confirmNo = onNo;
-}
-
-// Show multiple email addresses as a tap list
-function showEmailChoiceCard(name, emails, onPick, onCancel) {
-  const card = document.getElementById('confirmCard');
-  const lbl = document.getElementById('confirmLabel');
-  const body = document.getElementById('confirmCardBody');
-  if (!card) return;
-  lbl.textContent = name;
-  const btns = emails.map((email, i) => `
-    <button class="email-choice-btn" onclick="emailChoicePick(${i})">
-      <div class="email-choice-addr">${esc(email)}</div>
-    </button>`).join('');
-  body.innerHTML = `
-    <div class="email-choice-list">${btns}</div>
-    <button class="email-choice-cancel" onclick="emailChoiceCancel()">✕ Annuller</button>`;
-  card.style.display = 'block';
-  window._emailChoiceEmails = emails;
-  window._emailChoiceOnPick = onPick;
-  window._emailChoiceOnCancel = onCancel;
-}
-
-function emailChoicePick(idx) {
-  const email = window._emailChoiceEmails[idx];
-  const onPick = window._emailChoiceOnPick;
-  hideConfirmCard();
-  if (onPick) onPick(email);
-}
-
-function emailChoiceCancel() {
-  const onCancel = window._emailChoiceOnCancel;
-  hideConfirmCard();
-  if (onCancel) onCancel();
-  else {
-    const msg = 'Ok, annulleret.';
-    saveToHistory('assistant', msg);
-    speak(msg);
-  }
-}
-
-function hideConfirmCard() {
-  const card = document.getElementById('confirmCard');
-  if (card) card.style.display = 'none';
-  window._confirmYes = null;
-  window._confirmNo = null;
-  window._emailChoiceEmails = null;
-  window._emailChoiceOnPick = null;
-}
-
-function confirmCardYes() {
-  hideConfirmCard();
-  if (window._confirmYes) window._confirmYes();
-}
-
-function confirmCardNo() {
-  hideConfirmCard();
+window.addEventListener('pagehide', () => {
+  stopListening();
   stopSpeaking();
-  if (window._confirmNo) window._confirmNo();
-  else {
-    const msg = 'Ok, cancelled.';
-    saveToHistory('assistant', msg);
-    speak(msg);
-  }
-}
+  stopAudioHeartbeat();
+});
 
-async function executeAction(action) {
-  console.log('Executing action:', action);
-  if (action.type === 'create_project') {
-    const { data, error } = await sb.from('projects').insert({ name: action.name }).select();
-    if (!error && data && data.length > 0) {
-      await loadProjects();
-      setTimeout(() => openProject(data[0]), 300);
-    } else {
-      console.log('Create project error:', error);
-    }
-  } else if (action.type === 'open_project') {
-    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
-    if (p) setTimeout(() => openProject(p), 300);
-  } else if (action.type === 'delete_project') {
-    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
-    if (p) {
-      // Delete all messages for this project first
-      await sb.from('messages').delete().eq('project_id', p.id);
-      await sb.from('projects').delete().eq('id', p.id);
-      if (activeProject && activeProject.id === p.id) goHome();
-      await loadProjects();
-    }
-  } else if (action.type === 'connect_calendar') {
-    window.location.href = '/api/google-auth?force=true';
-  } else if (action.type === 'list_upcoming') {
-    const waitAndList = () => {
-      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
-      listUpcomingEvents();
-    };
-    setTimeout(waitAndList, 500);
-  } else if (action.type === 'list_date') {
-    const d = action.date, tf = action.time_from, tt = action.time_to;
-    const waitAndList = () => {
-      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
-      listDateEvents(d, tf, tt);
-    };
-    setTimeout(waitAndList, 500);
-  } else if (action.type === 'find_event') {
-    const waitAndFind = () => {
-      if (isSpeaking) { setTimeout(waitAndFind, 300); return; }
-      findCalendarEvent(action.query);
-    };
-    setTimeout(waitAndFind, 500);
-  } else if (action.type === 'delete_multiple_events') {
-    const ids = action.event_ids || [];
-    let deleted = 0;
-    for (const id of ids) {
-      try {
-        const res = await fetch('/api/google-calendar', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', event: { event_id: id } })
-        });
-        const data = await res.json();
-        if (!data.error) deleted++;
-        else console.log('Failed to delete:', id, data.error);
-      } catch(e) { console.log('Failed to delete:', id, e); }
-    }
-    const msg = `Deleted ${deleted} event${deleted !== 1 ? 's' : ''}.`;
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } else if (action.type === 'delete_event') {
-    if (action.event_id) {
-      await deleteCalendarEvent(action.event_id);
-    } else if (action.query || action.title) {
-      const q = action.query || action.title;
-      await findCalendarEvent(q, true);
-      if (lastFoundEvents.length === 1) {
-        await deleteCalendarEvent(lastFoundEvents[0].id);
-      } else if (lastFoundEvents.length > 1) {
-        speak(`I found ${lastFoundEvents.length} events matching that. Please be more specific.`);
-      } else {
-        speak(`I could not find an event called "${q}".`);
-      }
-    } else {
-      speak("I could not identify that event. Please say the event name.");
-    }
-  } else if (action.type === 'update_event') {
-    if (action.event_id) {
-      await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration, action.description);
-    } else {
-      speak("I could not identify that event. Please try again.");
-    }
-  } else if (action.type === 'list_calendar') {
-    // Wait for Claude to finish speaking before reading calendar
-    const waitAndList = () => {
-      if (isSpeaking) { setTimeout(waitAndList, 300); return; }
-      listCalendarEvents();
-    };
-    setTimeout(waitAndList, 500);
-  } else if (action.type === 'create_event_and_invite') {
-    // Create event then find contact and send invite
-    await createCalendarEvent(action.title, action.date, action.time, action.duration, false, false);
-    if (action.invite_to) {
-      window._pendingInvite = {
-        title: action.title,
-        date: action.date,
-        time: action.time,
-        duration: action.duration || 60
-      };
-      await findContact(action.invite_to, 
-        `Mødeindkaldelse: ${action.title}`,
-        buildInviteBody(action.title, action.date, action.time, action.duration || 60)
-      );
-    }
-  } else if (action.type === 'create_multiple_events') {
-    const events = action.events || [];
-    let created = 0;
-    for (const e of events) {
-      try {
-        await createCalendarEvent(e.title, e.date, e.time, e.duration || 60, e.allday, e.reminder || false, e.description || '', true);
-        created++;
-      } catch(err) { console.log('Failed to create event:', e.title, err); }
-    }
-    const msg = `Done. Added ${created} event${created !== 1 ? 's' : ''} to your calendar.`;
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } else if (action.type === 'create_event') {
-    await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder, action.description || '');
-  } else if (action.type === 'find_contact') {
-    await findContact(action.query, action.subject, action.body);
-  } else if (action.type === 'find_contacts') {
-    // cc can be string or array — normalize to array
-    const ccArr = Array.isArray(action.cc) ? action.cc : (action.cc ? [action.cc] : []);
-    await findContactsWithCC(action.to, ccArr, action.subject, action.body);
-  } else if (action.type === 'send_confirmed_email') {
-    if (window._confirmedEmail) {
-      const to = window._confirmedEmail;
-      window._confirmedEmail = null;
-      window._foundContacts = null;
-      // Check if attachment requested
-      let attachment = null;
-      if (action.attach_from_inbox) {
-        attachment = window._lastInboxFile || null;
-      } else if (action.attach_from_project) {
-        // Fetch files from project folder and show picker
-        attachment = await pickFileFromProject(action.attach_from_project);
-      }
-      showEmailPreview(to, action.subject, action.body,
-        (t, s, b, c, a) => sendEmail(t, s, b, c, a),
-        null, action.cc || '', false, attachment
-      );
-    }
-  } else if (action.type === 'spell_email') {
-    // User spelled out an email address — confirm and send
-    if (window._pendingEmail) {
-      const email = action.email;
-      const name = window._pendingContactQuery || email;
-      window._foundContacts = [{ name, emails: [email] }];
-      const msg = `Got it. I'll send to ${speakableEmail(email)}. Shall I send?`;
-      saveToHistory('assistant', msg);
-      speak(msg);
-    }
-  } else if (action.type === 'confirm_email') {
-    if (window._foundContacts) {
-      const idx = (action.index || 1) - 1;
-      const contact = window._foundContacts[idx];
-      if (contact) {
-        const draft = window._pendingEmailDraft || {};
-        if (draft.subject && draft.body) {
-          // Address confirmed + draft exists — show preview before sending
-          const emailTo = contact.emails[0];
-          window._pendingEmail = null;
-          window._pendingEmailDraft = null;
-          window._foundContacts = null;
-          hideConfirmCard();
-          setTimeout(() => showEmailPreview(emailTo, draft.subject, draft.body,
-            (t, s, b) => sendEmail(t, s, b), null), 300);
-        } else {
-          // Address confirmed — ask for content
-          window._confirmedEmail = contact.emails[0];
-          window._foundContacts = null;
-          hideConfirmCard();
-          const msg = `Got it. What should the email say?`;
-          saveToHistory('assistant', msg);
-          speak(msg);
-        }
-      }
-    }
-  } else if (action.type === 'send_email') {
-    // NEVER send directly — always verify address first, then show preview
-    const looksReal = action.to && action.to.includes('@') &&
-      !action.to.includes('example.com') &&
-      !action.to.includes('placeholder') &&
-      action.to.split('@')[1]?.includes('.');
-    if (!looksReal || !window._confirmedEmail) {
-      // Address not confirmed — search contacts first
-      const query = action.to?.includes('@')
-        ? action.to.split('@')[0].replace(/[._]/g,' ')
-        : (action.to || '');
-      await findContact(query, action.subject, action.body);
-    } else {
-      // Address was confirmed via card — show preview before sending
-      const to = window._confirmedEmail || action.to;
-      window._confirmedEmail = null;
-      showEmailPreview(to, action.subject, action.body,
-        (t, s, b, c) => sendEmail(t, s, b, c), null, action.cc || '');
-    }
-  } else if (action.type === 'read_inbox') {
-    const waitAndRead = () => {
-      if (isSpeaking) { setTimeout(waitAndRead, 300); return; }
-      readInbox();
-    };
-    setTimeout(waitAndRead, 500);
-  } else if (action.type === 'read_email') {
-    const waitAndRead = () => {
-      if (isSpeaking) { setTimeout(waitAndRead, 300); return; }
-      readEmail(action.message_id);
-    };
-    setTimeout(waitAndRead, 500);
-  } else if (action.type === 'open_drive_folder') {
-    if (activeProject) {
-      await fetchDriveContext(activeProject.name);
-      const msg = driveFiles.length > 0
-        ? `Found ${driveFiles.length} file${driveFiles.length>1?'s':''} in the ${activeProject.name} folder: ${driveFiles.map(f=>f.name).join(', ')}.`
-        : `The ${activeProject.name} Drive folder is empty. Add files in Google Drive under Vox/${activeProject.name}.`;
-      saveToHistory('assistant', msg);
-      speak(msg);
-    }
-  } else if (action.type === 'list_inbox') {
-    await listInbox();
-  } else if (action.type === 'process_inbox_file') {
-    await processInboxFile(action.task, action.save_to, action.file_name, action.send_email);
-  } else if (action.type === 'go_home') {
-    goHome();
-  }
-}
-
-async function listCalendarEvents(date) {
-  try {
-    const action = date ? 'list_date' : 'list';
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, date })
-    });
-    const data = await res.json();
-    if (data.error) { speak('Calendar error: ' + data.error); return; }
-    const events = data.items || [];
-    const dayLabel = date ? new Date(date).toLocaleDateString('en', {weekday:'long'}) : 'today';
-    let msg;
-    if (events.length === 0) {
-      msg = date ? `You have no events on ${dayLabel}.` : "You have no more events today.";
-    } else {
-      const summary = events.map(e => {
-        const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'}) : 'All day';
-        return `${time}, ${e.summary}`;
-      }).join('. ');
-      msg = `On ${dayLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
-    }
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } catch(e) { speak('Could not load calendar events.'); }
-}
-
-async function createCalendarEvent(title, date, time, duration, allday, reminder, description, silent = false) {
-  try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create', event: { title, date, time, duration, allday, reminder, description } })
-    });
-    const data = await res.json();
-    if (!silent) {
-      if (data.id) speak(`Done. ${title} has been added to your calendar.`);
-      else speak('Could not create the event. Please try again.');
-    }
-    return data;
-  } catch(e) {
-    if (!silent) speak('Could not create calendar event.');
-    throw e;
-  }
-}
-
-async function listDateEvents(date, timeFrom, timeTo) {
-  try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list_date', date, time_from: timeFrom, time_to: timeTo })
-    });
-    const data = await res.json();
-    const events = data.items || [];
-    const dayLabel = new Date(date + 'T12:00:00').toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' });
-    const timeLabel = timeFrom ? ` between ${timeFrom} and ${timeTo || 'end of day'}` : '';
-    if (events.length === 0) {
-      const noMsg = `You have no events on ${dayLabel}${timeLabel}.`;
-      saveToHistory('assistant', noMsg);
-      speak(noMsg);
-      return;
-    }
-    const summary = events.map(e => {
-      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : 'All day';
-      return `${time}, ${e.summary}`;
-    }).join('. ');
-    const msg = `On ${dayLabel}${timeLabel} you have ${events.length} event${events.length > 1 ? 's' : ''}. ${summary}.`;
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } catch(e) { speak('Could not load events for that day.'); }
-}
-
-async function listUpcomingEvents() {
-  try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'upcoming' })
-    });
-    const data = await res.json();
-    const events = data.items || [];
-    if (events.length === 0) { saveToHistory('assistant', "You have no upcoming events this week."); speak("You have no upcoming events this week."); return; }
-    const summary = events.map(e => {
-      const d = new Date(e.start.dateTime || e.start.date);
-      const day = d.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
-      const time = e.start.dateTime ? d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
-      return `${day}${time ? ' at ' + time : ''}: ${e.summary}`;
-    }).join('. ');
-    const msg = `You have ${events.length} upcoming events. ${summary}.`;
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } catch(e) { speak('Could not load upcoming events.'); }
-}
-
-// Store last found events for follow-up delete/edit
-let lastFoundEvents = [];
-
-async function loadTodayEventsForContext() {
-  try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list' })
-    });
-    const data = await res.json();
-    lastFoundEvents = data.items || [];
-    console.log('Loaded today events for context:', lastFoundEvents.map(e => e.summary));
-  } catch(e) { console.error('Could not load today events:', e); }
-}
-
-async function findCalendarEvent(query, silent = false) {
-  try {
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'search', event: { query } })
-    });
-    const data = await res.json();
-    lastFoundEvents = data.items || [];
-    if (silent) return; // Used internally before update/delete
-    if (lastFoundEvents.length === 0) { speak(`I could not find any event matching "${query}".`); return; }
-    if (lastFoundEvents.length === 1) {
-      const e = lastFoundEvents[0];
-      const time = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }) : '';
-      speak(`Found: ${e.summary}${time ? ' at ' + time : ''}. Say delete it or tell me how to update it.`);
-    } else {
-      const names = lastFoundEvents.slice(0,3).map(e => e.summary).join(', ');
-      speak(`Found ${lastFoundEvents.length} events: ${names}. Please be more specific.`);
-    }
-  } catch(e) { speak('Could not search calendar.'); }
-}
-
-async function deleteCalendarEvent(eventId) {
-  try {
-    // If no eventId but we have lastFoundEvents, use the first one
-    const id = eventId || (lastFoundEvents[0] && lastFoundEvents[0].id);
-    if (!id) { speak('I do not know which event to delete. Please say find event first.'); return; }
-    const eventName = lastFoundEvents[0] ? lastFoundEvents[0].summary : 'the event';
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', event: { id } })
-    });
-    const data = await res.json();
-    if (data.success) { lastFoundEvents = []; speak(`Done. ${eventName} has been deleted from your calendar.`); }
-    else speak('Could not delete the event. Please try again.');
-  } catch(e) { speak('Could not delete the event.'); }
-}
-
-async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration, description) {
-  try {
-    if (!eventId) { speak('I do not know which event to update.'); return; }
-    const updates = {};
-    if (newTitle) updates.summary = newTitle;
-    if (description) updates.description = description;
-    if (newDate || newTime) {
-      // We need the original event to preserve unchanged fields
-      const getRes = await fetch('/api/google-calendar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get', event: { id: eventId } })
-      });
-      const original = await getRes.json();
-      const origStart = original.start?.dateTime || original.start?.date || '';
-      const startDate = newDate || origStart.split('T')[0];
-      const startTime = newTime || (origStart.includes('T') ? origStart.split('T')[1].substring(0,5) : '09:00');
-      const duration = newDuration || 60;
-      const start = new Date(`${startDate}T${startTime}:00`);
-      const end = new Date(start.getTime() + duration * 60000);
-      updates.start = { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' };
-      updates.end = { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' };
-    }
-    const res = await fetch('/api/google-calendar', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update', event: { id: eventId, updates } })
-    });
-    const data = await res.json();
-    if (data.id) speak(`Done. The event has been updated.`);
-    else speak('Could not update the event. Please try again.');
-  } catch(e) { console.error('Update error:', e); speak('Could not update the event.'); }
-}
-
-// ── GOOGLE DRIVE ──
-async function fetchDriveContext(projectName) {
-  try {
-    const res = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_project_context', projectName })
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    driveContext = data.context || '';
-    driveFiles = data.files || [];
-    console.log(`Drive: loaded ${driveFiles.length} files for "${projectName}"`);
-  } catch(e) {
-    console.log('Drive context error:', e.message);
-    driveContext = '';
-    driveFiles = [];
-  }
-}
-
-async function ensureProjectFolder(projectName) {
-  try {
-    await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'ensure_project_folder', projectName })
-    });
-  } catch(e) { console.log('Drive folder error:', e.message); }
-}
-
-// ── GMAIL ──
-// Convert email address to speakable text — NO dots (they break sentence splitter)
-function speakableEmail(email) {
-  if (!email) return '';
-  const [user, domain] = email.split('@');
-  if (!domain) return email;
-  const domainClean = domain.replace(/\./g, ' dot ');
-  const userSpoken = user.length <= 5
-    ? user.toUpperCase().split('').join(' ')
-    : user.replace(/[._-]/g, ' ');
-  return `${userSpoken} at ${domainClean}`;
-}
-
-// Build a meeting invite email body
-function buildInviteBody(title, date, time, duration) {
-  const d = new Date(`${date}T${time || '09:00'}:00`);
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  const dateStr = d.toLocaleDateString('da-DK', options);
-  const timeStr = time || '09:00';
-  const endDate = new Date(d.getTime() + duration * 60000);
-  const endTime = endDate.toTimeString().substring(0, 5);
-  return `Hej,
-
-Jeg vil gerne invitere dig til følgende møde:
-
-Emne: ${title}
-Dato: ${dateStr}
-Tidspunkt: ${timeStr} - ${endTime}
-
-Ses vi?
-
-Venlig hilsen
-Martin`;
-}
-
-// Pending email state for contact confirmation flow
-window._pendingEmail = null;
-window._foundContacts = null;
-
-// ── FIND CONTACTS WITH CC — searches TO and CC in parallel ──
-async function findContactsWithCC(toQuery, ccQueries, subject, body) {
-  // ccQueries can be a string or array
-  const ccList = Array.isArray(ccQueries) ? ccQueries : (ccQueries ? [ccQueries] : []);
-  const count = 1 + ccList.length;
-  speak(`Looking up ${count} addresses.`);
-
-  // Search TO + all CC recipients in parallel
-  const [toRes, ...ccResArr] = await Promise.all([
-    fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'find_contact', query: toQuery }) }),
-    ...ccList.map(q => fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'find_contact', query: q }) }))
-  ]);
-
-  const toData = await toRes.json();
-  const ccDataArr = await Promise.all(ccResArr.map(r => r.json()));
-
-  // Flatten TO emails
-  const toEmails = [];
-  (toData.contacts || []).forEach(c => (c.emails||[]).forEach(e => toEmails.push({ name: c.name, email: e })));
-
-  // Build CC groups — one group per person searched
-  const ccGroups = await Promise.all(ccDataArr.map(async (d, i) => {
-    const emails = [];
-    (d.contacts || []).forEach(c => (c.emails||[]).forEach(e => emails.push({ name: c.name, email: e })));
-    return { query: ccList[i], emails, chosen: null };
-  }));
-
-  window._pendingEmailDraft = { subject, body };
-  window._multiContactState = { toEmails, ccGroups, chosenTo: null, subject, body };
-  showMultiContactCard();
-}
-
-function showMultiContactCard() {
-  const state = window._multiContactState;
-  if (!state) return;
-  const card = document.getElementById('confirmCard');
-  const lbl = document.getElementById('confirmLabel');
-  const cardBody = document.getElementById('confirmCardBody');
-  if (!card) return;
-  lbl.textContent = 'Vælg mailadresser';
-
-  const renderGroup = (label, emails, chosen, pickFnName, groupIdx) => {
-    if (emails.length === 0) {
-      return `<div class="email-preview-field">
-        <div class="email-preview-field-label">${label}</div>
-        <div style="font-size:13px;color:var(--label);margin-top:4px;">Ikke fundet</div>
-      </div>`;
-    }
-    const btns = emails.map((c, i) => {
-      const isChosen = chosen === c.email;
-      return `<button onclick="${pickFnName}(${groupIdx !== undefined ? groupIdx + ',' : ''}${i})" class="email-choice-btn" style="${isChosen ? 'background:var(--text);' : ''}">
-        <div class="email-choice-name" style="${isChosen ? 'color:rgba(255,255,255,.7)' : ''}">${esc(c.name)}</div>
-        <div class="email-choice-addr" style="${isChosen ? 'color:#fff' : ''}">${esc(c.email)}</div>
-      </button>`;
-    }).join('');
-    return `<div class="email-preview-field">
-      <div class="email-preview-field-label">${label}</div>
-      <div class="email-choice-list">${btns}</div>
-    </div>`;
-  };
-
-  // TO group
-  let html = renderGroup('TIL', state.toEmails, state.chosenTo, 'multiPickTo', undefined);
-
-  // CC groups — one per person
-  (state.ccGroups || []).forEach((g, gi) => {
-    html += renderGroup(`CC — ${esc(g.query)}`, g.emails, g.chosen, 'multiPickCC', gi);
-  });
-
-  const allCCChosen = (state.ccGroups || []).every(g => g.emails.length === 0 || g.chosen);
-  const canSend = state.chosenTo;
-
-  html += `<div style="margin-top:4px;font-size:12px;color:var(--label)">Tryk på en adresse for at vælge</div>`;
-  if (canSend) html += `<button class="email-preview-send" style="margin-top:12px" onclick="multiContactProceed()">✓ Fortsæt</button>`;
-  html += `<button class="email-preview-cancel" onclick="multiContactCancel()">✕ Annuller</button>`;
-
-  cardBody.innerHTML = html;
-  card.style.display = 'block';
-}
-
-function multiPickTo(idx) {
-  if (!window._multiContactState) return;
-  window._multiContactState.chosenTo = window._multiContactState.toEmails[idx]?.email || null;
-  showMultiContactCard();
-}
-
-function multiPickCC(groupIdx, emailIdx) {
-  if (!window._multiContactState) return;
-  const g = window._multiContactState.ccGroups[groupIdx];
-  if (g) g.chosen = g.emails[emailIdx]?.email || null;
-  showMultiContactCard();
-}
-
-function multiContactProceed() {
-  const state = window._multiContactState;
-  if (!state || !state.chosenTo) return;
-  // Build CC string from all chosen CC addresses
-  const ccAddresses = (state.ccGroups || [])
-    .map(g => g.chosen)
-    .filter(Boolean)
-    .join(',');
-  window._multiContactState = null;
-  hideConfirmCard();
-  showEmailPreview(
-    state.chosenTo,
-    state.subject,
-    state.body,
-    (t, s, b, c) => sendEmail(t, s, b, c),
-    null,
-    ccAddresses
-  );
-}
-
-function multiContactCancel() {
-  window._multiContactState = null;
-  hideConfirmCard();
-  const msg = 'Ok, cancelled.';
-  saveToHistory('assistant', msg);
-  speak(msg);
-}
-
-async function findContact(query, subject, body) {
-  console.log('findContact called with query:', query);
-  try {
-    const res = await fetch('/api/gmail', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'find_contact', query })
-    });
-    console.log('findContact HTTP status:', res.status);
-    const data = await res.json();
-    console.log('findContact response:', JSON.stringify(data));
-    const contacts = data.contacts || [];
-
-    // Clean up garbled name from email headers
-    contacts.forEach(c => {
-      c.name = c.name.replace(/^["\\ ]+|["\\ ]+$/g, '').trim();
-    });
-
-    // Cache found contacts in Supabase for future use
-    if (contacts.length > 0) {
-      contacts.forEach(c => { if (c.emails?.length) saveContactCache(c.name, c.emails); });
-    }
-
-    if (contacts.length === 0) {
-      window._pendingEmail = { subject, body };
-      window._pendingContactQuery = query;
-      const msg = `I could not find anyone named ${query}. Please say their email address.`;
-      saveToHistory('assistant', msg);
-      speakQueued(msg);
-      return;
-    }
-
-    // Store pending email — but NOT subject/body yet, confirm address first
-    window._pendingEmail = { subject: '', body: '' };
-    window._pendingEmailDraft = { subject, body };
-    // If _toEmailConfirmed already set, this search is for CC
-    if (window._toEmailConfirmed) {
-      window._foundContactsCC = contacts;
-    } else {
-      window._foundContacts = contacts;
-    }
-    window._awaitingEmailContent = false;
-
-    let msg;
-    // Flatten: one entry per email address
-    const flat = [];
-    contacts.forEach(c => {
-      (c.emails || []).forEach(e => flat.push({ name: c.name || e, email: e }));
-    });
-
-    if (flat.length === 1) {
-      msg = `I found ${flat[0].name}. Is this the right address?`;
-      saveToHistory('assistant', msg);
-      speakQueued(msg, () => {
-        // Show confirm card after speech
-        showConfirmCard(
-          `Send mail til ${flat[0].name}`,
-          flat[0].email,
-          () => {
-            // Yes — confirm TO address
-            window._confirmedEmail = flat[0].email;
-            window._toEmailConfirmed = flat[0].email;
-            window._foundContacts = null;
-            hideConfirmCard();
-            const doneMsg = `Got it. What should the email say?`;
-            saveToHistory('assistant', doneMsg);
-            speak(doneMsg);
-          },
-          () => {
-            // No — ask to spell
-            window._foundContacts = null;
-            hideConfirmCard();
-            const noMsg = `Ok. Please say the correct email address.`;
-            saveToHistory('assistant', noMsg);
-            speak(noMsg);
-          }
-        );
-      });
-    } else {
-      // Multiple emails found — group by person name, show all as tap list
-      // Deduplicate: if same person appears with multiple emails, group them
-      const byName = {};
-      flat.forEach(c => {
-        const key = c.name.toLowerCase();
-        if (!byName[key]) byName[key] = { name: c.name, emails: [] };
-        if (!byName[key].emails.includes(c.email)) byName[key].emails.push(c.email);
-      });
-      const grouped = Object.values(byName);
-
-      // Collect all emails with labels for the choice card
-      const allEmails = [];
-      grouped.forEach(g => g.emails.forEach(e => allEmails.push(e)));
-
-      // Store for voice fallback
-      window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails: [e] }));
-
-      const personName = grouped[0].name;
-      msg = `I found ${allEmails.length} addresses for ${personName}. Tap the right one.`;
-      saveToHistory('assistant', msg);
-      speakQueued(msg, () => {
-        showEmailChoiceCard(
-          personName,
-          allEmails,
-          (chosenEmail) => {
-            // User tapped TO address — show preview with CC option
-            window._foundContacts = null;
-            window._confirmedEmail = chosenEmail;
-            window._toEmailConfirmed = chosenEmail;
-            const draft = window._pendingEmailDraft || {};
-            if (draft.subject && draft.body) {
-              window._pendingEmailDraft = null;
-              showEmailPreview(chosenEmail, draft.subject, draft.body,
-                (t, s, b, c) => sendEmail(t, s, b, c), null, '', true);
-            } else {
-              const doneMsg = 'Got it. What should the email say?';
-              saveToHistory('assistant', doneMsg);
-              speak(doneMsg);
-            }
-          },
-          () => {
-            window._foundContacts = null;
-            const cancelMsg = 'Ok, cancelled.';
-            saveToHistory('assistant', cancelMsg);
-            speak(cancelMsg);
-          }
-        );
-      });
-    }
-  } catch(e) { speak('Could not search contacts.'); }
-}
-
-async function sendEmail(to, subject, body, cc, attachment) {
-  window._toEmailConfirmed = null;
-  try {
-    const payload = { action: 'send', to, subject, body, cc: cc || '' };
-    if (attachment?.driveFileId) payload.driveFileId = attachment.driveFileId;
-    else if (attachment?.data) payload.attachment = attachment;
-    const res = await fetch('/api/gmail', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.id) {
-      const name = to.split('@')[0];
-      const msg = `Email sent.`;
-      saveToHistory('assistant', msg);
-      speak(msg);
-    } else {
-      speak('Could not send the email. ' + (data.error || 'Please try again.'));
-    }
-  } catch(e) { speak('Could not send the email.'); }
-}
-
-async function readInbox() {
-  try {
-    const res = await fetch('/api/gmail', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list' })
-    });
-    const data = await res.json();
-    const messages = data.messages || [];
-    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
-    const summary = messages.map((m, i) => {
-      const from = m.from.replace(/<.*>/, '').trim() || m.from;
-      return `${i + 1}. From ${from}: ${m.subject}`;
-    }).join('. ');
-    const msg = `You have ${messages.length} recent emails. ${summary}.`;
-    saveToHistory('assistant', msg);
-    // Store message IDs for follow-up
-    window._lastInboxMessages = messages;
-    speak(msg);
-  } catch(e) { speak('Could not load your inbox.'); }
-}
-
-async function readEmail(messageId) {
-  try {
-    const res = await fetch('/api/gmail', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get', messageId })
-    });
-    const data = await res.json();
-    if (data.body) {
-      const msg = `Email from ${data.from}. Subject: ${data.subject}. ${data.body.substring(0, 500)}`;
-      saveToHistory('assistant', msg);
-      speak(msg);
-    } else {
-      speak('Could not read that email.');
-    }
-  } catch(e) { speak('Could not read that email.'); }
-}
-
-// ── VOICE COMMANDS ──
-function handleCommand(text) {
-  const t = text.toLowerCase();
-  setTranscript(text);
-
-  if (t.includes('morgenoverblik') || t.includes('morning brief') || t.includes('godmorgen')) { playMorningBrief(); return; }
-  if ((t.includes('gå hjem') || t.includes('tilbage') || t.includes('hjem')) && activeProject) { goHome(); speak('Going home.'); return; }
-
-  // If already in a project, don't navigate — send to Claude instead
-  if (activeProject) {
-    sendToClaude(text);
-    return;
-  }
-
-  // From home screen: only navigate to project if the command is ONLY about opening it
-  // Not if there are other instructions (resumé, mail, inbox etc.)
-  const TASK_WORDS = ['resumé', 'resume', 'opsummer', 'analyser', 'skriv', 'send', 'mail', 'inbox', 'fil', 'hent', 'lav', 'opret', 'slet', 'find', 'vis', 'læs'];
-  const hasTaskWords = TASK_WORDS.some(w => t.includes(w));
-  if (!hasTaskWords) {
-    for (const p of projects) {
-      if (t.includes(p.name.toLowerCase())) {
-        openProject(p);
-        speak(`Opening ${p.name}.`);
-        return;
-      }
-    }
-  }
-
-  // Direct reconnect bypass
-  if (t.includes('reconnect') || t.includes('forbind igen') || t.includes('connect again')) {
-    window.location.href = '/api/google-auth?force=true';
-    return;
-  }
-
-  // No project match — send to Claude from home
-  sendToClaude(text);
-}
-
-// ── PUSH TO TALK ──
-let micTranscript = ''; // Accumulates across restarts
+// ═══════════════════════════════════════════════════════
+// STT — BROWSER WEB SPEECH (forbedret konfiguration)
+// ═══════════════════════════════════════════════════════
+let micTranscript = '';
 
 function startListening() {
   if (isThinking) return;
@@ -2182,15 +623,21 @@ function _startRecognitionInstance() {
   if (!isListening) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
+
+  // DANSK input — Vox forstår dansk, svarer på engelsk
   recognition.lang = 'da-DK';
   recognition.interimResults = true;
   recognition.continuous = true;
+  recognition.maxAlternatives = 1;
 
   recognition.onresult = e => {
     let interim = micTranscript;
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) micTranscript += e.results[i][0].transcript + ' ';
-      else interim = micTranscript + e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        micTranscript += e.results[i][0].transcript + ' ';
+      } else {
+        interim = micTranscript + e.results[i][0].transcript;
+      }
     }
     const t = interim.trim();
     setTranscript(t);
@@ -2200,27 +647,32 @@ function _startRecognitionInstance() {
   recognition.onend = () => {
     recognition = null;
     if (isListening) {
-      // iOS killed it — restart silently to keep mic open
+      // iOS dræber recognition hvert ~60s — genstart stille
       setTimeout(_startRecognitionInstance, 100);
     }
   };
 
-  recognition.onerror = e => {
+  recognition.onerror = (e) => {
     recognition = null;
     if (e.error === 'not-allowed') {
       isListening = false;
       setMicState('idle');
       setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
-    } else if (isListening) {
-      // Restart on other errors
-      setTimeout(_startRecognitionInstance, 200);
+      return;
     }
+    if (e.error === 'no-speech') {
+      // Normal — ingen tale registreret
+      if (isListening) setTimeout(_startRecognitionInstance, 200);
+      return;
+    }
+    console.warn('[STT] Error:', e.error);
+    if (isListening) setTimeout(_startRecognitionInstance, 300);
   };
 
   try {
     recognition.start();
   } catch(e) {
-    console.log('Recognition start error:', e);
+    console.log('[STT] Start error:', e);
     if (isListening) setTimeout(_startRecognitionInstance, 300);
   }
 }
@@ -2233,93 +685,1068 @@ function stopListening() {
   }
   const transcript = micTranscript.trim();
   micTranscript = '';
-  setLiveTranscript(''); // clear live bubble
+  setLiveTranscript('');
   return transcript;
 }
 
+// ═══════════════════════════════════════════════════════
+// WHISPER STT (klar til brug — sæt STT_ENGINE = 'whisper')
+// Sender audio til /api/stt som kalder Groq eller OpenAI Whisper
+// ═══════════════════════════════════════════════════════
+let _mediaRecorder = null;
+let _audioChunks = [];
+
+function startListeningWhisper() {
+  if (isThinking) return;
+  if (isSpeaking || _speakBusy) stopSpeaking();
+  isListening = true;
+  setMicState('listening');
+  setMicHint('Tryk igen for at sende');
+  setTranscript('');
+  _audioChunks = [];
+
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _audioChunks.push(e.data); };
+      _mediaRecorder.start(250); // chunk hvert 250ms
+    })
+    .catch(e => {
+      console.warn('[Whisper STT] Mic error:', e);
+      isListening = false;
+      setMicState('idle');
+      setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
+    });
+}
+
+async function stopListeningWhisper() {
+  isListening = false;
+  if (!_mediaRecorder) return '';
+
+  return new Promise(resolve => {
+    _mediaRecorder.onstop = async () => {
+      const stream = _mediaRecorder.stream;
+      stream.getTracks().forEach(t => t.stop());
+      _mediaRecorder = null;
+
+      const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+      _audioChunks = [];
+
+      setMicHint('Transskriberer...');
+      try {
+        const form = new FormData();
+        form.append('audio', blob, 'audio.webm');
+        // Whisper prompt hjælper med at genkende navne og fagtermer
+        form.append('prompt', 'Martin, Mie, WoodUpp, ByAulum, Timelog, Høgsgaard, weproduce');
+        form.append('language', 'da');
+        const res = await fetch('/api/stt', { method: 'POST', body: form });
+        const data = await res.json();
+        const text = data.text?.trim() || '';
+        setTranscript(text);
+        resolve(text);
+      } catch(e) {
+        console.warn('[Whisper STT] Transcription error:', e);
+        resolve('');
+      }
+    };
+    _mediaRecorder.stop();
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// MIC TAP HANDLER — bruger rigtig STT-adapter
+// ═══════════════════════════════════════════════════════
 function handleMicTap() {
-  // Don't interrupt if email preview card is showing — user should use card buttons
   const card = document.getElementById('confirmCard');
   if (card && card.style.display !== 'none') {
-    // Still allow stopping speech
     if (isSpeaking || _speakBusy) { stopSpeaking(); return; }
-    return; // Ignore mic taps while card is visible
-  }
-  // Interrupt speech
-  if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
-    stopSpeaking();
     return;
+  }
+  if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
+    stopSpeaking(); return;
   }
   if (isThinking) return;
-  if (isListening) {
-    const transcript = stopListening();
-    if (transcript && transcript.length > 1) {
-      handleCommand(transcript);
+
+  if (STT_ENGINE === 'whisper') {
+    if (isListening) {
+      stopListeningWhisper().then(transcript => {
+        if (transcript && transcript.length > 1) handleCommand(transcript);
+        else { setMicState('idle'); setMicHint('Tryk for at tale'); }
+      });
     } else {
+      startListeningWhisper();
+    }
+  } else {
+    if (isListening) {
+      const transcript = stopListening();
+      if (transcript && transcript.length > 1) handleCommand(transcript);
+      else { setMicState('idle'); setMicHint('Tryk for at tale'); }
+    } else {
+      startListening();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// DATE
+// ═══════════════════════════════════════════════════════
+function setDate() {
+  const d = new Date();
+  const days = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+  const months = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+  document.getElementById('dateDisplay').innerHTML = `${days[d.getDay()]}<span>, ${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// WEATHER
+// ═══════════════════════════════════════════════════════
+async function fetchWeather() {
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=55.68&longitude=12.57&current=temperature_2m,weathercode&timezone=Europe/Copenhagen');
+    const d = await r.json();
+    const temp = Math.round(d.current.temperature_2m);
+    const descs = {0:'klart vejr',1:'let skyet',2:'skyet',3:'overskyet',45:'tåge',61:'let regn',63:'regn',71:'let sne',80:'byger'};
+    const desc = descs[d.current.weathercode] || 'skiftende vejr';
+    return `${temp} grader, ${desc}`;
+  } catch { return 'vejret ikke tilgængeligt'; }
+}
+
+// ═══════════════════════════════════════════════════════
+// PROJECTS
+// ═══════════════════════════════════════════════════════
+async function loadProjects() {
+  const { data, error } = await sb.from('projects').select('*');
+  if (error) { console.log('Projects error:', error); return; }
+  if (!data || data.length === 0) {
+    for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer']) {
+      await sb.from('projects').insert({ name });
+    }
+    const { data: s } = await sb.from('projects').select('*');
+    projects = s || [];
+  } else {
+    projects = data;
+  }
+  renderProjects(projects);
+}
+
+function renderProjects(list) {
+  const el = document.getElementById('projekterList') || document.getElementById('projectsList');
+  el.innerHTML = '';
+  list.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'project-item';
+    d.innerHTML = `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><div class="project-name">${esc(p.name)}</div><div class="project-arrow">›</div>`;
+    d.onclick = () => openProject(p);
+    el.appendChild(d);
+  });
+  const n = document.createElement('div');
+  n.className = 'new-project';
+  n.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Nyt projekt</span>`;
+  n.onclick = () => document.getElementById('modal').classList.add('visible');
+  el.appendChild(n);
+}
+
+// ═══════════════════════════════════════════════════════
+// SUPABASE MEMORY
+// ═══════════════════════════════════════════════════════
+async function loadProjectMemory(projectId) {
+  try {
+    const { data } = await sb.from('project_memory').select('summary').eq('project_id', projectId).order('updated_at', { ascending: false }).limit(1);
+    projectMemory = data?.[0]?.summary || '';
+  } catch(e) { projectMemory = ''; }
+}
+
+async function saveProjectMemory(projectId, newMessages) {
+  if (!newMessages || newMessages.length < 4) return;
+  try {
+    const recent = newMessages.slice(-8).map(m => m.role + ': ' + m.content).join('\n');
+    const res = await fetch('/api/claude', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 300, system: 'Summarize this conversation in 2-3 sentences. Focus on decisions made, key information, and next steps. Be extremely concise.', messages: [{ role: 'user', content: recent }] })
+    });
+    const data = await res.json();
+    const summary = data.content?.[0]?.text || '';
+    if (!summary) return;
+    await sb.from('project_memory').upsert({ project_id: projectId, summary, updated_at: new Date().toISOString() }, { onConflict: 'project_id' });
+    projectMemory = summary;
+  } catch(e) { console.log('Memory save failed:', e.message); }
+}
+
+async function loadUserProfile() {
+  try {
+    const { data } = await sb.from('user_profile').select('key, value');
+    if (data) data.forEach(row => { userProfile[row.key] = row.value; });
+  } catch(e) { userProfile = {}; }
+}
+
+async function saveToUserProfile(key, value) {
+  try {
+    await sb.from('user_profile').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    userProfile[key] = value;
+  } catch(e) {}
+}
+
+async function loadContactCache(name) {
+  try {
+    const { data } = await sb.from('contact_cache').select('emails').eq('name', name).limit(1);
+    return data?.[0]?.emails || null;
+  } catch(e) { return null; }
+}
+
+async function saveContactCache(name, emails) {
+  try {
+    await sb.from('contact_cache').upsert({ name, emails, updated_at: new Date().toISOString() }, { onConflict: 'name' });
+  } catch(e) {}
+}
+
+async function openProject(p) {
+  activeProject = p;
+  projectMemory = '';
+  showView('projectView');
+  document.getElementById('projectViewLabel').textContent = p.name.toUpperCase();
+  await loadProjectMemory(p.id);
+  const { data } = await sb.from('messages').select('*').eq('project_id', p.id);
+  const sorted = (data || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  conversationHistory = sorted.map(m => ({ role: m.role, content: m.content }));
+  const chat = document.getElementById('chatArea');
+  chat.innerHTML = '';
+  if (conversationHistory.length === 0) {
+    addBubble('assistant', `You are now in ${p.name}. What would you like to talk about?`);
+  } else {
+    conversationHistory.slice(-20).forEach(m => addBubble(m.role, m.content, false));
+    chat.scrollTop = chat.scrollHeight;
+  }
+  setMicHint(`Aktiv: ${p.name}`);
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showView(viewId) {
+  ['homeView','projectView','calendarView','projekterView'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === viewId ? 'flex' : 'none';
+  });
+}
+
+function renderProjekterView() {
+  const list = document.getElementById('projekterList');
+  if (!projects || projects.length === 0) { list.innerHTML = '<div class="cal-empty">Ingen projekter endnu</div>'; return; }
+  list.innerHTML = projects.map(p => `<div class="project-item" onclick="openProjectFromNav('${p.id}')"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="project-name">${p.name}</span><span class="project-arrow">›</span></div>`).join('');
+}
+
+function openProjectFromNav(id) {
+  const p = projects.find(p => p.id === id);
+  if (p) openProject(p);
+}
+
+async function renderCalendarView() {
+  const list = document.getElementById('calendarList');
+  list.innerHTML = '<div class="cal-loading">Henter kalender...</div>';
+  try {
+    const res = await fetch('/api/google-calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upcoming_14' }) });
+    const data = await res.json();
+    const events = data.items || [];
+    if (events.length === 0) { list.innerHTML = '<div class="cal-empty">Ingen kommende aftaler</div>'; return; }
+    const groups = {};
+    events.forEach(e => { const dk = (e.start.dateTime || e.start.date).split('T')[0]; if (!groups[dk]) groups[dk] = []; groups[dk].push(e); });
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tomorrowStr = (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().split('T')[0]; })();
+    let html = '';
+    Object.keys(groups).sort().forEach(dateKey => {
+      const isToday = dateKey === todayStr, isTomorrow = dateKey === tomorrowStr;
+      const d = new Date(dateKey + 'T12:00:00');
+      let label = isToday ? 'I dag' : isTomorrow ? 'I morgen' : d.toLocaleDateString('da', { weekday:'long', day:'numeric', month:'long' });
+      label = label.charAt(0).toUpperCase() + label.slice(1);
+      html += `<div class="cal-day-group"><div class="cal-day-header${isToday?' today':''}">${label}</div>`;
+      groups[dateKey].forEach(e => {
+        const isAllDay = !!e.start.date;
+        let timeStr = '', durationStr = '';
+        if (!isAllDay) {
+          const start = new Date(e.start.dateTime), end = new Date(e.end.dateTime);
+          timeStr = start.toLocaleTimeString('da', { hour:'2-digit', minute:'2-digit' });
+          const mins = Math.round((end - start) / 60000);
+          durationStr = mins >= 60 ? `${Math.floor(mins/60)}t${mins%60 ? ' '+mins%60+'m' : ''}` : `${mins}m`;
+        } else { timeStr = 'Hele<br>dagen'; }
+        html += `<div class="cal-event" onclick="speakEvent('${esc(e.summary)}','${timeStr.replace('<br>',' ')}')"><div class="cal-event-time${isAllDay?' allday':''}">${timeStr}</div><div class="cal-event-dot${isToday?' today':''}"></div><div class="cal-event-info"><div class="cal-event-title">${esc(e.summary)}</div>${durationStr?`<div class="cal-event-duration">${durationStr}</div>`:''}</div></div>`;
+      });
+      html += '</div>';
+    });
+    list.innerHTML = html;
+  } catch { list.innerHTML = '<div class="cal-empty">Kunne ikke hente kalender</div>'; }
+}
+
+function speakEvent(title, time) { speak(time && time !== 'Hele dagen' ? `${title} kl. ${time}` : title); }
+function startVoiceCreate() { speak("Tell me what to create. For example: create a meeting called WoodUpp Monday at ten."); }
+
+function setActiveNav(tab) {
+  ['hjem','projekter','kalender','konto'].forEach(t => {
+    const el = document.getElementById('nav-' + t);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+}
+
+function navTo(tab) {
+  setActiveNav(tab);
+  activeProject = null;
+  conversationHistory = [];
+  if (tab === 'hjem') { homeHistory = []; hideConfirmCard(); showView('homeView'); }
+  else if (tab === 'projekter') { showView('projekterView'); renderProjekterView(); }
+  else if (tab === 'kalender') { showView('calendarView'); renderCalendarView(); }
+  else if (tab === 'konto') { showView('homeView'); }
+}
+
+function goHome() {
+  activeProject = null;
+  conversationHistory = [];
+  homeHistory = [];
+  setActiveNav('hjem');
+  showView('homeView');
+  setTranscript('Tryk på mikrofon for at tale');
+  setMicHint('Altid lyttende');
+  hideConfirmCard();
+}
+
+async function createProject() {
+  const name = document.getElementById('newProjectName').value.trim();
+  if (!name) return;
+  const { data, error } = await sb.from('projects').insert({ name }).select();
+  closeModal();
+  document.getElementById('newProjectName').value = '';
+  await loadProjects();
+  if (!error && data && data.length > 0) {
+    openProject(data[0]);
+    speak(`Project ${name} created.`);
+    ensureProjectFolder(name);
+  }
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('visible'); }
+
+// ═══════════════════════════════════════════════════════
+// CHAT BUBBLES
+// ═══════════════════════════════════════════════════════
+function addBubble(role, text, scroll = true) {
+  const chatId = activeProject ? 'chatArea' : 'homeChatArea';
+  const chat = document.getElementById(chatId);
+  if (!chat) return;
+  const empty = document.getElementById('homeChatEmpty');
+  if (empty) empty.style.display = 'none';
+  const d = document.createElement('div');
+  d.className = `bubble ${role}`;
+  d.textContent = text;
+  chat.appendChild(d);
+  const wrap = activeProject ? document.getElementById('projectView') : document.getElementById('homeChatWrap');
+  if (scroll && wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+let _liveBubble = null;
+function setLiveTranscript(text) {
+  if (activeProject) { setTranscript(text); return; }
+  const wrap = document.getElementById('homeChatWrap');
+  const empty = document.getElementById('homeChatEmpty');
+  if (!text) { if (_liveBubble) { _liveBubble.remove(); _liveBubble = null; } return; }
+  if (empty) empty.style.display = 'none';
+  if (!_liveBubble) {
+    _liveBubble = document.createElement('div');
+    _liveBubble.className = 'bubble user';
+    _liveBubble.style.opacity = '0.5';
+    wrap.appendChild(_liveBubble);
+  }
+  _liveBubble.textContent = text;
+  if (wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════
+// STOP COMMANDS
+// ═══════════════════════════════════════════════════════
+const STOP_WORDS = ['stop', 'hold op', 'nok', 'stilhed', 'quiet', 'shut up', 'enough', 'lad være'];
+function isStopCommand(text) {
+  const t = text.toLowerCase().trim();
+  return STOP_WORDS.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w));
+}
+
+// ═══════════════════════════════════════════════════════
+// CLAUDE
+// ═══════════════════════════════════════════════════════
+async function sendToClaude(text) {
+  if (isStopCommand(text)) { stopSpeaking(); speak('Ok.'); return; }
+
+  isThinking = true;
+  setMicState('thinking');
+  setMicHint('Arbejder...');
+  setLiveTranscript('');
+
+  if (activeProject) {
+    addBubble('user', text);
+    conversationHistory.push({ role:'user', content:text });
+    await sb.from('messages').insert({ project_id: activeProject.id, role:'user', content:text });
+  } else {
+    addBubble('user', text);
+    homeHistory.push({ role:'user', content:text });
+    if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
+  }
+
+  const projectNames = projects.map(p => p.name).join(', ');
+  const now = new Date();
+  const copenhagenDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(now);
+  const copenhagenWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Copenhagen', weekday: 'long' }).format(now);
+
+  function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const next60 = Array.from({length: 60}, (_, i) => {
+    const d = new Date(now); d.setDate(d.getDate() + i);
+    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(d);
+    return `W${getISOWeek(d)} ${dayNames[d.getDay()]} = ${dateStr}`;
+  });
+  const tomorrowDate = new Date(now); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(tomorrowDate);
+
+  const CAL_KEYWORDS = ['møde','kalender','aftale','event','begivenhed','tid','tidspunkt','opret','slet','flyt','hvad sker','har jeg','schedule','calendar','meeting','appointment','create event','delete event','update event','mandag','tirsdag','onsdag','torsdag','fredag','lørdag','søndag','i dag','imorgen','næste uge','denne uge'];
+  const needsCalendar = CAL_KEYWORDS.some(k => text.toLowerCase().includes(k));
+  let calendarContext = '';
+  if (needsCalendar) {
+    try {
+      const calRes = await fetch('/api/google-calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upcoming_14' }) });
+      const calData = await calRes.json();
+      const calEvents = calData.items || [];
+      calendarContext = calEvents.length > 0
+        ? '\n\nCALENDAR (next 14 days):\n' + calEvents.map(e => `- id:${e.id} | "${e.summary}" | start:${e.start.dateTime || e.start.date} | end:${e.end.dateTime || e.end.date}`).join('\n')
+        : '\n\nCALENDAR: No upcoming events.';
+    } catch {}
+  }
+
+  const confirmedEmailContext = window._confirmedEmail
+    ? `\n\nIMPORTANT: Martin has already confirmed the email address "${window._confirmedEmail}". Use send_confirmed_email with this address.`
+    : '';
+
+  const system = `You are Vox — Martin Høgsgaard's personal AI assistant. Martin is a Danish external consultant working with clients on packaging, logistics, and software projects.
+Current projects: ${projectNames}.
+Today: ${copenhagenDate} (${copenhagenWeekday}). Tomorrow: ${tomorrowStr}.
+ALWAYS use Europe/Copenhagen timezone.
+DATE REFERENCE: ${next60.join(', ')}
+${activeProject ? `Active project: "${activeProject.name}".${projectMemory ? `\n\nPREVIOUS SUMMARY:\n${projectMemory}` : ''}` : 'No active project.'}${calendarContext}
+${driveFiles.length > 0 ? `\nPROJECT FILES: ${driveFiles.map(f=>f.name).join(', ')}${driveContext ? '\nFILE CONTENTS:\n' + driveContext : ''}` : ''}
+${Object.keys(userProfile).length > 0 ? `USER PROFILE:\n${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}\n` : ''}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Martin speaks Danish to you — that is fine and expected. But your replies must be in English. Martin is frequently driving so replies are read aloud. Be conversational and concise.
+
+ACTIONS — append ONE on the last line when needed:
+ACTION:{"type":"create_project","name":"ProjectName"}
+ACTION:{"type":"open_project","name":"ProjectName"}
+ACTION:{"type":"delete_project","name":"ProjectName"}
+ACTION:{"type":"go_home"}
+ACTION:{"type":"open_drive_folder"}
+ACTION:{"type":"process_inbox_file","task":"kort resumé","save_to":"ByAulum"}
+ACTION:{"type":"list_inbox"}
+ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","time":"14:00","duration":60}
+ACTION:{"type":"create_multiple_events","events":[{"title":"Title","date":"2026-03-09","time":"18:00","duration":60}]}
+ACTION:{"type":"delete_multiple_events","event_ids":["id1","id2"]}
+ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
+ACTION:{"type":"create_event","title":"Reminder","date":"2026-03-28","time":"12:00","reminder":true}
+ACTION:{"type":"delete_event","event_id":"EXACT_ID"}
+ACTION:{"type":"update_event","event_id":"EXACT_ID","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
+ACTION:{"type":"create_event_and_invite","title":"Møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Navn"}
+ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
+ACTION:{"type":"find_contacts","to":"Henrik","cc":["Martin","Søren"],"subject":"Subject","body":"Body"}
+ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":"Body"}
+ACTION:{"type":"send_email","to":"email@example.com","cc":"cc@example.com","subject":"Subject","body":"Body"}
+ACTION:{"type":"spell_email","email":"mie@example.dk"}
+ACTION:{"type":"confirm_email","index":1}
+ACTION:{"type":"read_inbox"}
+ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
+
+Rules:
+- Reply in English always. Martin speaks Danish — that is fine.
+- For calendar READ: answer directly from CALENDAR. No action.
+- For calendar WRITE: use exact event_id from CALENDAR.
+- Event titles max 5 words.
+- For multiple events use create_multiple_events.
+- For send_email: ONLY use when address confirmed. Otherwise use find_contact.
+- Never guess email addresses.
+- Keep spoken replies under 3 sentences — Martin is driving.
+- Never read full documents or long lists aloud.${confirmedEmailContext}`;
+
+  const messages = activeProject
+    ? (conversationHistory.length > 0 ? conversationHistory.slice(-8) : [{ role:'user', content:text }])
+    : (homeHistory.length > 0 ? homeHistory.slice(-12) : [{ role:'user', content:text }]);
+
+  try {
+    const res = await fetch('/api/claude', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1500, system, messages })
+    });
+    const data = await res.json();
+    if (!data.content?.[0]?.text) {
+      isThinking = false;
+      const errType = data?.error?.type || '';
+      if (errType === 'rate_limit_error') speak('Out of capacity. Please wait 60 seconds and try again.');
+      else speak('Something went wrong. Please try again.');
+      return;
+    }
+
+    let reply = data.content[0].text;
+
+    // Parse og fjern action-linje
+    const actionMatch = reply.match(/ACTION:(\{[^\n]+\})/);
+    let parsedAction = null;
+    if (actionMatch) {
+      reply = reply.replace(/\nACTION:\{[^\n]+\}/, '').trim();
+      try { parsedAction = JSON.parse(actionMatch[1]); } catch(e) { console.log('Action parse error:', e); }
+    }
+
+    if (activeProject) {
+      addBubble('assistant', reply);
+      await sb.from('messages').insert({ project_id: activeProject.id, role:'assistant', content:reply });
+      conversationHistory.push({ role:'assistant', content:reply });
+      if (conversationHistory.length % 8 === 0) saveProjectMemory(activeProject.id, conversationHistory);
+    } else {
+      addBubble('assistant', reply);
+      homeHistory.push({ role:'assistant', content:reply });
+      if (homeHistory.length > 12) homeHistory = homeHistory.slice(-12);
+    }
+    isThinking = false;
+
+    speak(reply, async () => {
       setMicState('idle');
       setMicHint('Tryk for at tale');
-    }
-    return;
-  }
-  startListening();
-}
-
-// ── PAGE VISIBILITY — stop mic when app goes to background ──
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    stopListening();
-    stopSpeaking();
+      isThinking = false;
+      if (parsedAction) await executeAction(parsedAction);
+    });
+  } catch(e) {
+    console.log('Claude error:', e);
+    isThinking = false;
     setMicState('idle');
     setMicHint('Tryk for at tale');
+    speak('Something went wrong. Please try again.');
   }
-});
-
-window.addEventListener('blur', () => {
-  stopListening();
-  setMicState('idle');
-  setMicHint('Tryk for at tale');
-});
-
-window.addEventListener('pagehide', () => {
-  stopListening();
-  stopSpeaking();
-});
-
-// ── iOS AUDIO UNLOCK via splash ──
-function startApp() {
-  // 1. Unlock AudioContext with user gesture
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-    setTimeout(() => ctx.close(), 200);
-  } catch(e) { console.log('AudioContext error:', e); }
-
-  // 2. Unlock speechSynthesis with silent utterance
-  try {
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    speechSynthesis.speak(u);
-  } catch(e) {}
-
-  // 3. Load voices
-  loadVoices();
-  setTimeout(loadVoices, 300);
-  setTimeout(loadVoices, 1000);
-
-  // 4. Hide splash, show app
-  document.getElementById('splashScreen').style.display = 'none';
-
-  // 5. Init app
-  init();
 }
 
+// ═══════════════════════════════════════════════════════
+// EMAIL PREVIEW
+// ═══════════════════════════════════════════════════════
+function showEmailPreview(to, subject, body, onSend, onCancel, cc, showCCSearch, attachment) {
+  const card = document.getElementById('confirmCard');
+  const lbl = document.getElementById('confirmLabel');
+  const cardBody = document.getElementById('confirmCardBody');
+  if (!card) return;
+  lbl.textContent = 'Bekræft mail';
+  const ccBlock = cc
+    ? `<div class="email-preview-field"><div class="email-preview-field-label">CC</div><div class="email-preview-field-value">${esc(cc)}</div></div>`
+    : `<div class="email-preview-field" id="previewCCRow" style="${showCCSearch?'':'display:none'}"><div class="email-preview-field-label">CC</div><div style="display:flex;gap:6px;align-items:center;margin-top:4px;"><input id="previewCCInput" placeholder="Søg navn..." style="flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);outline:none;" onkeydown="if(event.key==='Enter')previewCCSearch()"/><button onclick="previewCCSearch()" style="background:var(--text);color:#fff;border:none;border-radius:var(--rs);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Søg</button></div><div id="previewCCSuggestions" style="margin-top:6px;"></div></div>`;
+  cardBody.innerHTML = `
+    <div class="email-preview-field"><div class="email-preview-field-label">Til</div><div class="email-preview-field-value">${esc(to)}</div></div>
+    ${ccBlock}
+    ${!cc&&!showCCSearch?`<button onclick="document.getElementById('previewCCRow').style.display='block'" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">+ Tilføj CC</button>`:''}
+    ${attachment?`<div class="email-preview-field"><div class="email-preview-field-label">Vedhæftning</div><div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);"><span style="font-size:13px;font-weight:500;flex:1;">${esc(attachment.filename)}</span><button onclick="removeAttachment()" style="background:none;border:none;color:var(--label);font-size:12px;cursor:pointer;">✕</button></div></div>`:`<button onclick="showAttachmentPicker()" style="background:none;border:1px dashed var(--border);border-radius:var(--rs);padding:6px 12px;font-size:12px;color:var(--label);cursor:pointer;margin-bottom:8px;width:100%;">📎 Vedhæft fil</button>`}
+    <div class="email-preview-field"><div class="email-preview-field-label">Emne</div><div class="email-preview-field-value">${esc(subject)}</div></div>
+    <div class="email-preview-field"><div class="email-preview-field-label">Besked</div><textarea class="email-preview-body" id="emailPreviewBody">${esc(body)}</textarea></div>
+    <button class="email-preview-send" onclick="emailPreviewSend()">✓ Send mail</button>
+    <button class="email-preview-cancel" onclick="emailPreviewCancel()">✕ Annuller</button>`;
+  card.style.display = 'block';
+  window._emailPreviewTo = to;
+  window._emailPreviewSubject = subject;
+  window._emailPreviewCc = cc || '';
+  window._emailPreviewAttachment = attachment || null;
+  window._emailPreviewOnSend = onSend;
+  window._emailPreviewOnCancel = onCancel;
+}
 
+async function showAttachmentPicker() {
+  try {
+    const res = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_inbox' }) });
+    const data = await res.json();
+    const files = data.files || [];
+    window._inboxFilesForAttach = files;
+    const card = document.getElementById('confirmCardBody');
+    const existing = document.getElementById('attachmentPicker');
+    if (existing) existing.remove();
+    if (files.length === 0) { speak('No files found.'); return; }
+    const picker = document.createElement('div');
+    picker.id = 'attachmentPicker';
+    picker.style.cssText = 'margin-bottom:10px;';
+    picker.innerHTML = `<div class="email-preview-field-label" style="margin-bottom:6px;">Vælg fil</div>` +
+      files.map((f, i) => `<button onclick="selectAttachment(${i})" class="email-choice-btn" style="margin-bottom:4px;"><div class="email-choice-addr">${esc(f.name)}</div></button>`).join('');
+    const sendBtn = card.querySelector('.email-preview-send');
+    if (sendBtn) card.insertBefore(picker, sendBtn); else card.appendChild(picker);
+  } catch { speak('Could not load files.'); }
+}
 
-// ── UI ──
+function selectAttachment(idx) {
+  const file = window._inboxFilesForAttach?.[idx];
+  if (!file) return;
+  window._emailPreviewAttachment = { driveFileId: file.id, filename: file.name, mimeType: file.mimeType };
+  const picker = document.getElementById('attachmentPicker');
+  if (picker) picker.remove();
+  showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, document.getElementById('emailPreviewBody')?.value || '', window._emailPreviewOnSend, window._emailPreviewOnCancel, window._emailPreviewCc, false, window._emailPreviewAttachment);
+}
+
+function removeAttachment() {
+  window._emailPreviewAttachment = null;
+  showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, document.getElementById('emailPreviewBody')?.value || '', window._emailPreviewOnSend, window._emailPreviewOnCancel, window._emailPreviewCc, false, null);
+}
+
+async function previewCCSearch() {
+  const input = document.getElementById('previewCCInput');
+  const query = input?.value?.trim();
+  if (!query) return;
+  input.disabled = true;
+  try {
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query }) });
+    const data = await res.json();
+    const contacts = data.contacts || [];
+    const suggestions = document.getElementById('previewCCSuggestions');
+    if (!suggestions) return;
+    if (contacts.length === 0) { suggestions.innerHTML = `<div style="font-size:12px;color:var(--label)">Ingen fundet</div>`; }
+    else {
+      const flat = [];
+      contacts.forEach(c => c.emails.forEach(e => flat.push({ name: c.name, email: e })));
+      suggestions.innerHTML = flat.slice(0,6).map(c => `<button onclick="previewCCPick('${esc(c.email)}')" class="email-choice-btn"><div class="email-choice-name">${esc(c.name)}</div><div class="email-choice-addr">${esc(c.email)}</div></button>`).join('');
+    }
+  } catch {}
+  input.disabled = false;
+}
+
+function previewCCPick(email) {
+  window._emailPreviewCc = window._emailPreviewCc ? window._emailPreviewCc + ',' + email : email;
+  const row = document.getElementById('previewCCRow');
+  if (row) row.innerHTML = `<div class="email-preview-field-label">CC</div><div class="email-preview-field-value">${esc(window._emailPreviewCc)}</div>`;
+}
+
+function emailPreviewSend() {
+  const body = document.getElementById('emailPreviewBody')?.value || '';
+  const { _emailPreviewTo: to, _emailPreviewSubject: subject, _emailPreviewCc: cc, _emailPreviewAttachment: attachment, _emailPreviewOnSend: onSend } = window;
+  hideConfirmCard();
+  if (onSend) onSend(to, subject, body, cc, attachment);
+  else sendEmail(to, subject, body, cc, attachment);
+}
+
+function emailPreviewCancel() {
+  hideConfirmCard();
+  const onCancel = window._emailPreviewOnCancel;
+  if (onCancel) onCancel();
+  else speak('Ok, mailen er annulleret.');
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIRM CARD
+// ═══════════════════════════════════════════════════════
+function showConfirmCard(label, value, onYes, onNo) {
+  const card = document.getElementById('confirmCard');
+  document.getElementById('confirmLabel').textContent = label;
+  document.getElementById('confirmCardBody').innerHTML = `<div class="confirm-card-value">${esc(value)}</div><div class="confirm-card-btns"><button class="confirm-yes" onclick="confirmCardYes()">✓ Ja</button><button class="confirm-no" onclick="confirmCardNo()">✕ Nej</button></div>`;
+  card.style.display = 'block';
+  window._confirmYes = onYes;
+  window._confirmNo = onNo;
+}
+
+function showEmailChoiceCard(name, emails, onPick, onCancel) {
+  const card = document.getElementById('confirmCard');
+  document.getElementById('confirmLabel').textContent = name;
+  document.getElementById('confirmCardBody').innerHTML = `<div class="email-choice-list">${emails.map((e,i) => `<button class="email-choice-btn" onclick="emailChoicePick(${i})"><div class="email-choice-addr">${esc(e)}</div></button>`).join('')}</div><button class="email-choice-cancel" onclick="emailChoiceCancel()">✕ Annuller</button>`;
+  card.style.display = 'block';
+  window._emailChoiceEmails = emails;
+  window._emailChoiceOnPick = onPick;
+  window._emailChoiceOnCancel = onCancel;
+}
+
+function emailChoicePick(idx) { const email = window._emailChoiceEmails[idx]; hideConfirmCard(); if (window._emailChoiceOnPick) window._emailChoiceOnPick(email); }
+function emailChoiceCancel() { hideConfirmCard(); if (window._emailChoiceOnCancel) window._emailChoiceOnCancel(); else speak('Ok, annulleret.'); }
+function hideConfirmCard() {
+  const card = document.getElementById('confirmCard');
+  if (card) card.style.display = 'none';
+  window._confirmYes = window._confirmNo = window._emailChoiceEmails = window._emailChoiceOnPick = null;
+}
+function confirmCardYes() { hideConfirmCard(); if (window._confirmYes) window._confirmYes(); }
+function confirmCardNo() { hideConfirmCard(); stopSpeaking(); if (window._confirmNo) window._confirmNo(); else speak('Ok, cancelled.'); }
+
+// ═══════════════════════════════════════════════════════
+// EXECUTE ACTION
+// ═══════════════════════════════════════════════════════
+async function executeAction(action) {
+  console.log('[Action]', action);
+  if (action.type === 'create_project') {
+    const { data, error } = await sb.from('projects').insert({ name: action.name }).select();
+    if (!error && data?.length > 0) { await loadProjects(); setTimeout(() => openProject(data[0]), 300); }
+  } else if (action.type === 'open_project') {
+    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
+    if (p) setTimeout(() => openProject(p), 300);
+  } else if (action.type === 'delete_project') {
+    const p = projects.find(p => p.name.toLowerCase().includes(action.name.toLowerCase()));
+    if (p) { await sb.from('messages').delete().eq('project_id', p.id); await sb.from('projects').delete().eq('id', p.id); if (activeProject?.id === p.id) goHome(); await loadProjects(); }
+  } else if (action.type === 'delete_multiple_events') {
+    let deleted = 0;
+    for (const id of (action.event_ids || [])) {
+      try { const res = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', event:{ event_id: id } }) }); const d = await res.json(); if (!d.error) deleted++; } catch {}
+    }
+    speak(`Deleted ${deleted} event${deleted !== 1 ? 's' : ''}.`);
+  } else if (action.type === 'delete_event') {
+    if (action.event_id) await deleteCalendarEvent(action.event_id);
+    else speak("I could not identify that event.");
+  } else if (action.type === 'update_event') {
+    if (action.event_id) await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration, action.description);
+    else speak("I could not identify that event.");
+  } else if (action.type === 'create_event_and_invite') {
+    await createCalendarEvent(action.title, action.date, action.time, action.duration, false, false);
+    if (action.invite_to) await findContact(action.invite_to, `Mødeindkaldelse: ${action.title}`, buildInviteBody(action.title, action.date, action.time, action.duration || 60));
+  } else if (action.type === 'create_multiple_events') {
+    let created = 0;
+    for (const e of (action.events || [])) { try { await createCalendarEvent(e.title, e.date, e.time, e.duration||60, e.allday, e.reminder||false, e.description||'', true); created++; } catch {} }
+    speak(`Done. Added ${created} event${created !== 1 ? 's' : ''} to your calendar.`);
+  } else if (action.type === 'create_event') {
+    await createCalendarEvent(action.title, action.date, action.time, action.duration, action.allday, action.reminder, action.description || '');
+  } else if (action.type === 'find_contact') {
+    await findContact(action.query, action.subject, action.body);
+  } else if (action.type === 'find_contacts') {
+    const ccArr = Array.isArray(action.cc) ? action.cc : (action.cc ? [action.cc] : []);
+    await findContactsWithCC(action.to, ccArr, action.subject, action.body);
+  } else if (action.type === 'send_confirmed_email') {
+    if (window._confirmedEmail) {
+      const to = window._confirmedEmail;
+      window._confirmedEmail = null;
+      showEmailPreview(to, action.subject, action.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, action.cc||'', false, null);
+    }
+  } else if (action.type === 'spell_email') {
+    if (window._pendingEmail) {
+      window._foundContacts = [{ name: action.email, emails: [action.email] }];
+      speak(`Got it. I'll send to ${speakableEmail(action.email)}. Shall I send?`);
+    }
+  } else if (action.type === 'confirm_email') {
+    if (window._foundContacts) {
+      const contact = window._foundContacts[(action.index||1)-1];
+      if (contact) {
+        const draft = window._pendingEmailDraft || {};
+        if (draft.subject && draft.body) {
+          const emailTo = contact.emails[0];
+          window._pendingEmail = window._pendingEmailDraft = window._foundContacts = null;
+          hideConfirmCard();
+          setTimeout(() => showEmailPreview(emailTo, draft.subject, draft.body, (t,s,b) => sendEmail(t,s,b), null), 300);
+        } else {
+          window._confirmedEmail = contact.emails[0];
+          window._foundContacts = null;
+          hideConfirmCard();
+          speak('Got it. What should the email say?');
+        }
+      }
+    }
+  } else if (action.type === 'send_email') {
+    const looksReal = action.to?.includes('@') && !action.to.includes('example.com') && action.to.split('@')[1]?.includes('.');
+    if (!looksReal || !window._confirmedEmail) {
+      const query = action.to?.includes('@') ? action.to.split('@')[0].replace(/[._]/g,' ') : (action.to || '');
+      await findContact(query, action.subject, action.body);
+    } else {
+      const to = window._confirmedEmail || action.to;
+      window._confirmedEmail = null;
+      showEmailPreview(to, action.subject, action.body, (t,s,b,c) => sendEmail(t,s,b,c), null, action.cc||'');
+    }
+  } else if (action.type === 'read_inbox') {
+    setTimeout(() => { if (!isSpeaking) readInbox(); else setTimeout(readInbox, 500); }, 500);
+  } else if (action.type === 'read_email') {
+    setTimeout(() => readEmail(action.message_id), 500);
+  } else if (action.type === 'open_drive_folder') {
+    if (activeProject) {
+      await fetchDriveContext(activeProject.name);
+      speak(driveFiles.length > 0 ? `Found ${driveFiles.length} file${driveFiles.length>1?'s':''}: ${driveFiles.map(f=>f.name).join(', ')}.` : `The ${activeProject.name} folder is empty.`);
+    }
+  } else if (action.type === 'list_inbox') {
+    await listInbox();
+  } else if (action.type === 'process_inbox_file') {
+    await processInboxFile(action.task, action.save_to, action.file_name, action.send_email);
+  } else if (action.type === 'go_home') {
+    goHome();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════
+let lastFoundEvents = [];
+
+async function createCalendarEvent(title, date, time, duration, allday, reminder, description, silent = false) {
+  try {
+    const res = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'create', event:{ title, date, time, duration, allday, reminder, description } }) });
+    const data = await res.json();
+    if (!silent) speak(data.id ? `Done. ${title} added to your calendar.` : 'Could not create the event.');
+    return data;
+  } catch(e) { if (!silent) speak('Could not create calendar event.'); throw e; }
+}
+
+async function deleteCalendarEvent(eventId) {
+  try {
+    const id = eventId || lastFoundEvents[0]?.id;
+    if (!id) { speak('I do not know which event to delete.'); return; }
+    const eventName = lastFoundEvents[0]?.summary || 'the event';
+    const res = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'delete', event:{ id } }) });
+    const data = await res.json();
+    if (data.success) { lastFoundEvents = []; speak(`Done. ${eventName} deleted.`); }
+    else speak('Could not delete the event.');
+  } catch { speak('Could not delete the event.'); }
+}
+
+async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration, description) {
+  try {
+    const updates = {};
+    if (newTitle) updates.summary = newTitle;
+    if (description) updates.description = description;
+    if (newDate || newTime) {
+      const getRes = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', event:{ id: eventId } }) });
+      const original = await getRes.json();
+      const origStart = original.start?.dateTime || original.start?.date || '';
+      const startDate = newDate || origStart.split('T')[0];
+      const startTime = newTime || (origStart.includes('T') ? origStart.split('T')[1].substring(0,5) : '09:00');
+      const start = new Date(`${startDate}T${startTime}:00`);
+      const end = new Date(start.getTime() + (newDuration||60) * 60000);
+      updates.start = { dateTime: start.toISOString(), timeZone: 'Europe/Copenhagen' };
+      updates.end = { dateTime: end.toISOString(), timeZone: 'Europe/Copenhagen' };
+    }
+    const res = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'update', event:{ id: eventId, updates } }) });
+    const data = await res.json();
+    speak(data.id ? 'Done. Event updated.' : 'Could not update the event.');
+  } catch { speak('Could not update the event.'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// GOOGLE DRIVE
+// ═══════════════════════════════════════════════════════
+async function fetchDriveContext(projectName) {
+  try {
+    const res = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get_project_context', projectName }) });
+    if (!res.ok) return;
+    const data = await res.json();
+    driveContext = data.context || '';
+    driveFiles = data.files || [];
+  } catch { driveContext = ''; driveFiles = []; }
+}
+
+async function ensureProjectFolder(projectName) {
+  try { await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'ensure_project_folder', projectName }) }); } catch {}
+}
+
+// ═══════════════════════════════════════════════════════
+// GMAIL
+// ═══════════════════════════════════════════════════════
+function speakableEmail(email) {
+  if (!email) return '';
+  const [user, domain] = email.split('@');
+  if (!domain) return email;
+  return `${user.length <= 5 ? user.toUpperCase().split('').join(' ') : user.replace(/[._-]/g,' ')} at ${domain.replace(/\./g,' dot ')}`;
+}
+
+function buildInviteBody(title, date, time, duration) {
+  const d = new Date(`${date}T${time||'09:00'}:00`);
+  const dateStr = d.toLocaleDateString('da-DK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const end = new Date(d.getTime() + duration * 60000);
+  return `Hej,\n\nJeg vil gerne invitere dig til:\n\nEmne: ${title}\nDato: ${dateStr}\nTidspunkt: ${time||'09:00'} - ${end.toTimeString().substring(0,5)}\n\nSes vi?\n\nVenlig hilsen\nMartin`;
+}
+
+window._pendingEmail = null;
+window._foundContacts = null;
+
+async function findContactsWithCC(toQuery, ccQueries, subject, body) {
+  const ccList = Array.isArray(ccQueries) ? ccQueries : (ccQueries ? [ccQueries] : []);
+  speak(`Looking up ${1 + ccList.length} addresses.`);
+  const [toRes, ...ccResArr] = await Promise.all([
+    fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query: toQuery }) }),
+    ...ccList.map(q => fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query: q }) }))
+  ]);
+  const toData = await toRes.json();
+  const ccDataArr = await Promise.all(ccResArr.map(r => r.json()));
+  const toEmails = [];
+  (toData.contacts||[]).forEach(c => (c.emails||[]).forEach(e => toEmails.push({ name:c.name, email:e })));
+  const ccGroups = ccDataArr.map((d, i) => {
+    const emails = [];
+    (d.contacts||[]).forEach(c => (c.emails||[]).forEach(e => emails.push({ name:c.name, email:e })));
+    return { query: ccList[i], emails, chosen: null };
+  });
+  window._pendingEmailDraft = { subject, body };
+  window._multiContactState = { toEmails, ccGroups, chosenTo: null, subject, body };
+  showMultiContactCard();
+}
+
+function showMultiContactCard() {
+  const state = window._multiContactState;
+  if (!state) return;
+  const card = document.getElementById('confirmCard');
+  document.getElementById('confirmLabel').textContent = 'Vælg mailadresser';
+  const renderGroup = (label, emails, chosen, pickFn, gi) => {
+    if (emails.length === 0) return `<div class="email-preview-field"><div class="email-preview-field-label">${label}</div><div style="font-size:13px;color:var(--label);margin-top:4px;">Ikke fundet</div></div>`;
+    const btns = emails.map((c, i) => { const sel = chosen === c.email; return `<button onclick="${pickFn}(${gi!==undefined?gi+',':''}${i})" class="email-choice-btn" style="${sel?'background:var(--text);':''}"><div class="email-choice-name" style="${sel?'color:rgba(255,255,255,.7)':'''}">${esc(c.name)}</div><div class="email-choice-addr" style="${sel?'color:#fff':''}">${esc(c.email)}</div></button>`; }).join('');
+    return `<div class="email-preview-field"><div class="email-preview-field-label">${label}</div><div class="email-choice-list">${btns}</div></div>`;
+  };
+  let html = renderGroup('TIL', state.toEmails, state.chosenTo, 'multiPickTo', undefined);
+  (state.ccGroups||[]).forEach((g, gi) => { html += renderGroup(`CC — ${esc(g.query)}`, g.emails, g.chosen, 'multiPickCC', gi); });
+  if (state.chosenTo) html += `<button class="email-preview-send" style="margin-top:12px" onclick="multiContactProceed()">✓ Fortsæt</button>`;
+  html += `<button class="email-preview-cancel" onclick="multiContactCancel()">✕ Annuller</button>`;
+  document.getElementById('confirmCardBody').innerHTML = html;
+  card.style.display = 'block';
+}
+
+function multiPickTo(idx) { if (window._multiContactState) { window._multiContactState.chosenTo = window._multiContactState.toEmails[idx]?.email||null; showMultiContactCard(); } }
+function multiPickCC(gi, idx) { if (window._multiContactState) { window._multiContactState.ccGroups[gi].chosen = window._multiContactState.ccGroups[gi].emails[idx]?.email||null; showMultiContactCard(); } }
+function multiContactProceed() {
+  const state = window._multiContactState;
+  if (!state?.chosenTo) return;
+  const cc = (state.ccGroups||[]).map(g=>g.chosen).filter(Boolean).join(',');
+  window._multiContactState = null; hideConfirmCard();
+  showEmailPreview(state.chosenTo, state.subject, state.body, (t,s,b,c) => sendEmail(t,s,b,c), null, cc);
+}
+function multiContactCancel() { window._multiContactState = null; hideConfirmCard(); speak('Ok, cancelled.'); }
+
+async function findContact(query, subject, body) {
+  try {
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query }) });
+    const data = await res.json();
+    const contacts = data.contacts || [];
+    contacts.forEach(c => { c.name = c.name.replace(/^["\\ ]+|["\\ ]+$/g,'').trim(); if (c.emails?.length) saveContactCache(c.name, c.emails); });
+    if (contacts.length === 0) {
+      window._pendingEmail = { subject, body }; window._pendingContactQuery = query;
+      speakQueued(`I could not find anyone named ${query}. Please say their email address.`); return;
+    }
+    window._pendingEmail = { subject:'', body:'' };
+    window._pendingEmailDraft = { subject, body };
+    window._foundContacts = contacts;
+    const flat = [];
+    contacts.forEach(c => (c.emails||[]).forEach(e => flat.push({ name:c.name||e, email:e })));
+    if (flat.length === 1) {
+      speakQueued(`I found ${flat[0].name}. Is this the right address?`, () => {
+        showConfirmCard(`Send mail til ${flat[0].name}`, flat[0].email,
+          () => { window._confirmedEmail = flat[0].email; window._toEmailConfirmed = flat[0].email; window._foundContacts = null; hideConfirmCard(); speak('Got it. What should the email say?'); },
+          () => { window._foundContacts = null; hideConfirmCard(); speak('Ok. Please say the correct email address.'); }
+        );
+      });
+    } else {
+      const byName = {};
+      flat.forEach(c => { const k = c.name.toLowerCase(); if (!byName[k]) byName[k] = { name:c.name, emails:[] }; if (!byName[k].emails.includes(c.email)) byName[k].emails.push(c.email); });
+      const allEmails = Object.values(byName).flatMap(g => g.emails);
+      window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails:[e] }));
+      speakQueued(`I found ${allEmails.length} addresses for ${flat[0].name}. Tap the right one.`, () => {
+        showEmailChoiceCard(flat[0].name, allEmails,
+          (chosen) => { window._foundContacts = null; window._confirmedEmail = chosen; window._toEmailConfirmed = chosen; const draft = window._pendingEmailDraft||{}; if (draft.subject&&draft.body) { window._pendingEmailDraft=null; showEmailPreview(chosen, draft.subject, draft.body, (t,s,b,c)=>sendEmail(t,s,b,c), null,'',true); } else speak('Got it. What should the email say?'); },
+          () => { window._foundContacts = null; speak('Ok, cancelled.'); }
+        );
+      });
+    }
+  } catch { speak('Could not search contacts.'); }
+}
+
+async function sendEmail(to, subject, body, cc, attachment) {
+  window._toEmailConfirmed = null;
+  try {
+    const payload = { action:'send', to, subject, body, cc:cc||'' };
+    if (attachment?.driveFileId) payload.driveFileId = attachment.driveFileId;
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    speak(data.id ? 'Email sent.' : 'Could not send the email. ' + (data.error||'Please try again.'));
+  } catch { speak('Could not send the email.'); }
+}
+
+async function readInbox() {
+  try {
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list' }) });
+    const data = await res.json();
+    const messages = data.messages || [];
+    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
+    window._lastInboxMessages = messages;
+    speak(`You have ${messages.length} recent emails. ${messages.map((m,i) => `${i+1}. From ${m.from.replace(/<.*>/,'').trim()}: ${m.subject}`).join('. ')}.`);
+  } catch { speak('Could not load your inbox.'); }
+}
+
+async function readEmail(messageId) {
+  try {
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', messageId }) });
+    const data = await res.json();
+    if (data.body) speak(`Email from ${data.from}. Subject: ${data.subject}. ${data.body.substring(0,500)}`);
+    else speak('Could not read that email.');
+  } catch { speak('Could not read that email.'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// VOICE COMMAND HANDLER
+// ═══════════════════════════════════════════════════════
+function handleCommand(text) {
+  setTranscript(text);
+  if (text.toLowerCase().includes('morgenoverblik') || text.toLowerCase().includes('godmorgen')) { playMorningBrief(); return; }
+  if ((text.toLowerCase().includes('gå hjem') || text.toLowerCase().includes('hjem')) && activeProject) { goHome(); speak('Going home.'); return; }
+  if (activeProject) { sendToClaude(text); return; }
+  const TASK_WORDS = ['resumé','resume','opsummer','analyser','skriv','send','mail','inbox','fil','hent','lav','opret','slet','find','vis','læs'];
+  const hasTask = TASK_WORDS.some(w => text.toLowerCase().includes(w));
+  if (!hasTask) {
+    for (const p of projects) {
+      if (text.toLowerCase().includes(p.name.toLowerCase())) { openProject(p); speak(`Opening ${p.name}.`); return; }
+    }
+  }
+  if (text.toLowerCase().includes('reconnect') || text.toLowerCase().includes('forbind igen')) { window.location.href = '/api/google-auth?force=true'; return; }
+  sendToClaude(text);
+}
+
+// ═══════════════════════════════════════════════════════
+// MORNING BRIEF
+// ═══════════════════════════════════════════════════════
+async function playMorningBrief() {
+  if (recognition) try { recognition.stop(); } catch {}
+  isListening = false;
+  const weather = await fetchWeather();
+  const d = new Date();
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  speak(`Good morning Martin. Today is ${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}. Weather in Denmark: ${weather}. You have ${projects.length} active projects: ${projects.map(p=>p.name).join(', ')}. What would you like to start with today?`);
+}
+
+// ═══════════════════════════════════════════════════════
+// INBOX FILE PROCESSING
+// ═══════════════════════════════════════════════════════
+async function listInbox(autoTask, autoSaveTo) {
+  try {
+    const res = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_inbox' }) });
+    const data = await res.json();
+    const files = data.files || [];
+    if (files.length === 0) { speak('Your Vox inbox is empty.'); return; }
+    window._inboxFiles = files;
+    if (files.length === 1 && autoTask) { await processInboxFile(autoTask, autoSaveTo, files[0].name, false); return; }
+    speak(`You have ${files.length} file${files.length>1?'s':''} in your inbox: ${files.map(f=>f.name).join(', ')}.`);
+  } catch { speak('Could not read your inbox.'); }
+}
+
+async function processInboxFile(task, saveTo, fileName, sendEmailAfter) {
+  setMicState('thinking'); setMicHint('Læser fil...');
+  speak('Reading your file.');
+  try {
+    const readRes = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'read_inbox_file', fileName: fileName||null }) });
+    const fileData = await readRes.json();
+    if (fileData.error) { speak('Could not read the file. ' + fileData.error); return; }
+    const { fileName: name, mimeType, content: fileContent } = fileData;
+    setMicHint(`Behandler "${name}"...`);
+    speak(`Got it. Processing "${name}" now.`);
+    let userContent;
+    if (fileContent.type === 'text') {
+      userContent = `Here is the document "${name}":\n\n${fileContent.content}\n\nTask: ${task}`;
+    } else if (fileContent.type === 'base64') {
+      userContent = [{ type: mimeType==='application/pdf'?'document':'image', source:{ type:'base64', media_type:mimeType, data:fileContent.content } }, { type:'text', text:`Task: ${task}. Be thorough. Write in the same language as the document.` }];
+    }
+    const claudeRes = await fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, system:'You are processing a document for Martin Høgsgaard. Complete the task thoroughly. Write in the same language as the document unless instructed otherwise.', messages:[{ role:'user', content:userContent }] }) });
+    const claudeData = await claudeRes.json();
+    const result = claudeData.content?.[0]?.text || '';
+    if (!result) { speak('Could not process the file.'); return; }
+    const projectFolder = saveTo || (activeProject ? activeProject.name : 'Nye idéer');
+    const docName = `${task} — ${name} — ${new Date().toLocaleDateString('da-DK')}`;
+    saveToHistory('assistant', result);
+    window._lastInboxFile = { driveFileId: fileData.fileId, filename: fileData.fileName, mimeType: fileData.mimeType };
+    const saveRes = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'save_to_project', projectName:projectFolder, content:result, docName }) });
+    const saveData = await saveRes.json();
+    speak(saveData.success ? `Done. Saved to your ${projectFolder} folder in Drive.` : `Done. Could not save to Drive.`);
+  } catch(e) {
+    console.error('processInboxFile error:', e);
+    setMicState('idle'); setMicHint('Tryk for at tale');
+    speak('Something went wrong processing the file.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════
 function setMicState(state) {
   const btn = document.getElementById('micBtn');
   const status = document.getElementById('micStatus');
@@ -2332,143 +1759,50 @@ function setMicState(state) {
 function setTranscript(t) { document.getElementById('transcriptBox').textContent = t; }
 function setMicHint(t) { document.getElementById('micHint').textContent = t; }
 
-// ── MORNING BRIEF ──
-async function playMorningBrief() {
-  if (recognition) try { recognition.stop(); } catch {}
-  isListening = false;
-  const weather = await fetchWeather();
-  const d = new Date();
-  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-  const pNames = projects.map(p => p.name).join(', ');
-  const brief = `Good morning Martin. Today is ${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}. Weather in Denmark: ${weather}. You have ${projects.length} active projects: ${pNames}. What would you like to start with today?`;
-  speak(brief);
-}
-
-// ── INBOX FILE PROCESSING ──
-async function listInbox(autoTask, autoSaveTo) {
+// ═══════════════════════════════════════════════════════
+// iOS AUDIO UNLOCK + APP START
+// ═══════════════════════════════════════════════════════
+function startApp() {
+  // Unlock AudioContext med user gesture (kræves på iOS)
   try {
-    const res = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'list_inbox' })
-    });
-    const data = await res.json();
-    const files = data.files || [];
-    if (files.length === 0) {
-      const msg = 'Your Vox inbox is empty. Add a file to the Vox/Inbox folder in Google Drive.';
-      saveToHistory('assistant', msg); speak(msg); return;
-    }
-    window._inboxFiles = files;
-    // If only 1 file and a task is given, process immediately
-    if (files.length === 1 && autoTask) {
-      await processInboxFile(autoTask, autoSaveTo, files[0].name, false);
-      return;
-    }
-    const names = files.map(f => f.name).join(', ');
-    const msg = `You have ${files.length} file${files.length>1?'s':''} in your inbox: ${names}.`;
-    saveToHistory('assistant', msg);
-    speak(msg);
-  } catch(e) { speak('Could not read your inbox.'); }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf; src.connect(ctx.destination); src.start(0);
+    setTimeout(() => ctx.close(), 200);
+  } catch {}
+
+  // Unlock speechSynthesis
+  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
+
+  loadVoices();
+  setTimeout(loadVoices, 300);
+  setTimeout(loadVoices, 1000);
+
+  document.getElementById('splashScreen').style.display = 'none';
+  init();
 }
 
-async function processInboxFile(task, saveTo, fileName, sendEmail) {
-  setMicState('thinking');
-  setMicHint('Læser fil...');
-  speak('Reading your file.');
-  try {
-    // 1. Read file from inbox
-    const readRes = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'read_inbox_file', fileName: fileName || null })
-    });
-    const fileData = await readRes.json();
-    if (fileData.error) { speak('Could not read the file. ' + fileData.error); return; }
-
-    const { fileName: name, mimeType, content: fileContent } = fileData;
-    setMicHint(`Behandler "${name}"...`);
-    speak(`Got it. Processing "${name}" now.`);
-
-    // 2. Build Claude request — text or base64 document
-    let userContent;
-    if (fileContent.type === 'text') {
-      userContent = `Here is the document "${name}":
-
-${fileContent.content}
-
-Task: ${task}`;
-    } else if (fileContent.type === 'base64') {
-      // Send as document to Claude
-      const isPDF = mimeType === 'application/pdf';
-      userContent = [
-        {
-          type: isPDF ? 'document' : 'image',
-          source: { type: 'base64', media_type: mimeType, data: fileContent.content }
-        },
-        { type: 'text', text: `Task: ${task}. Be thorough and well-structured. Write in the same language as the document.` }
-      ];
-    }
-
-    // 3. Send to Claude
-    const claudeRes = await fetch('/api/claude', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        system: 'You are processing a document for Martin Høgsgaard. Complete the requested task thoroughly. Write in the same language as the document unless instructed otherwise.',
-        messages: [{ role: 'user', content: userContent }]
-      })
-    });
-    const claudeData = await claudeRes.json();
-    const result = claudeData.content?.[0]?.text || '';
-    if (!result) { speak('Could not process the file.'); return; }
-
-    // 4. Save to project folder in Drive first, then confirm
-    const projectFolder = saveTo || (activeProject ? activeProject.name : 'Nye idéer');
-    const today = new Date().toLocaleDateString('da-DK');
-    const docName = `${task} — ${name} — ${today}`;
-    saveToHistory('assistant', result);
-    // Store reference to processed file for potential email attachment
-    window._lastInboxFile = { driveFileId: fileData.fileId, filename: fileData.fileName, mimeType: fileData.mimeType };
-    const saveRes = await fetch('/api/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_to_project', projectName: projectFolder, content: result, docName })
-    });
-    const saveData = await saveRes.json();
-    // Only speak confirmation — never read the full content aloud
-    const confirmMsg = saveData.success
-      ? `Done. Saved to your ${projectFolder} folder in Drive.`
-      : `Done. Could not save to Drive — but the summary is ready.`;
-    saveToHistory('assistant', confirmMsg);
-    speak(confirmMsg);
-
-    // 6. Send email if requested
-    if (sendEmail && window._confirmedEmail) {
-      await sendEmail(window._confirmedEmail, docName, result);
-    }
-
-  } catch(e) {
-    console.error('processInboxFile error:', e);
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
-    speak('Something went wrong processing the file.');
-  }
-}
-
-// ── INIT ──
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
 async function init() {
   setDate();
   fetchWeather();
   await loadProjects();
   await loadUserProfile();
-  // Seed Martin's own emails into profile if not already there
   if (!userProfile['own_emails']) {
     saveToUserProfile('own_emails', 'mh@weproduce.dk, mh@firtal.com, m_hoegsgaard@hotmail.com');
     saveToUserProfile('name', 'Martin Høgsgaard');
   }
+
+  // Start bil keep-alive
+  await acquireWakeLock();
+  startAudioHeartbeat();
+
   setMicState('idle');
   setMicHint('Tryk for at tale');
 
-  // Check if returning from Google OAuth
   const params = new URLSearchParams(window.location.search);
   if (params.get('calendar') === 'connected') {
     calendarConnected = true;
@@ -2479,8 +1813,7 @@ async function init() {
     speak('Could not connect Google Calendar. Please try again.');
   }
 }
-// On iOS/Safari: show splash and wait for tap to unlock audio
-// On desktop: start immediately
+
 if (isIOS || isSafari) {
   document.getElementById('splashScreen').style.display = 'flex';
 } else {
