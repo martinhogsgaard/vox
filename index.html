@@ -1493,46 +1493,46 @@ async function findContact(query, subject, body) {
     const flat = [];
     contacts.forEach(c => (c.emails||[]).forEach(e => flat.push({ name:c.name||e, email:e })));
     if (flat.length === 1) {
-      speakQueued(`I found ${flat[0].name}. Is this the right address?`, () => {
-        showConfirmCard(`Send mail til ${flat[0].name}`, flat[0].email,
-          () => {
-            const email = flat[0].email;
-            window._foundContacts = null;
-            hideConfirmCard();
-            const draft = window._pendingEmailDraft || {};
-            if (draft.subject && draft.body) {
-              window._pendingEmailDraft = null;
-              showEmailPreview(email, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
-            } else {
-              window._confirmedEmail = email;
-              speak('Got it. What should the email say?');
-            }
-          },
-          () => { window._foundContacts = null; hideConfirmCard(); speak('Ok. Please say the correct email address.'); }
-        );
-      });
+      // Vis kortet med det samme
+      showConfirmCard(`Send mail til ${flat[0].name}`, flat[0].email,
+        () => {
+          const email = flat[0].email;
+          window._foundContacts = null;
+          hideConfirmCard();
+          const draft = window._pendingEmailDraft || {};
+          if (draft.subject && draft.body) {
+            window._pendingEmailDraft = null;
+            showEmailPreview(email, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
+          } else {
+            window._confirmedEmail = email;
+            speak('Got it. What should the email say?');
+          }
+        },
+        () => { window._foundContacts = null; hideConfirmCard(); speak('Ok. Please say the correct email address.'); }
+      );
+      speak(`I found ${flat[0].name}. Is this the right address?`);
     } else {
       const byName = {};
       flat.forEach(c => { const k = c.name.toLowerCase(); if (!byName[k]) byName[k] = { name:c.name, emails:[] }; if (!byName[k].emails.includes(c.email)) byName[k].emails.push(c.email); });
       const allEmails = Object.values(byName).flatMap(g => g.emails);
       window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails:[e] }));
-      speakQueued(`I found ${allEmails.length} addresses for ${flat[0].name}. Tap the right one.`, () => {
-        showEmailChoiceCard(flat[0].name, allEmails,
-          (chosen) => {
-            window._foundContacts = null;
-            window._confirmedEmail = chosen;
-            window._toEmailConfirmed = chosen;
-            const draft = window._pendingEmailDraft || {};
-            if (draft.subject && draft.body) {
-              window._pendingEmailDraft = null;
-              showEmailPreview(chosen, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
-            } else {
-              speak('Got it. What should the email say?');
-            }
-          },
-          () => { window._foundContacts = null; speak('Ok, cancelled.'); }
-        );
-      });
+      // Vis kortet med det samme — tal i baggrunden
+      showEmailChoiceCard(flat[0].name, allEmails,
+        (chosen) => {
+          window._foundContacts = null;
+          window._confirmedEmail = chosen;
+          window._toEmailConfirmed = chosen;
+          const draft = window._pendingEmailDraft || {};
+          if (draft.subject && draft.body) {
+            window._pendingEmailDraft = null;
+            showEmailPreview(chosen, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
+          } else {
+            speak('Got it. What should the email say?');
+          }
+        },
+        () => { window._foundContacts = null; speak('Ok, cancelled.'); }
+      );
+      speak(`I found ${allEmails.length} addresses for ${flat[0].name}. Tap the right one.`);
     }
   } catch { speak('Could not search contacts.'); }
 }
