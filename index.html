@@ -665,48 +665,144 @@ async function stopListeningWhisper() {
 // ═══════════════════════════════════════════════════════
 // MIC TAP HANDLER
 // ═══════════════════════════════════════════════════════
-function handleEmailPreviewCommand(text) {
+async function handleEmailPreviewCommand(text) {
   const t = text.toLowerCase().trim();
 
   // Send kommandoer
   const sendWords = ['send', 'send den', 'send mail', 'send email', 'ok send', 'ja send', 'afsend', 'ok'];
   if (sendWords.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w))) {
-    emailPreviewSend();
-    return;
+    emailPreviewSend(); return;
   }
 
   // Annuller kommandoer
   const cancelWords = ['annuller', 'cancel', 'stop', 'lad være', 'afbryd'];
   if (cancelWords.some(w => t === w || t.startsWith(w))) {
-    emailPreviewCancel();
-    return;
+    emailPreviewCancel(); return;
   }
 
-  // Ret beskedteksten — send til Claude som redigeringsopgave
-  const bodyEl = document.getElementById('emailPreviewBody');
-  if (!bodyEl) return;
-  const currentBody = bodyEl.value;
+  // Byg nuværende mail-state til Claude
+  const bodyEl    = document.getElementById('emailPreviewBody');
+  const currentTo      = window._emailPreviewTo || '';
+  const currentSubject = window._emailPreviewSubject || '';
+  const currentCc      = window._emailPreviewCc || '';
+  const currentBody    = bodyEl?.value || '';
+
   setMicHint('Retter...');
-  fetch('/api/claude', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514', max_tokens: 500,
-      system: 'You are editing an email body. Apply the requested change to the email and return ONLY the updated email body — no preamble, no explanation, no quotes.',
-      messages: [{ role: 'user', content: 'Current email:\n' + currentBody + '\n\nRequested change: ' + text }]
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    const updated = data.content?.[0]?.text?.trim() || '';
-    if (updated) {
-      bodyEl.value = updated;
-      speak('Updated. Say send to send, or make more changes.');
-    } else {
-      speak('Could not update the email.');
+
+  try {
+    const res = await fetch('/api/claude', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 800,
+        system: `You are editing an email before sending. The user may ask to change the body, subject, CC, or recipient.
+Return ONLY a JSON object with these fields (include only fields that changed):
+{"body":"...","subject":"...","cc":"email@example.com","to":"email@example.com","speak":"Short confirmation in English, max 1 sentence"}
+If the user wants to ADD a CC person you don't know the email for, set cc to the name prefixed with "FIND:" e.g. "FIND:Søren".
+If only the body changes, only include body and speak.
+NEVER include markdown, preamble or explanation — only the raw JSON object.`,
+        messages: [{ role: 'user', content: `Current email:
+To: ${currentTo}
+CC: ${currentCc}
+Subject: ${currentSubject}
+Body:
+${currentBody}
+
+User instruction: ${text}` }]
+      })
+    });
+    const data = await res.json();
+    let raw = data.content?.[0]?.text?.trim() || '';
+    raw = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(raw);
+
+    if (result.body    !== undefined && bodyEl) bodyEl.value = result.body;
+    if (result.subject !== undefined) {
+      window._emailPreviewSubject = result.subject;
+      const subEl = document.querySelector('.email-preview-field-value');
+      // Opdater subject visning i kortet
+      const fields = document.querySelectorAll('.email-preview-field');
+      fields.forEach(f => {
+        const lbl = f.querySelector('.email-preview-field-label');
+        if (lbl && lbl.textContent === 'EMNE') {
+          const val = f.querySelector('.email-preview-field-value');
+          if (val) val.textContent = result.subject;
+        }
+      });
     }
-    setMicHint('Tryk for at tale');
-  })
-  .catch(() => { speak('Something went wrong.'); setMicHint('Tryk for at tale'); });
+    if (result.to !== undefined) {
+      window._emailPreviewTo = result.to;
+      const fields = document.querySelectorAll('.email-preview-field');
+      fields.forEach(f => {
+        const lbl = f.querySelector('.email-preview-field-label');
+        if (lbl && lbl.textContent === 'TIL') {
+          const val = f.querySelector('.email-preview-field-value');
+          if (val) val.textContent = result.to;
+        }
+      });
+    }
+    if (result.cc !== undefined) {
+      if (result.cc.startsWith('FIND:')) {
+        // Slå kontakt op og tilføj som CC
+        const name = result.cc.replace('FIND:', '').trim();
+        speak(`Looking up ${name}.`);
+        const cRes = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query: name }) });
+        const cData = await cRes.json();
+        const contacts = cData.contacts || [];
+        const flat = [];
+        contacts.forEach(c => (c.emails||[]).forEach(e => flat.push({ name: c.name, email: e })));
+        if (flat.length === 0) {
+          speak(`Could not find ${name}. Please add CC manually.`);
+        } else if (flat.length === 1) {
+          const newCc = currentCc ? currentCc + ',' + flat[0].email : flat[0].email;
+          window._emailPreviewCc = newCc;
+          showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, bodyEl?.value || currentBody, window._emailPreviewOnSend, window._emailPreviewOnCancel, newCc, false, window._emailPreviewAttachment);
+          speak(`Added ${flat[0].name} to CC.`);
+        } else {
+          showEmailChoiceCard(name, flat.map(f => f.email),
+            (chosen) => {
+              const newCc = currentCc ? currentCc + ',' + chosen : chosen;
+              window._emailPreviewCc = newCc;
+              showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, bodyEl?.value || currentBody, window._emailPreviewOnSend, window._emailPreviewOnCancel, newCc, false, window._emailPreviewAttachment);
+            },
+            () => speak('Ok, cancelled.')
+          );
+          setMicHint('Vælg CC adresse');
+        }
+        return;
+      } else {
+        window._emailPreviewCc = result.cc;
+        // Genopfrisk CC i preview
+        const fields = document.querySelectorAll('.email-preview-field');
+        fields.forEach(f => {
+          const lbl = f.querySelector('.email-preview-field-label');
+          if (lbl && lbl.textContent === 'CC') {
+            const val = f.querySelector('.email-preview-field-value');
+            if (val) val.textContent = result.cc;
+          }
+        });
+      }
+    }
+
+    speak(result.speak || 'Done.');
+  } catch(e) {
+    console.warn('handleEmailPreviewCommand error:', e);
+    // Fallback — ret kun body
+    const bodyEl2 = document.getElementById('emailPreviewBody');
+    if (!bodyEl2) return;
+    const currentBody2 = bodyEl2.value;
+    const res2 = await fetch('/api/claude', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 500,
+        system: 'Edit the email body as requested. Return ONLY the updated body text.',
+        messages: [{ role: 'user', content: 'Email:\n' + currentBody2 + '\n\nChange: ' + text }]
+      })
+    }).then(r => r.json()).catch(() => ({}));
+    const updated = res2.content?.[0]?.text?.trim() || '';
+    if (updated) { bodyEl2.value = updated; speak('Updated.'); }
+    else speak('Could not update.');
+  }
+  setMicHint('Tryk for at tale');
 }
 
 function handleMicTap() {
