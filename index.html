@@ -634,7 +634,20 @@ async function stopListeningWhisper() {
           return;
         }
         const data = await res.json();
-        const text = data.text?.trim() || '';
+        let text = data.text?.trim() || '';
+
+        // Whisper sprog-validering — filtrer islandsk/færøsk/arabisk etc. fra
+        // Tjek om teksten indeholder for mange ikke-latinske eller nordiske specialtegn
+        // der ikke er danske (þ, ð, æ er islandsk/færøsk — á, í, ó er ikke dansk)
+        const nonDanishChars = (text.match(/[þðÞÐ]/g) || []).length;
+        const totalChars = text.replace(/\s/g, '').length;
+        if (nonDanishChars > 0 || (totalChars > 5 && /^[^a-zA-ZæøåÆØÅ0-9\s.,!?-]/.test(text))) {
+          console.warn('[Whisper] Non-Danish result detected, discarding:', text);
+          setTranscript('Ikke forstået — prøv igen');
+          resolve('');
+          return;
+        }
+
         setTranscript(text || 'Ingen tekst — prøv igen');
         resolve(text);
       } catch(e) {
@@ -1480,7 +1493,19 @@ async function findContact(query, subject, body) {
     if (flat.length === 1) {
       speakQueued(`I found ${flat[0].name}. Is this the right address?`, () => {
         showConfirmCard(`Send mail til ${flat[0].name}`, flat[0].email,
-          () => { window._confirmedEmail = flat[0].email; window._toEmailConfirmed = flat[0].email; window._foundContacts = null; hideConfirmCard(); speak('Got it. What should the email say?'); },
+          () => {
+            const email = flat[0].email;
+            window._foundContacts = null;
+            hideConfirmCard();
+            const draft = window._pendingEmailDraft || {};
+            if (draft.subject && draft.body) {
+              window._pendingEmailDraft = null;
+              showEmailPreview(email, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
+            } else {
+              window._confirmedEmail = email;
+              speak('Got it. What should the email say?');
+            }
+          },
           () => { window._foundContacts = null; hideConfirmCard(); speak('Ok. Please say the correct email address.'); }
         );
       });
