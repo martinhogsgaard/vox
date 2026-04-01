@@ -1516,7 +1516,18 @@ async function findContact(query, subject, body) {
       window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails:[e] }));
       speakQueued(`I found ${allEmails.length} addresses for ${flat[0].name}. Tap the right one.`, () => {
         showEmailChoiceCard(flat[0].name, allEmails,
-          (chosen) => { window._foundContacts = null; window._confirmedEmail = chosen; window._toEmailConfirmed = chosen; const draft = window._pendingEmailDraft||{}; if (draft.subject&&draft.body) { window._pendingEmailDraft=null; showEmailPreview(chosen, draft.subject, draft.body, (t,s,b,c)=>sendEmail(t,s,b,c), null,'',true); } else speak('Got it. What should the email say?'); },
+          (chosen) => {
+            window._foundContacts = null;
+            window._confirmedEmail = chosen;
+            window._toEmailConfirmed = chosen;
+            const draft = window._pendingEmailDraft || {};
+            if (draft.subject && draft.body) {
+              window._pendingEmailDraft = null;
+              showEmailPreview(chosen, draft.subject, draft.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, '', false, null);
+            } else {
+              speak('Got it. What should the email say?');
+            }
+          },
           () => { window._foundContacts = null; speak('Ok, cancelled.'); }
         );
       });
