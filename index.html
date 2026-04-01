@@ -1502,56 +1502,42 @@ async function executeAction(action) {
     await processInboxFile(action.task, action.save_to, action.file_name, action.send_email);
   } else if (action.type === 'web_search') {
     try {
-      // Trin 1: Søg efter information
-      const res = await fetch('/api/claude', {
+      speak('Looking that up.');
+      const wsRes = await fetch('/api/claude', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514', max_tokens: 500,
-          system: 'You are a web search assistant. Return ONLY the specific fact requested — address, phone, hours etc. One sentence max. No preamble.',
+          model: 'claude-sonnet-4-20250514', max_tokens: 300,
+          system: 'Find the specific fact and return it in ONE short sentence. No preamble.',
           messages: [{ role: 'user', content: action.query }],
           tools: [{ type: 'web_search_20250305', name: 'web_search' }]
         })
       });
-      const data = await res.json();
-      const result = data.content?.filter(b => b.type === 'text').map(b => b.text).join(' ').trim() || '';
-      if (!result) { speak('Could not find that information.'); return; }
-
-      addBubble('assistant', result);
-      speak(result.substring(0, 200));
-
-      // Trin 2: Send resultatet tilbage til Claude med kontekst så den kan handle
-      if (action.then_update_event || action.event_id) {
-        const projectNames = projects.map(p => p.name).join(', ');
-        const now = new Date();
-        const copenhagenDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(now);
-
-        // Hent kalender for event IDs
-        const calRes = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'upcoming_14' }) });
-        const calData = await calRes.json();
-        const calEvents = calData.items || [];
-        const calContext = calEvents.length > 0
-          ? 'CALENDAR:\n' + calEvents.map(e => `- id:${e.id} | "${e.summary}" | start:${e.start.dateTime||e.start.date}`).join('\n')
-          : 'CALENDAR: No events.';
-
-        const followUp = await fetch('/api/claude', {
+      const wsData = await wsRes.json();
+      const wsResult = (wsData.content || [])
+        .filter(b => b.type === 'text' && b.text && b.text.trim().length > 5)
+        .map(b => b.text.trim())
+        .join(' ')
+        .trim();
+      if (!wsResult) { speak('Could not find that information.'); return; }
+      addBubble('assistant', wsResult);
+      speak(wsResult.substring(0, 300));
+      if (action.then_update_event) {
+        const calRes2 = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'upcoming_14' }) });
+        const calData2 = await calRes2.json();
+        const calList = (calData2.items || []).map(e => 'id:' + e.id + ' title:"' + e.summary + '" start:' + (e.start.dateTime||e.start.date)).join(' | ');
+        const fuRes = await fetch('/api/claude', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514', max_tokens: 300,
-            system: `You are Vox. Today: ${copenhagenDate}. ${calContext}
-Search result: "${result}"
-The user wants to add this information to a calendar event. Reply with ONE action line only:
-ACTION:{"type":"update_event","event_id":"EXACT_ID","description":"the info"}`,
-            messages: [{ role: 'user', content: action.then_update_event || 'Add the search result to the most relevant calendar event.' }]
+            model: 'claude-sonnet-4-20250514', max_tokens: 150,
+            system: 'Reply with ONE line only in this exact format: ACTION:{"type":"update_event","event_id":"ID","description":"info"} — use exact id from: ' + calList,
+            messages: [{ role: 'user', content: action.then_update_event + '. Info: ' + wsResult }]
           })
         });
-        const followData = await followUp.json();
-        const followText = followData.content?.[0]?.text || '';
-        const actionMatch = followText.match(/ACTION:(\{[^\n]+\})/);
-        if (actionMatch) {
-          try {
-            const nextAction = JSON.parse(actionMatch[1]);
-            await executeAction(nextAction);
-          } catch(e) { console.warn('Follow-up action parse error:', e); }
+        const fuData = await fuRes.json();
+        const fuText = (fuData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        const fuMatch = fuText.match(/ACTION:(\{"type":"update_event"[^}]+\})/);
+        if (fuMatch) {
+          try { await executeAction(JSON.parse(fuMatch[1])); } catch(e2) { console.warn('Follow-up parse error:', e2); }
         }
       }
     } catch(e) { console.warn('Web search error:', e); speak('Web search failed.'); }
