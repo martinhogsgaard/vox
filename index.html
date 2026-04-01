@@ -1530,9 +1530,7 @@ async function executeAction(action) {
         const calData = await calRes.json();
         const calEvents = calData.items || [];
         const calContext = calEvents.length > 0
-          ? 'CALENDAR:
-' + calEvents.map(e => `- id:${e.id} | "${e.summary}" | start:${e.start.dateTime||e.start.date}`).join('
-')
+          ? 'CALENDAR:\n' + calEvents.map(e => `- id:${e.id} | "${e.summary}" | start:${e.start.dateTime||e.start.date}`).join('\n')
           : 'CALENDAR: No events.';
 
         const followUp = await fetch('/api/claude', {
@@ -1548,8 +1546,7 @@ ACTION:{"type":"update_event","event_id":"EXACT_ID","description":"the info"}`,
         });
         const followData = await followUp.json();
         const followText = followData.content?.[0]?.text || '';
-        const actionMatch = followText.match(/ACTION:(\{[^
-]+\})/);
+        const actionMatch = followText.match(/ACTION:(\{[^\n]+\})/);
         if (actionMatch) {
           try {
             const nextAction = JSON.parse(actionMatch[1]);
