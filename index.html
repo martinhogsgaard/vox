@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- PWA -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Vox">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vox">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>Vox</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -229,22 +228,11 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 
 <script>
 // ═══════════════════════════════════════════════════════
-// TTS ADAPTER
-// Skift TTS_ENGINE for at skifte motor uden anden kodeændring.
-// 'browser'  → gratis, kræver ingen API-nøgle
-// 'openai'   → kræver OPENAI_KEY i .env, ~1 øre/svar
-// 'elevenlabs' → kræver ELEVENLABS_KEY i .env, bedste kvalitet
+// CONFIG
 // ═══════════════════════════════════════════════════════
 const TTS_ENGINE = 'browser'; // 'browser' | 'openai' | 'elevenlabs'
-const TTS_VOICE  = 'onyx';    // OpenAI: alloy|echo|fable|onyx|nova|shimmer
-const TTS_ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // ElevenLabs: Adam (English)
-
-// ═══════════════════════════════════════════════════════
-// STT ADAPTER
-// Skift STT_ENGINE for at skifte transskriptionsmotor.
-// 'browser'  → gratis, bruger Web Speech API
-// 'whisper'  → kræver OPENAI_KEY eller GROQ_KEY i .env
-// ═══════════════════════════════════════════════════════
+const TTS_VOICE  = 'onyx';
+const TTS_ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB';
 const STT_ENGINE = 'whisper'; // 'browser' | 'whisper'
 
 // ═══════════════════════════════════════════════════════
@@ -257,8 +245,9 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ═══════════════════════════════════════════════════════
 // DEVICE DETECTION
 // ═══════════════════════════════════════════════════════
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -291,8 +280,8 @@ function esc(str) {
 }
 
 // ═══════════════════════════════════════════════════════
-// TTS — BROWSER ENGINE
-// Robust voice selection der virker på tværs af iOS-versioner
+// TTS — VOICE SELECTION
+// Optimeret til Chrome Mac + Safari iPhone
 // ═══════════════════════════════════════════════════════
 let selectedVoice = null;
 
@@ -300,73 +289,69 @@ function loadVoices() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return;
 
-  // Prioriteret liste — dækker iOS 15, 16, 17, 18 + macOS + Android + Chrome
-  // iOS Enhanced-stemmer er markant bedre — forsøg dem først
-  const priority = [
-    // iOS Enhanced (bedste kvalitet, kræver download)
-    'Daniel (Enhanced)', 'Arthur (Enhanced)', 'Oliver (Enhanced)',
-    // iOS standard
-    'Daniel', 'Arthur', 'Oliver', 'Karen',
-    // macOS / Safari
-    'Alex', 'Samantha',
-    // Chrome desktop
-    'Google UK English Male', 'Google UK English Female',
-    'Google US English', 'Google US English 1 (Natural)',
-    // Android
-    'en-GB-SMTf00', 'en-US-SMTf00',
+  console.log('[TTS] Available voices:', voices.map(v => v.name + ' (' + v.lang + ')').join(', '));
+
+  // Chrome Mac — Google-stemmer først
+  const chromePriority = [
+    'Google UK English Male',
+    'Google UK English Female',
+    'Google US English',
+    'Google US English 1 (Natural)',
+    'Google US English 2 (Natural)',
   ];
+
+  // Safari iOS/Mac — Enhanced er bedst
+  const safariPriority = [
+    'Daniel (Enhanced)', 'Arthur (Enhanced)', 'Oliver (Enhanced)',
+    'Rishi (Enhanced)', 'Aaron (Enhanced)',
+    'Daniel', 'Arthur', 'Oliver', 'Rishi', 'Aaron',
+    'Karen', 'Alex', 'Samantha',
+  ];
+
+  const priority = isChrome
+    ? [...chromePriority, ...safariPriority]
+    : [...safariPriority, ...chromePriority];
 
   for (const name of priority) {
     const v = voices.find(v => v.name === name);
-    if (v) {
-      selectedVoice = v;
-      console.log('[TTS] Voice selected:', v.name, v.lang);
-      return;
-    }
+    if (v) { selectedVoice = v; console.log('[TTS] Voice selected:', v.name, v.lang); return; }
   }
 
-  // Fallback 1: første engelske Enhanced-stemme
-  const enhanced = voices.find(v => v.lang.startsWith('en') && v.name.includes('Enhanced'));
-  if (enhanced) { selectedVoice = enhanced; console.log('[TTS] Enhanced fallback:', enhanced.name); return; }
+  // Fallback: aldrig dansk
+  const enGB = voices.find(v => v.lang === 'en-GB' && !v.name.toLowerCase().includes('dansk') && !v.name.toLowerCase().includes('danish'));
+  if (enGB) { selectedVoice = enGB; console.log('[TTS] en-GB fallback:', enGB.name); return; }
 
-  // Fallback 2: første engelske stemme overhovedet
+  const enUS = voices.find(v => v.lang === 'en-US');
+  if (enUS) { selectedVoice = enUS; console.log('[TTS] en-US fallback:', enUS.name); return; }
+
   const anyEn = voices.find(v => v.lang.startsWith('en'));
-  if (anyEn) { selectedVoice = anyEn; console.log('[TTS] English fallback:', anyEn.name); return; }
+  if (anyEn) { selectedVoice = anyEn; console.log('[TTS] any-en fallback:', anyEn.name); return; }
 
-  // Fallback 3: første stemme
   selectedVoice = voices[0];
-  console.log('[TTS] Last resort fallback:', selectedVoice?.name);
+  console.warn('[TTS] Last resort fallback:', selectedVoice?.name);
 }
 
-// Forsøg voice load på flere tidspunkter — iOS loader dem asynkront
 speechSynthesis.onvoiceschanged = loadVoices;
-[100, 500, 1000, 2000].forEach(t => setTimeout(loadVoices, t));
+[100, 300, 600, 1000, 2000, 3000].forEach(t => setTimeout(loadVoices, t));
 
 // ═══════════════════════════════════════════════════════
-// TTS — CENTRAL SPEAK FUNKTION (adapter-pattern)
-// speak() og stopSpeaking() er de eneste funktioner
-// resten af koden kalder. Motoren skiftes her.
+// TTS — SPEAK
 // ═══════════════════════════════════════════════════════
 let _speakQueue = [];
 let _speakBusy = false;
 let _stopRequested = false;
-let _currentAudio = null; // bruges af OpenAI/ElevenLabs
+let _currentAudio = null;
 
 function stopSpeaking() {
   _stopRequested = true;
   _speakQueue = [];
   _speakBusy = false;
   isSpeaking = false;
-
-  // Stop browser TTS
   try { speechSynthesis.cancel(); } catch {}
-
-  // Stop OpenAI/ElevenLabs audio
   if (_currentAudio) {
     try { _currentAudio.pause(); _currentAudio.src = ''; } catch {}
     _currentAudio = null;
   }
-
   setMicState('idle');
   setMicHint('Tryk for at tale');
 }
@@ -391,20 +376,13 @@ function _processQueue() {
   _speakBusy = true;
   isSpeaking = true;
   setMicState('speaking');
-
-  if (TTS_ENGINE === 'openai') {
-    _speakOpenAI(text, onDone);
-  } else if (TTS_ENGINE === 'elevenlabs') {
-    _speakElevenLabs(text, onDone);
-  } else {
-    _speakBrowser(text, onDone);
-  }
+  if (TTS_ENGINE === 'openai') _speakOpenAI(text, onDone);
+  else if (TTS_ENGINE === 'elevenlabs') _speakElevenLabs(text, onDone);
+  else _speakBrowser(text, onDone);
 }
 
-// ── BROWSER TTS ──
 function _speakBrowser(text, onDone) {
   if (!selectedVoice) loadVoices();
-
   const safe = text.replace(/ dot /gi, ' DOT ');
   const sentences = safe.match(/[^.!?]+[.!?]*/g) || [safe];
   let idx = 0;
@@ -421,19 +399,15 @@ function _speakBrowser(text, onDone) {
     }
     const chunk = sentences[idx].trim().replace(/ DOT /g, ' dot ');
     if (!chunk) { idx++; next(); return; }
-
     const u = new SpeechSynthesisUtterance(chunk);
     u.voice = selectedVoice || null;
     u.lang = 'en-GB';
     u.rate = isIOS ? 1.0 : 1.1;
     u.pitch = 1.0;
     u.volume = 1.0;
-
     u.onend = () => { idx++; next(); };
     u.onerror = (e) => {
-      if (e.error === 'interrupted' || e.error === 'canceled') {
-        _speakBusy = false; isSpeaking = false; return;
-      }
+      if (e.error === 'interrupted' || e.error === 'canceled') { _speakBusy = false; isSpeaking = false; return; }
       console.warn('[TTS] Browser error:', e.error, chunk);
       idx++; next();
     };
@@ -442,76 +416,34 @@ function _speakBrowser(text, onDone) {
   next();
 }
 
-// ── OPENAI TTS (klar til brug — sæt TTS_ENGINE = 'openai') ──
 async function _speakOpenAI(text, onDone) {
   try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ engine: 'openai', text, voice: TTS_VOICE })
-    });
+    const res = await fetch('/api/tts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine:'openai', text, voice: TTS_VOICE }) });
     if (!res.ok) throw new Error('TTS API error');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     _currentAudio = new Audio(url);
-    _currentAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      _currentAudio = null;
-      _speakBusy = false;
-      isSpeaking = _speakQueue.length > 0;
-      if (onDone && !_stopRequested) onDone();
-      else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
-      _processQueue();
-    };
-    _currentAudio.onerror = () => {
-      console.warn('[TTS] OpenAI audio error — falling back to browser');
-      _currentAudio = null;
-      _speakBrowser(text, onDone);
-    };
+    _currentAudio.onended = () => { URL.revokeObjectURL(url); _currentAudio=null; _speakBusy=false; isSpeaking=_speakQueue.length>0; if(onDone&&!_stopRequested) onDone(); else if(!_speakQueue.length){ setMicState('idle'); setMicHint('Tryk for at tale'); } _processQueue(); };
+    _currentAudio.onerror = () => { _currentAudio=null; _speakBrowser(text, onDone); };
     await _currentAudio.play();
-  } catch(e) {
-    console.warn('[TTS] OpenAI failed, falling back to browser:', e.message);
-    _speakBrowser(text, onDone);
-  }
+  } catch(e) { console.warn('[TTS] OpenAI failed:', e.message); _speakBrowser(text, onDone); }
 }
 
-// ── ELEVENLABS TTS (klar til brug — sæt TTS_ENGINE = 'elevenlabs') ──
 async function _speakElevenLabs(text, onDone) {
   try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ engine: 'elevenlabs', text, voiceId: TTS_ELEVENLABS_VOICE_ID })
-    });
-    if (!res.ok) throw new Error('ElevenLabs API error');
+    const res = await fetch('/api/tts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ engine:'elevenlabs', text, voiceId: TTS_ELEVENLABS_VOICE_ID }) });
+    if (!res.ok) throw new Error('ElevenLabs error');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     _currentAudio = new Audio(url);
-    _currentAudio.onended = () => {
-      URL.revokeObjectURL(url);
-      _currentAudio = null;
-      _speakBusy = false;
-      isSpeaking = _speakQueue.length > 0;
-      if (onDone && !_stopRequested) onDone();
-      else if (_speakQueue.length === 0) { setMicState('idle'); setMicHint('Tryk for at tale'); }
-      _processQueue();
-    };
-    _currentAudio.onerror = () => {
-      console.warn('[TTS] ElevenLabs audio error — falling back to browser');
-      _currentAudio = null;
-      _speakBrowser(text, onDone);
-    };
+    _currentAudio.onended = () => { URL.revokeObjectURL(url); _currentAudio=null; _speakBusy=false; isSpeaking=_speakQueue.length>0; if(onDone&&!_stopRequested) onDone(); else if(!_speakQueue.length){ setMicState('idle'); setMicHint('Tryk for at tale'); } _processQueue(); };
+    _currentAudio.onerror = () => { _currentAudio=null; _speakBrowser(text, onDone); };
     await _currentAudio.play();
-  } catch(e) {
-    console.warn('[TTS] ElevenLabs failed, falling back to browser:', e.message);
-    _speakBrowser(text, onDone);
-  }
+  } catch(e) { console.warn('[TTS] ElevenLabs failed:', e.message); _speakBrowser(text, onDone); }
 }
 
 // ═══════════════════════════════════════════════════════
-// BIL KEEP-ALIVE
-// Tre lag: WakeLock (skærm), silent audio heartbeat (audio session),
-// og visibilitychange reconnect.
+// KEEP-ALIVE
 // ═══════════════════════════════════════════════════════
 let _wakeLock = null;
 let _heartbeatInterval = null;
@@ -521,94 +453,58 @@ async function acquireWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
     _wakeLock = await navigator.wakeLock.request('screen');
-    _wakeLock.addEventListener('release', () => {
-      console.log('[WakeLock] Released — reacquiring');
-      setTimeout(acquireWakeLock, 500);
-    });
+    _wakeLock.addEventListener('release', () => { console.log('[WakeLock] Released — reacquiring'); setTimeout(acquireWakeLock, 500); });
     console.log('[WakeLock] Acquired');
-  } catch(e) {
-    console.log('[WakeLock] Not available:', e.message);
-  }
+  } catch(e) { console.log('[WakeLock] Not available:', e.message); }
 }
 
 function startAudioHeartbeat() {
-  // Spiller en lyd der er for stille til at høre (~0.001 volume)
-  // men holder audio session aktiv på iOS/Bluetooth
   if (_heartbeatInterval) return;
   try {
     _heartbeatCtx = new (window.AudioContext || window.webkitAudioContext)();
     _heartbeatInterval = setInterval(() => {
-      if (isSpeaking || isListening) return; // Ikke nødvendigt mens vi er aktive
+      if (isSpeaking || isListening) return;
       try {
         const buf = _heartbeatCtx.createBuffer(1, 1, 22050);
         const src = _heartbeatCtx.createBufferSource();
         const gain = _heartbeatCtx.createGain();
-        gain.gain.value = 0.001; // næsten uhørlig
-        src.buffer = buf;
-        src.connect(gain);
-        gain.connect(_heartbeatCtx.destination);
-        src.start(0);
+        gain.gain.value = 0.001;
+        src.buffer = buf; src.connect(gain); gain.connect(_heartbeatCtx.destination); src.start(0);
       } catch {}
-    }, 20000); // hvert 20. sekund
+    }, 20000);
     console.log('[Heartbeat] Started');
-  } catch(e) {
-    console.log('[Heartbeat] AudioContext not available:', e.message);
-  }
+  } catch(e) { console.log('[Heartbeat] AudioContext not available:', e.message); }
 }
 
-function stopAudioHeartbeat() {
-  if (_heartbeatInterval) { clearInterval(_heartbeatInterval); _heartbeatInterval = null; }
-  if (_heartbeatCtx) { try { _heartbeatCtx.close(); } catch {} _heartbeatCtx = null; }
-}
-
-// Gendan forbindelsen når app kommer i forgrunden igen
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden) {
-    // Gå i dvale — stop aktiv lytning
     if (isListening) { stopListening(); setMicState('idle'); setMicHint('Tryk for at tale'); }
     stopSpeaking();
   } else {
-    // Kom tilbage i forgrunden — gendan WakeLock og audio session
-    console.log('[Visibility] App active again — restoring');
     await acquireWakeLock();
-    // Resume AudioContext hvis den er suspended (sker på iOS)
     if (_heartbeatCtx && _heartbeatCtx.state === 'suspended') {
       try { await _heartbeatCtx.resume(); console.log('[Heartbeat] Resumed'); } catch {}
     }
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
+    setMicState('idle'); setMicHint('Tryk for at tale');
   }
 });
 
-// Reacquire WakeLock hvis den tabes (skærmtimeout, opkald, mm.)
 document.addEventListener('visibilitychange', async () => {
-  if (!document.hidden && _wakeLock === null) {
-    await acquireWakeLock();
-  }
+  if (!document.hidden && _wakeLock === null) await acquireWakeLock();
 });
 
-window.addEventListener('blur', () => {
-  // Blur ≠ app lukket — bare fokus væk (f.eks. notifikation)
-  // Stop lytning men behold heartbeat
-  if (isListening) { stopListening(); setMicState('idle'); }
-});
-
-window.addEventListener('pagehide', () => {
-  stopListening();
-  stopSpeaking();
-  stopAudioHeartbeat();
-});
+window.addEventListener('blur', () => { if (isListening) { stopListening(); setMicState('idle'); } });
+window.addEventListener('pagehide', () => { stopListening(); stopSpeaking(); if (_heartbeatInterval) { clearInterval(_heartbeatInterval); _heartbeatInterval = null; } });
 
 // ═══════════════════════════════════════════════════════
-// STT — BROWSER WEB SPEECH (forbedret konfiguration)
+// STT — BROWSER WEB SPEECH
 // ═══════════════════════════════════════════════════════
 let micTranscript = '';
 
 function startListening() {
   if (isThinking) return;
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    setMicHint('Stemme ikke understøttet — brug Safari');
-    return;
+    setMicHint('Stemme ikke understøttet — brug Safari'); return;
   }
   if (isSpeaking || _speakBusy) stopSpeaking();
   isListening = true;
@@ -623,8 +519,6 @@ function _startRecognitionInstance() {
   if (!isListening) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
-
-  // DANSK input — Vox forstår dansk, svarer på engelsk
   recognition.lang = 'da-DK';
   recognition.interimResults = true;
   recognition.continuous = true;
@@ -633,56 +527,28 @@ function _startRecognitionInstance() {
   recognition.onresult = e => {
     let interim = micTranscript;
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) {
-        micTranscript += e.results[i][0].transcript + ' ';
-      } else {
-        interim = micTranscript + e.results[i][0].transcript;
-      }
+      if (e.results[i].isFinal) micTranscript += e.results[i][0].transcript + ' ';
+      else interim = micTranscript + e.results[i][0].transcript;
     }
     const t = interim.trim();
     setTranscript(t);
     setLiveTranscript(t);
   };
 
-  recognition.onend = () => {
-    recognition = null;
-    if (isListening) {
-      // iOS dræber recognition hvert ~60s — genstart stille
-      setTimeout(_startRecognitionInstance, 100);
-    }
-  };
-
+  recognition.onend = () => { recognition = null; if (isListening) setTimeout(_startRecognitionInstance, 100); };
   recognition.onerror = (e) => {
     recognition = null;
-    if (e.error === 'not-allowed') {
-      isListening = false;
-      setMicState('idle');
-      setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
-      return;
-    }
-    if (e.error === 'no-speech') {
-      // Normal — ingen tale registreret
-      if (isListening) setTimeout(_startRecognitionInstance, 200);
-      return;
-    }
+    if (e.error === 'not-allowed') { isListening = false; setMicState('idle'); setMicHint('Mikrofon ikke tilladt — tjek indstillinger'); return; }
+    if (e.error === 'no-speech') { if (isListening) setTimeout(_startRecognitionInstance, 200); return; }
     console.warn('[STT] Error:', e.error);
     if (isListening) setTimeout(_startRecognitionInstance, 300);
   };
-
-  try {
-    recognition.start();
-  } catch(e) {
-    console.log('[STT] Start error:', e);
-    if (isListening) setTimeout(_startRecognitionInstance, 300);
-  }
+  try { recognition.start(); } catch(e) { if (isListening) setTimeout(_startRecognitionInstance, 300); }
 }
 
 function stopListening() {
   isListening = false;
-  if (recognition) {
-    try { recognition.stop(); } catch {}
-    recognition = null;
-  }
+  if (recognition) { try { recognition.stop(); } catch {} recognition = null; }
   const transcript = micTranscript.trim();
   micTranscript = '';
   setLiveTranscript('');
@@ -690,8 +556,7 @@ function stopListening() {
 }
 
 // ═══════════════════════════════════════════════════════
-// WHISPER STT (klar til brug — sæt STT_ENGINE = 'whisper')
-// Sender audio til /api/stt som kalder Groq eller OpenAI Whisper
+// STT — WHISPER (med korrekt MIME for Safari + Chrome)
 // ═══════════════════════════════════════════════════════
 let _mediaRecorder = null;
 let _audioChunks = [];
@@ -702,20 +567,36 @@ function startListeningWhisper() {
   isListening = true;
   setMicState('listening');
   setMicHint('Tryk igen for at sende');
-  setTranscript('');
   _audioChunks = [];
+
+  // Live feedback mens der optages
+  setTranscript('🎙 Optager...');
 
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
-      _mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Vælg bedste MIME for platformen:
+      // Chrome: audio/webm;codecs=opus (bedst) eller audio/webm
+      // Safari iOS: audio/mp4 (eneste mulighed)
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : '';
+
+      const opts = mimeType ? { mimeType } : {};
+      _mediaRecorder = new MediaRecorder(stream, opts);
       _mediaRecorder.ondataavailable = e => { if (e.data.size > 0) _audioChunks.push(e.data); };
-      _mediaRecorder.start(250); // chunk hvert 250ms
+      _mediaRecorder.start(250);
+      console.log('[Whisper] Recording MIME:', _mediaRecorder.mimeType);
     })
     .catch(e => {
       console.warn('[Whisper STT] Mic error:', e);
       isListening = false;
       setMicState('idle');
       setMicHint('Mikrofon ikke tilladt — tjek indstillinger');
+      setTranscript('Tryk på mikrofon for at tale');
     });
 }
 
@@ -725,27 +606,40 @@ async function stopListeningWhisper() {
 
   return new Promise(resolve => {
     _mediaRecorder.onstop = async () => {
-      const stream = _mediaRecorder.stream;
+      const stream   = _mediaRecorder.stream;
+      const mimeType = _mediaRecorder.mimeType;
       stream.getTracks().forEach(t => t.stop());
       _mediaRecorder = null;
 
-      const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+      const blob = new Blob(_audioChunks, { type: mimeType });
       _audioChunks = [];
 
+      // Filnavn matcher MIME
+      const filename = mimeType.includes('mp4') ? 'audio.mp4' : 'audio.webm';
+
+      setTranscript('⏳ Transskriberer...');
       setMicHint('Transskriberer...');
+
       try {
         const form = new FormData();
-        form.append('audio', blob, 'audio.webm');
-        // Whisper prompt hjælper med at genkende navne og fagtermer
+        form.append('audio', blob, filename);
         form.append('prompt', 'Martin, Mie, WoodUpp, ByAulum, Timelog, Høgsgaard, weproduce');
         form.append('language', 'da');
         const res = await fetch('/api/stt', { method: 'POST', body: form });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error('[Whisper STT] Server error:', res.status, err);
+          setTranscript('Tryk på mikrofon for at tale');
+          resolve('');
+          return;
+        }
         const data = await res.json();
         const text = data.text?.trim() || '';
-        setTranscript(text);
+        setTranscript(text || 'Ingen tekst — prøv igen');
         resolve(text);
       } catch(e) {
-        console.warn('[Whisper STT] Transcription error:', e);
+        console.warn('[Whisper STT] Error:', e);
+        setTranscript('Tryk på mikrofon for at tale');
         resolve('');
       }
     };
@@ -754,7 +648,7 @@ async function stopListeningWhisper() {
 }
 
 // ═══════════════════════════════════════════════════════
-// MIC TAP HANDLER — bruger rigtig STT-adapter
+// MIC TAP HANDLER
 // ═══════════════════════════════════════════════════════
 function handleMicTap() {
   const card = document.getElementById('confirmCard');
@@ -762,9 +656,7 @@ function handleMicTap() {
     if (isSpeaking || _speakBusy) { stopSpeaking(); return; }
     return;
   }
-  if (isSpeaking || _speakBusy || _speakQueue.length > 0) {
-    stopSpeaking(); return;
-  }
+  if (isSpeaking || _speakBusy || _speakQueue.length > 0) { stopSpeaking(); return; }
   if (isThinking) return;
 
   if (STT_ENGINE === 'whisper') {
@@ -818,9 +710,8 @@ async function loadProjects() {
   const { data, error } = await sb.from('projects').select('*');
   if (error) { console.log('Projects error:', error); return; }
   if (!data || data.length === 0) {
-    for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer']) {
+    for (const name of ['WoodUpp','ByAulum','Timelog','Nye idéer'])
       await sb.from('projects').insert({ name });
-    }
     const { data: s } = await sb.from('projects').select('*');
     projects = s || [];
   } else {
@@ -830,7 +721,7 @@ async function loadProjects() {
 }
 
 function renderProjects(list) {
-  const el = document.getElementById('projekterList') || document.getElementById('projectsList');
+  const el = document.getElementById('projekterList');
   el.innerHTML = '';
   list.forEach(p => {
     const d = document.createElement('div');
@@ -839,11 +730,6 @@ function renderProjects(list) {
     d.onclick = () => openProject(p);
     el.appendChild(d);
   });
-  const n = document.createElement('div');
-  n.className = 'new-project';
-  n.innerHTML = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Nyt projekt</span>`;
-  n.onclick = () => document.getElementById('modal').classList.add('visible');
-  el.appendChild(n);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -900,8 +786,7 @@ async function saveContactCache(name, emails) {
 }
 
 async function openProject(p) {
-  activeProject = p;
-  projectMemory = '';
+  activeProject = p; projectMemory = '';
   showView('projectView');
   document.getElementById('projectViewLabel').textContent = p.name.toUpperCase();
   await loadProjectMemory(p.id);
@@ -988,8 +873,7 @@ function setActiveNav(tab) {
 
 function navTo(tab) {
   setActiveNav(tab);
-  activeProject = null;
-  conversationHistory = [];
+  activeProject = null; conversationHistory = [];
   if (tab === 'hjem') { homeHistory = []; hideConfirmCard(); showView('homeView'); }
   else if (tab === 'projekter') { showView('projekterView'); renderProjekterView(); }
   else if (tab === 'kalender') { showView('calendarView'); renderCalendarView(); }
@@ -997,9 +881,7 @@ function navTo(tab) {
 }
 
 function goHome() {
-  activeProject = null;
-  conversationHistory = [];
-  homeHistory = [];
+  activeProject = null; conversationHistory = []; homeHistory = [];
   setActiveNav('hjem');
   showView('homeView');
   setTranscript('Tryk på mikrofon for at tale');
@@ -1014,11 +896,7 @@ async function createProject() {
   closeModal();
   document.getElementById('newProjectName').value = '';
   await loadProjects();
-  if (!error && data && data.length > 0) {
-    openProject(data[0]);
-    speak(`Project ${name} created.`);
-    ensureProjectFolder(name);
-  }
+  if (!error && data && data.length > 0) { openProject(data[0]); speak(`Project ${name} created.`); ensureProjectFolder(name); }
 }
 
 function closeModal() { document.getElementById('modal').classList.remove('visible'); }
@@ -1189,8 +1067,6 @@ Rules:
     }
 
     let reply = data.content[0].text;
-
-    // Parse og fjern action-linje
     const actionMatch = reply.match(/ACTION:(\{[^\n]+\})/);
     let parsedAction = null;
     if (actionMatch) {
@@ -1211,16 +1087,12 @@ Rules:
     isThinking = false;
 
     speak(reply, async () => {
-      setMicState('idle');
-      setMicHint('Tryk for at tale');
-      isThinking = false;
+      setMicState('idle'); setMicHint('Tryk for at tale'); isThinking = false;
       if (parsedAction) await executeAction(parsedAction);
     });
   } catch(e) {
     console.log('Claude error:', e);
-    isThinking = false;
-    setMicState('idle');
-    setMicHint('Tryk for at tale');
+    isThinking = false; setMicState('idle'); setMicHint('Tryk for at tale');
     speak('Something went wrong. Please try again.');
   }
 }
@@ -1405,8 +1277,7 @@ async function executeAction(action) {
     await findContactsWithCC(action.to, ccArr, action.subject, action.body);
   } else if (action.type === 'send_confirmed_email') {
     if (window._confirmedEmail) {
-      const to = window._confirmedEmail;
-      window._confirmedEmail = null;
+      const to = window._confirmedEmail; window._confirmedEmail = null;
       showEmailPreview(to, action.subject, action.body, (t,s,b,c,a) => sendEmail(t,s,b,c,a), null, action.cc||'', false, null);
     }
   } else if (action.type === 'spell_email') {
@@ -1425,10 +1296,8 @@ async function executeAction(action) {
           hideConfirmCard();
           setTimeout(() => showEmailPreview(emailTo, draft.subject, draft.body, (t,s,b) => sendEmail(t,s,b), null), 300);
         } else {
-          window._confirmedEmail = contact.emails[0];
-          window._foundContacts = null;
-          hideConfirmCard();
-          speak('Got it. What should the email say?');
+          window._confirmedEmail = contact.emails[0]; window._foundContacts = null;
+          hideConfirmCard(); speak('Got it. What should the email say?');
         }
       }
     }
@@ -1438,8 +1307,7 @@ async function executeAction(action) {
       const query = action.to?.includes('@') ? action.to.split('@')[0].replace(/[._]/g,' ') : (action.to || '');
       await findContact(query, action.subject, action.body);
     } else {
-      const to = window._confirmedEmail || action.to;
-      window._confirmedEmail = null;
+      const to = window._confirmedEmail || action.to; window._confirmedEmail = null;
       showEmailPreview(to, action.subject, action.body, (t,s,b,c) => sendEmail(t,s,b,c), null, action.cc||'');
     }
   } else if (action.type === 'read_inbox') {
@@ -1516,8 +1384,7 @@ async function fetchDriveContext(projectName) {
     const res = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get_project_context', projectName }) });
     if (!res.ok) return;
     const data = await res.json();
-    driveContext = data.context || '';
-    driveFiles = data.files || [];
+    driveContext = data.context || ''; driveFiles = data.files || [];
   } catch { driveContext = ''; driveFiles = []; }
 }
 
@@ -1763,7 +1630,6 @@ function setMicHint(t) { document.getElementById('micHint').textContent = t; }
 // iOS AUDIO UNLOCK + APP START
 // ═══════════════════════════════════════════════════════
 function startApp() {
-  // Unlock AudioContext med user gesture (kræves på iOS)
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const buf = ctx.createBuffer(1, 1, 22050);
@@ -1771,14 +1637,9 @@ function startApp() {
     src.buffer = buf; src.connect(ctx.destination); src.start(0);
     setTimeout(() => ctx.close(), 200);
   } catch {}
-
-  // Unlock speechSynthesis
   try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
-
   loadVoices();
-  setTimeout(loadVoices, 300);
-  setTimeout(loadVoices, 1000);
-
+  [300, 800, 1500, 3000].forEach(t => setTimeout(loadVoices, t));
   document.getElementById('splashScreen').style.display = 'none';
   init();
 }
@@ -1795,13 +1656,10 @@ async function init() {
     saveToUserProfile('own_emails', 'mh@weproduce.dk, mh@firtal.com, m_hoegsgaard@hotmail.com');
     saveToUserProfile('name', 'Martin Høgsgaard');
   }
-
-  // Start bil keep-alive
   await acquireWakeLock();
   startAudioHeartbeat();
-
   setMicState('idle');
-  setMicHint('Tryk for at tale');
+  setMicHint('Altid lyttende');
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('calendar') === 'connected') {
@@ -1814,11 +1672,13 @@ async function init() {
   }
 }
 
-if (isIOS || isSafari) {
-  document.getElementById('splashScreen').style.display = 'flex';
-} else {
+// Chrome starter direkte — ingen splash nødvendig for audio unlock
+if (isChrome && !isIOS) {
   document.getElementById('splashScreen').style.display = 'none';
-  init();
+  setTimeout(init, 100);
+} else {
+  // iOS Safari kræver splash for audio unlock
+  document.getElementById('splashScreen').style.display = 'flex';
 }
 </script>
 </body>
