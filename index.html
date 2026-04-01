@@ -1240,15 +1240,15 @@ function showEmailChoiceCard(name, emails, onPick, onCancel) {
   window._emailChoiceOnCancel = onCancel;
 }
 
-function emailChoicePick(idx) { const email = window._emailChoiceEmails[idx]; hideConfirmCard(); if (window._emailChoiceOnPick) window._emailChoiceOnPick(email); }
-function emailChoiceCancel() { hideConfirmCard(); if (window._emailChoiceOnCancel) window._emailChoiceOnCancel(); else speak('Ok, annulleret.'); }
+function emailChoicePick(idx) { const email = window._emailChoiceEmails[idx]; const cb = window._emailChoiceOnPick; hideConfirmCard(); if (cb) cb(email); }
+function emailChoiceCancel() { const cb = window._emailChoiceOnCancel; hideConfirmCard(); if (cb) cb(); else speak('Ok, annulleret.'); }
 function hideConfirmCard() {
   const card = document.getElementById('confirmCard');
   if (card) card.style.display = 'none';
   window._confirmYes = window._confirmNo = window._emailChoiceEmails = window._emailChoiceOnPick = null;
 }
-function confirmCardYes() { hideConfirmCard(); if (window._confirmYes) window._confirmYes(); }
-function confirmCardNo() { hideConfirmCard(); stopSpeaking(); if (window._confirmNo) window._confirmNo(); else speak('Ok, cancelled.'); }
+function confirmCardYes() { const cb = window._confirmYes; hideConfirmCard(); if (cb) cb(); }
+function confirmCardNo() { const cb = window._confirmNo; hideConfirmCard(); stopSpeaking(); if (cb) cb(); else speak('Ok, cancelled.'); }
 
 // ═══════════════════════════════════════════════════════
 // EXECUTE ACTION
@@ -1510,13 +1510,13 @@ async function findContact(query, subject, body) {
         },
         () => { window._foundContacts = null; hideConfirmCard(); speak('Ok. Please say the correct email address.'); }
       );
-      speak(`I found ${flat[0].name}. Is this the right address?`);
+      setMicHint(`${flat[0].name} — tryk Ja eller Nej`);
     } else {
       const byName = {};
       flat.forEach(c => { const k = c.name.toLowerCase(); if (!byName[k]) byName[k] = { name:c.name, emails:[] }; if (!byName[k].emails.includes(c.email)) byName[k].emails.push(c.email); });
       const allEmails = Object.values(byName).flatMap(g => g.emails);
       window._foundContacts = allEmails.map(e => ({ name: flat.find(f=>f.email===e)?.name||e, emails:[e] }));
-      // Vis kortet med det samme — tal i baggrunden
+      // Vis kortet med det samme — tal efter kort delay så speak() ikke forstyrrer
       showEmailChoiceCard(flat[0].name, allEmails,
         (chosen) => {
           window._foundContacts = null;
@@ -1532,7 +1532,7 @@ async function findContact(query, subject, body) {
         },
         () => { window._foundContacts = null; speak('Ok, cancelled.'); }
       );
-      speak(`I found ${allEmails.length} addresses for ${flat[0].name}. Tap the right one.`);
+      setMicHint(`${flat[0].name} — vælg adresse`);
     }
   } catch { speak('Could not search contacts.'); }
 }
