@@ -682,12 +682,31 @@ function handleEmailPreviewCommand(text) {
     return;
   }
 
-  // Ret beskedteksten — erstat body med ny tekst
+  // Ret beskedteksten — send til Claude som redigeringsopgave
   const bodyEl = document.getElementById('emailPreviewBody');
-  if (bodyEl) {
-    bodyEl.value = text;
-    speak('Besked opdateret. Sig send for at sende.');
-  }
+  if (!bodyEl) return;
+  const currentBody = bodyEl.value;
+  setMicHint('Retter...');
+  fetch('/api/claude', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514', max_tokens: 500,
+      system: 'You are editing an email body. Apply the requested change to the email and return ONLY the updated email body — no preamble, no explanation, no quotes.',
+      messages: [{ role: 'user', content: 'Current email:\n' + currentBody + '\n\nRequested change: ' + text }]
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const updated = data.content?.[0]?.text?.trim() || '';
+    if (updated) {
+      bodyEl.value = updated;
+      speak('Updated. Say send to send, or make more changes.');
+    } else {
+      speak('Could not update the email.');
+    }
+    setMicHint('Tryk for at tale');
+  })
+  .catch(() => { speak('Something went wrong.'); setMicHint('Tryk for at tale'); });
 }
 
 function handleMicTap() {
