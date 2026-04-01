@@ -665,10 +665,53 @@ async function stopListeningWhisper() {
 // ═══════════════════════════════════════════════════════
 // MIC TAP HANDLER
 // ═══════════════════════════════════════════════════════
+function handleEmailPreviewCommand(text) {
+  const t = text.toLowerCase().trim();
+
+  // Send kommandoer
+  const sendWords = ['send', 'send den', 'send mail', 'send email', 'ok send', 'ja send', 'afsend', 'ok'];
+  if (sendWords.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w))) {
+    emailPreviewSend();
+    return;
+  }
+
+  // Annuller kommandoer
+  const cancelWords = ['annuller', 'cancel', 'stop', 'lad være', 'afbryd'];
+  if (cancelWords.some(w => t === w || t.startsWith(w))) {
+    emailPreviewCancel();
+    return;
+  }
+
+  // Ret beskedteksten — erstat body med ny tekst
+  const bodyEl = document.getElementById('emailPreviewBody');
+  if (bodyEl) {
+    bodyEl.value = text;
+    speak('Besked opdateret. Sig send for at sende.');
+  }
+}
+
 function handleMicTap() {
   const card = document.getElementById('confirmCard');
   if (card && card.style.display !== 'none') {
     if (isSpeaking || _speakBusy) { stopSpeaking(); return; }
+    // Tillad tale når preview-kort er åbent
+    if (STT_ENGINE === 'whisper') {
+      if (isListening) {
+        stopListeningWhisper().then(transcript => {
+          if (!transcript || transcript.length < 2) return;
+          handleEmailPreviewCommand(transcript);
+        });
+      } else {
+        startListeningWhisper();
+      }
+    } else {
+      if (isListening) {
+        const transcript = stopListening();
+        if (transcript && transcript.length > 1) handleEmailPreviewCommand(transcript);
+      } else {
+        startListening();
+      }
+    }
     return;
   }
   if (isSpeaking || _speakBusy || _speakQueue.length > 0) { stopSpeaking(); return; }
