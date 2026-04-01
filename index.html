@@ -1084,7 +1084,7 @@ ACTION:{"type":"delete_multiple_events","event_ids":["id1","id2"]}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID"}
-ACTION:{"type":"update_event","event_id":"EXACT_ID","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90}
+ACTION:{"type":"update_event","event_id":"EXACT_ID","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90,"description":"Address or notes"}
 ACTION:{"type":"create_event_and_invite","title":"Møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Navn"}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"find_contacts","to":"Henrik","cc":["Martin","Søren"],"subject":"Subject","body":"Body"}
@@ -1092,6 +1092,7 @@ ACTION:{"type":"send_email","to":"email@example.com","subject":"Subject","body":
 ACTION:{"type":"send_email","to":"email@example.com","cc":"cc@example.com","subject":"Subject","body":"Body"}
 ACTION:{"type":"spell_email","email":"mie@example.dk"}
 ACTION:{"type":"confirm_email","index":1}
+ACTION:{"type":"web_search","query":"Restaurant ET Aarhus adresse"}
 ACTION:{"type":"read_inbox"}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
@@ -1104,6 +1105,8 @@ Rules:
 - For send_email: ONLY use when address confirmed. Otherwise use find_contact.
 - Never guess email addresses.
 - Keep spoken replies under 3 sentences — Martin is driving.
+- You CAN search the web. Use web_search action when asked for addresses, locations, phone numbers, or current info.
+- update_event supports description field — use it for addresses, notes, attendees.
 - Never read full documents or long lists aloud.${confirmedEmailContext}`;
 
   const messages = activeProject
@@ -1381,6 +1384,26 @@ async function executeAction(action) {
     await listInbox();
   } else if (action.type === 'process_inbox_file') {
     await processInboxFile(action.task, action.save_to, action.file_name, action.send_email);
+  } else if (action.type === 'web_search') {
+    try {
+      const res = await fetch('/api/claude', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 500,
+          system: 'You are a web search assistant. Answer only with the specific information requested — address, phone, hours etc. Be very brief. No preamble.',
+          messages: [{ role: 'user', content: action.query }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }]
+        })
+      });
+      const data = await res.json();
+      const result = data.content?.filter(b => b.type === 'text').map(b => b.text).join(' ') || '';
+      if (result) {
+        addBubble('assistant', result);
+        speak(result.substring(0, 300));
+      } else {
+        speak('Could not find that information.');
+      }
+    } catch { speak('Web search failed.'); }
   } else if (action.type === 'go_home') {
     goHome();
   }
