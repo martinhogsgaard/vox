@@ -680,8 +680,7 @@ async function handleEmailPreviewCommand(text) {
     emailPreviewCancel(); return;
   }
 
-  // Byg nuværende mail-state til Claude
-  const bodyEl    = document.getElementById('emailPreviewBody');
+  const bodyEl      = document.getElementById('emailPreviewBody');
   const currentTo      = window._emailPreviewTo || '';
   const currentSubject = window._emailPreviewSubject || '';
   const currentCc      = window._emailPreviewCc || '';
@@ -693,35 +692,50 @@ async function handleEmailPreviewCommand(text) {
     const res = await fetch('/api/claude', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 800,
-        system: `You are editing an email before sending. The user may ask to change the body, subject, CC, or recipient.
-Return ONLY a JSON object with these fields (include only fields that changed):
-{"body":"...","subject":"...","cc":"email@example.com","to":"email@example.com","speak":"Short confirmation in English, max 1 sentence"}
-If the user wants to ADD a CC person you don't know the email for, set cc to the name prefixed with "FIND:" e.g. "FIND:Søren".
-If only the body changes, only include body and speak.
-NEVER include markdown, preamble or explanation — only the raw JSON object.`,
-        messages: [{ role: 'user', content: `Current email:
-To: ${currentTo}
-CC: ${currentCc}
-Subject: ${currentSubject}
-Body:
-${currentBody}
-
-User instruction: ${text}` }]
+        model: 'claude-sonnet-4-20250514', max_tokens: 600,
+        system: 'You edit emails. Apply the requested change. Return ONLY a raw JSON object — no markdown, no backticks, no explanation. Format: {"body":"...","subject":"...","cc":"...","to":"...","speak":"one sentence"}. Only include fields that change. If adding a CC person unknown to you, use cc:"FIND:Name".',
+        messages: [{ role: 'user', content: 'Email:\nTo: ' + currentTo + '\nCC: ' + currentCc + '\nSubject: ' + currentSubject + '\nBody:\n' + currentBody + '\n\nChange: ' + text }]
       })
     });
     const data = await res.json();
-    let raw = data.content?.[0]?.text?.trim() || '';
-    raw = raw.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(raw);
+    let raw = (data.content?.[0]?.text || '').trim();
 
-    if (result.body    !== undefined && bodyEl) bodyEl.value = result.body;
+    // Strip markdown fences hvis de er der
+    raw = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/,'').trim();
+
+    // Hvis svaret ikke starter med { — prøv at finde JSON inde i teksten
+    if (!raw.startsWith('{')) {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (jsonMatch) raw = jsonMatch[0];
+    }
+
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch(parseErr) {
+      // JSON parse fejlede — brug teksten direkte til at rette body
+      console.warn('[EmailPreview] JSON parse failed, using as body edit:', raw);
+      const res2 = await fetch('/api/claude', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 400,
+          system: 'Edit the email body as requested. Return ONLY the updated body text, nothing else.',
+          messages: [{ role: 'user', content: 'Body:\n' + currentBody + '\n\nEdit: ' + text }]
+        })
+      });
+      const data2 = await res2.json();
+      const updated = data2.content?.[0]?.text?.trim() || '';
+      if (updated && bodyEl) { bodyEl.value = updated; speak('Updated. Say send to send.'); }
+      else speak('Could not update.');
+      setMicHint('Tryk for at tale');
+      return;
+    }
+
+    if (result.body !== undefined && bodyEl) bodyEl.value = result.body;
+
     if (result.subject !== undefined) {
       window._emailPreviewSubject = result.subject;
-      const subEl = document.querySelector('.email-preview-field-value');
-      // Opdater subject visning i kortet
-      const fields = document.querySelectorAll('.email-preview-field');
-      fields.forEach(f => {
+      document.querySelectorAll('.email-preview-field').forEach(f => {
         const lbl = f.querySelector('.email-preview-field-label');
         if (lbl && lbl.textContent === 'EMNE') {
           const val = f.querySelector('.email-preview-field-value');
@@ -729,10 +743,10 @@ User instruction: ${text}` }]
         }
       });
     }
+
     if (result.to !== undefined) {
       window._emailPreviewTo = result.to;
-      const fields = document.querySelectorAll('.email-preview-field');
-      fields.forEach(f => {
+      document.querySelectorAll('.email-preview-field').forEach(f => {
         const lbl = f.querySelector('.email-preview-field-label');
         if (lbl && lbl.textContent === 'TIL') {
           const val = f.querySelector('.email-preview-field-value');
@@ -740,40 +754,37 @@ User instruction: ${text}` }]
         }
       });
     }
+
     if (result.cc !== undefined) {
-      if (result.cc.startsWith('FIND:')) {
-        // Slå kontakt op og tilføj som CC
+      if (typeof result.cc === 'string' && result.cc.startsWith('FIND:')) {
         const name = result.cc.replace('FIND:', '').trim();
-        speak(`Looking up ${name}.`);
+        speak('Looking up ' + name + '.');
         const cRes = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'find_contact', query: name }) });
         const cData = await cRes.json();
-        const contacts = cData.contacts || [];
         const flat = [];
-        contacts.forEach(c => (c.emails||[]).forEach(e => flat.push({ name: c.name, email: e })));
+        (cData.contacts || []).forEach(c => (c.emails||[]).forEach(e => flat.push({ name: c.name, email: e })));
         if (flat.length === 0) {
-          speak(`Could not find ${name}. Please add CC manually.`);
+          speak('Could not find ' + name + '. Please add CC manually.');
         } else if (flat.length === 1) {
           const newCc = currentCc ? currentCc + ',' + flat[0].email : flat[0].email;
           window._emailPreviewCc = newCc;
           showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, bodyEl?.value || currentBody, window._emailPreviewOnSend, window._emailPreviewOnCancel, newCc, false, window._emailPreviewAttachment);
-          speak(`Added ${flat[0].name} to CC.`);
+          speak('Added ' + flat[0].name + ' to CC.');
         } else {
           showEmailChoiceCard(name, flat.map(f => f.email),
-            (chosen) => {
+            chosen => {
               const newCc = currentCc ? currentCc + ',' + chosen : chosen;
               window._emailPreviewCc = newCc;
               showEmailPreview(window._emailPreviewTo, window._emailPreviewSubject, bodyEl?.value || currentBody, window._emailPreviewOnSend, window._emailPreviewOnCancel, newCc, false, window._emailPreviewAttachment);
             },
             () => speak('Ok, cancelled.')
           );
-          setMicHint('Vælg CC adresse');
         }
+        setMicHint('Tryk for at tale');
         return;
       } else {
         window._emailPreviewCc = result.cc;
-        // Genopfrisk CC i preview
-        const fields = document.querySelectorAll('.email-preview-field');
-        fields.forEach(f => {
+        document.querySelectorAll('.email-preview-field').forEach(f => {
           const lbl = f.querySelector('.email-preview-field-label');
           if (lbl && lbl.textContent === 'CC') {
             const val = f.querySelector('.email-preview-field-value');
@@ -786,24 +797,11 @@ User instruction: ${text}` }]
     speak(result.speak || 'Done.');
   } catch(e) {
     console.warn('handleEmailPreviewCommand error:', e);
-    // Fallback — ret kun body
-    const bodyEl2 = document.getElementById('emailPreviewBody');
-    if (!bodyEl2) return;
-    const currentBody2 = bodyEl2.value;
-    const res2 = await fetch('/api/claude', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 500,
-        system: 'Edit the email body as requested. Return ONLY the updated body text.',
-        messages: [{ role: 'user', content: 'Email:\n' + currentBody2 + '\n\nChange: ' + text }]
-      })
-    }).then(r => r.json()).catch(() => ({}));
-    const updated = res2.content?.[0]?.text?.trim() || '';
-    if (updated) { bodyEl2.value = updated; speak('Updated.'); }
-    else speak('Could not update.');
+    speak('Could not update. Please try again.');
   }
   setMicHint('Tryk for at tale');
 }
+
 
 function handleMicTap() {
   const card = document.getElementById('confirmCard');
