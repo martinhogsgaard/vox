@@ -1158,10 +1158,11 @@ async function sendToClaude(text) {
   const tomorrowDate = new Date(now); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
   const tomorrowStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(tomorrowDate);
 
-  const CAL_KEYWORDS = ['møde','kalender','aftale','event','begivenhed','tid','tidspunkt','opret','slet','flyt','hvad sker','har jeg','schedule','calendar','meeting','appointment','create event','delete event','update event','mandag','tirsdag','onsdag','torsdag','fredag','lørdag','søndag','i dag','imorgen','næste uge','denne uge'];
+  const CAL_KEYWORDS = ['møde','kalender','aftale','event','begivenhed','tid','tidspunkt','opret','slet','flyt','hvad sker','har jeg','schedule','calendar','meeting','appointment','create event','delete event','update event','mandag','tirsdag','onsdag','torsdag','fredag','lørdag','søndag','i dag','imorgen','næste uge','denne uge','adresse','lokation','location','restaurant','tilføj','opdater','update','add to','ret i'];
   const needsCalendar = CAL_KEYWORDS.some(k => text.toLowerCase().includes(k));
+  // Brug cachet kalender-kontekst hvis den stadig er relevant
   let calendarContext = '';
-  if (needsCalendar) {
+  if (needsCalendar || window._cachedCalendarContext) {
     try {
       const calRes = await fetch('/api/google-calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upcoming_14' }) });
       const calData = await calRes.json();
@@ -1169,7 +1170,12 @@ async function sendToClaude(text) {
       calendarContext = calEvents.length > 0
         ? '\n\nCALENDAR (next 14 days):\n' + calEvents.map(e => `- id:${e.id} | "${e.summary}" | start:${e.start.dateTime || e.start.date} | end:${e.end.dateTime || e.end.date}`).join('\n')
         : '\n\nCALENDAR: No upcoming events.';
+      window._cachedCalendarContext = calendarContext; // Cache til næste besked
     } catch {}
+  }
+  // Brug cache hvis vi ikke hentede ny
+  if (!calendarContext && window._cachedCalendarContext) {
+    calendarContext = window._cachedCalendarContext;
   }
 
   const confirmedEmailContext = window._confirmedEmail
