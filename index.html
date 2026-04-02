@@ -1199,7 +1199,7 @@ ACTION:{"type":"delete_multiple_events","event_ids":["id1","id2"]}
 ACTION:{"type":"create_event","title":"Title","date":"2026-03-09","allday":true}
 ACTION:{"type":"create_event","title":"Reminder","date":"2026-03-28","time":"12:00","reminder":true}
 ACTION:{"type":"delete_event","event_id":"EXACT_ID"}
-ACTION:{"type":"update_event","event_id":"EXACT_ID","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90,"description":"Address or notes"}
+ACTION:{"type":"update_event","event_id":"EXACT_ID","new_time":"15:00","new_date":"2026-03-09","new_title":"New title","new_duration":90,"description":"Notes","location":"Mindegade 8, 8000 Aarhus C"}
 ACTION:{"type":"create_event_and_invite","title":"Møde","date":"2026-03-09","time":"10:00","duration":60,"invite_to":"Navn"}
 ACTION:{"type":"find_contact","query":"Mie","subject":"Subject","body":"Email body"}
 ACTION:{"type":"find_contacts","to":"Henrik","cc":["Martin","Søren"],"subject":"Subject","body":"Body"}
@@ -1222,7 +1222,7 @@ Rules:
 - Never guess email addresses.
 - Keep spoken replies under 3 sentences — Martin is driving.
 - You CAN search the web. Use web_search action when asked for addresses, locations, phone numbers, or current info.
-- update_event supports description field — use it for addresses, notes, attendees.
+- update_event supports location field for addresses, and description for notes. Always use location for addresses.
 - Never read full documents or long lists aloud.${confirmedEmailContext}`;
 
   const messages = activeProject
@@ -1436,7 +1436,7 @@ async function executeAction(action) {
     if (action.event_id) await deleteCalendarEvent(action.event_id);
     else speak("I could not identify that event.");
   } else if (action.type === 'update_event') {
-    if (action.event_id) await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration, action.description);
+    if (action.event_id) await updateCalendarEvent(action.event_id, action.new_title, action.new_date, action.new_time, action.new_duration, action.description, action.location);
     else speak("I could not identify that event.");
   } else if (action.type === 'create_event_and_invite') {
     await createCalendarEvent(action.title, action.date, action.time, action.duration, false, false);
@@ -1529,13 +1529,13 @@ async function executeAction(action) {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514', max_tokens: 150,
-            system: 'Reply with ONE line only in this exact format: ACTION:{"type":"update_event","event_id":"ID","description":"info"} — use exact id from: ' + calList,
+            system: 'Reply with ONE line only in this exact format: ACTION:{"type":"update_event","event_id":"ID","location":"address here"} — use exact id from: ' + calList,
             messages: [{ role: 'user', content: action.then_update_event + '. Info: ' + wsResult }]
           })
         });
         const fuData = await fuRes.json();
         const fuText = (fuData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-        const fuMatch = fuText.match(/ACTION:(\{"type":"update_event"[^}]+\})/);
+        const fuMatch = fuText.match(/ACTION:(\{[^\n\r]+\})/);
         if (fuMatch) {
           try { await executeAction(JSON.parse(fuMatch[1])); } catch(e2) { console.warn('Follow-up parse error:', e2); }
         }
@@ -1572,11 +1572,12 @@ async function deleteCalendarEvent(eventId) {
   } catch { speak('Could not delete the event.'); }
 }
 
-async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration, description) {
+async function updateCalendarEvent(eventId, newTitle, newDate, newTime, newDuration, description, location) {
   try {
     const updates = {};
     if (newTitle) updates.summary = newTitle;
     if (description) updates.description = description;
+    if (location)    updates.location = location;
     if (newDate || newTime) {
       const getRes = await fetch('/api/google-calendar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', event:{ id: eventId } }) });
       const original = await getRes.json();
