@@ -1214,6 +1214,7 @@ ACTION:{"type":"confirm_email","index":1}
 ACTION:{"type":"web_search","query":"Restaurant ET Aarhus adresse"}
 ACTION:{"type":"web_search","query":"Restaurant ET Aarhus adresse","then_update_event":"Add address to the Restaurant ET dinner event"}
 ACTION:{"type":"read_inbox"}
+ACTION:{"type":"find_and_read_email","query":"Mie Priess","summary_only":true}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
@@ -1229,6 +1230,8 @@ Rules:
 - NEVER say "let me", "I will", "I need to" — just do it and confirm.
 - You can append multiple ACTION lines if needed (e.g. create event AND send email).
 - NEVER read ACTION lines aloud.
+- To read a specific email: use find_and_read_email with the sender name — NEVER list all emails first.
+- When asked about email content, summarize the key point in 1-2 sentences.
 - You CAN search the web. Use web_search action when asked for addresses, locations, phone numbers, or current info.
 - update_event supports location field for addresses, and description for notes. Always use location for addresses.
 - Never read full documents or long lists aloud.${confirmedEmailContext}`;
@@ -1499,6 +1502,8 @@ async function executeAction(action) {
       const to = window._confirmedEmail || action.to; window._confirmedEmail = null;
       showEmailPreview(to, action.subject, action.body, (t,s,b,c) => sendEmail(t,s,b,c), null, action.cc||'');
     }
+  } else if (action.type === 'find_and_read_email') {
+    setTimeout(() => findAndReadEmail(action.query, action.summary_only !== false), 500);
   } else if (action.type === 'read_inbox') {
     setTimeout(() => { if (!isSpeaking) readInbox(); else setTimeout(readInbox, 500); }, 500);
   } else if (action.type === 'read_email') {
@@ -1763,6 +1768,63 @@ async function sendEmail(to, subject, body, cc, attachment) {
     speak(data.id ? 'Email sent.' : 'Could not send the email. ' + (data.error||'Please try again.'));
   } catch { speak('Could not send the email.'); }
 }
+
+async function findAndReadEmail(query, summaryOnly) {
+  try {
+    // Hent inbox
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list' }) });
+    const data = await res.json();
+    const messages = data.messages || [];
+    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
+
+    // Find mail der matcher query (afsender-navn)
+    const q = query.toLowerCase();
+    const match = messages.find(m => {
+      const from = (m.from || '').toLowerCase();
+      const name = from.replace(/<.*>/,'').trim();
+      // Fuzzy match — del-streng eller initialer
+      return name.includes(q) || q.split(' ').some(part => part.length > 2 && name.includes(part));
+    });
+
+    if (!match) {
+      speak(`I could not find an email from ${query} in your inbox.`);
+      return;
+    }
+
+    // Læs mail-indholdet
+    const msgRes = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', messageId: match.id }) });
+    const msgData = await msgRes.json();
+    if (!msgData.body) { speak(`Found an email from ${match.from.replace(/<.*>/,'').trim()} but could not read the content.`); return; }
+
+    const from    = match.from.replace(/<.*>/,'').trim();
+    const subject = match.subject || '';
+    const body    = msgData.body.substring(0, 800);
+
+    if (summaryOnly) {
+      // Lad Claude opsummere svaret i én sætning
+      const sumRes = await fetch('/api/claude', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 150,
+          system: 'Summarize the key answer from this email in 1-2 spoken sentences. Focus on yes/no answers and key info. Be direct.',
+          messages: [{ role: 'user', content: 'From: ' + from + '\nSubject: ' + subject + '\n\n' + body }]
+        })
+      });
+      const sumData = await sumRes.json();
+      const summary = sumData.content?.[0]?.text?.trim() || body.substring(0, 200);
+      addBubble('assistant', summary);
+      speak(summary);
+    } else {
+      const spoken = `Email from ${from}. Subject: ${subject}. ${body}`;
+      addBubble('assistant', spoken.substring(0, 300));
+      speak(spoken.substring(0, 500));
+    }
+  } catch(e) {
+    console.warn('findAndReadEmail error:', e);
+    speak('Could not read the email.');
+  }
+}
+
 
 async function readInbox() {
   try {
