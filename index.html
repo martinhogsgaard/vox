@@ -1189,7 +1189,7 @@ ${activeProject ? `Active project: "${activeProject.name}".${projectMemory ? `\n
 ${driveFiles.length > 0 ? `\nPROJECT FILES: ${driveFiles.map(f=>f.name).join(', ')}${driveContext ? '\nFILE CONTENTS:\n' + driveContext : ''}` : ''}
 ${Object.keys(userProfile).length > 0 ? `USER PROFILE:\n${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}\n` : ''}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Martin speaks Danish to you — that is fine and expected. But your replies must be in English. Martin is frequently driving so replies are read aloud. Be conversational and concise.
 
-ACTIONS — append ONE on the last line when needed:
+ACTIONS — append one or more on separate lines at the end of your reply (NEVER read them aloud — they are silent commands):
 ACTION:{"type":"create_project","name":"ProjectName"}
 ACTION:{"type":"open_project","name":"ProjectName"}
 ACTION:{"type":"delete_project","name":"ProjectName"}
@@ -1225,6 +1225,10 @@ Rules:
 - For send_email: ONLY use when address confirmed. Otherwise use find_contact.
 - Never guess email addresses.
 - Keep spoken replies under 3 sentences — Martin is driving.
+- After executing an action, confirm it briefly: "Done, lunch added" not "I will now add...".
+- NEVER say "let me", "I will", "I need to" — just do it and confirm.
+- You can append multiple ACTION lines if needed (e.g. create event AND send email).
+- NEVER read ACTION lines aloud.
 - You CAN search the web. Use web_search action when asked for addresses, locations, phone numbers, or current info.
 - update_event supports location field for addresses, and description for notes. Always use location for addresses.
 - Never read full documents or long lists aloud.${confirmedEmailContext}`;
@@ -1248,12 +1252,14 @@ Rules:
     }
 
     let reply = data.content[0].text;
-    const actionMatch = reply.match(/ACTION:(\{[^\n]+\})/);
-    let parsedAction = null;
-    if (actionMatch) {
-      reply = reply.replace(/\nACTION:\{[^\n]+\}/, '').trim();
-      try { parsedAction = JSON.parse(actionMatch[1]); } catch(e) { console.log('Action parse error:', e); }
+    // Find ALLE actions i svaret — Claude kan sende flere
+    const parsedActions = [];
+    for (const m of [...reply.matchAll(/ACTION:(\{[^\n\r]*\})/g)]) {
+      try { parsedActions.push(JSON.parse(m[1])); } catch(e) { console.log('Action parse error:', e); }
     }
+    const parsedAction = parsedActions[0] || null;
+    // Fjern alle ACTION-linjer fra det talte svar
+    reply = reply.replace(/\nACTION:\{[^\n\r]*\}/g, '').replace(/ACTION:\{[^\n\r]*\}/g, '').trim();
 
     if (activeProject) {
       addBubble('assistant', reply);
@@ -1269,7 +1275,9 @@ Rules:
 
     speak(reply, async () => {
       setMicState('idle'); setMicHint('Tryk for at tale'); isThinking = false;
-      if (parsedAction) await executeAction(parsedAction);
+      for (const action of parsedActions) {
+        await executeAction(action);
+      }
     });
   } catch(e) {
     console.log('Claude error:', e);
