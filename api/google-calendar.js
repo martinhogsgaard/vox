@@ -26,7 +26,6 @@ async function refreshAccessToken(refreshToken) {
   });
   const tokens = await response.json();
 
-  // Update token in Supabase
   if (tokens.access_token) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
@@ -55,11 +54,9 @@ export default async function handler(req, res) {
 
   const { action, event } = req.body;
 
-  // Get tokens from Supabase
   let tokenData = await getTokens();
   if (!tokenData) return res.status(401).json({ error: 'Calendar not connected' });
 
-  // Refresh if expired
   if (new Date(tokenData.expires_at) < new Date()) {
     const refreshed = await refreshAccessToken(tokenData.refresh_token);
     if (!refreshed.access_token) return res.status(401).json({ error: 'Could not refresh token' });
@@ -85,7 +82,7 @@ export default async function handler(req, res) {
     } else if (action === 'upcoming_14') {
       const now = new Date();
       const future = new Date(now);
-      future.setFullYear(future.getFullYear() + 1); // Full year ahead
+      future.setFullYear(future.getFullYear() + 1);
       const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
         `timeMin=${now.toISOString()}&timeMax=${future.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
       const r = await fetch(url, { headers });
@@ -103,11 +100,9 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
 
     } else if (action === 'list_date') {
-      // List events for a specific date, optionally filtered by time range
-      const date = req.body.date; // YYYY-MM-DD
-      const timeFrom = req.body.time_from; // HH:MM optional
-      const timeTo = req.body.time_to;     // HH:MM optional
-      // Use +01:00 offset (CET) — handles both winter and summer time reasonably
+      const date = req.body.date;
+      const timeFrom = req.body.time_from;
+      const timeTo = req.body.time_to;
       const offset = '+01:00';
       const dayStart = timeFrom
         ? new Date(`${date}T${timeFrom}:00${offset}`)
@@ -125,16 +120,18 @@ export default async function handler(req, res) {
       let eventBody;
       const title = event.summary || event.title;
       const isReminder = event.reminder === true;
-      // Reminders: short 15-min event with popup notification at start
       const reminderOverrides = isReminder
         ? { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }] }
         : { useDefault: true };
 
       const description = event.description || '';
+      const location = event.location || '';
+
       if (event.allday) {
         eventBody = {
           summary: isReminder ? `🔔 ${title}` : title,
           description,
+          ...(location && { location }),
           start: { date: event.date },
           end: { date: event.date },
           reminders: reminderOverrides
@@ -152,6 +149,7 @@ export default async function handler(req, res) {
         eventBody = {
           summary: isReminder ? `🔔 ${title}` : title,
           description,
+          ...(location && { location }),
           start: { dateTime: `${event.date}T${startTime}:00`, timeZone: 'Europe/Copenhagen' },
           end: { dateTime: `${endDate}T${endHours}:${endMins}:00`, timeZone: 'Europe/Copenhagen' },
           reminders: reminderOverrides
@@ -165,7 +163,6 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
 
     } else if (action === 'search') {
-      // Search events by title in next 30 days
       const now = new Date();
       const future = new Date(now);
       future.setDate(future.getDate() + 30);
