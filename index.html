@@ -625,7 +625,7 @@ async function stopListeningWhisper() {
       try {
         const form = new FormData();
         form.append('audio', blob, filename);
-        form.append('prompt', 'Martin, Mie, WoodUpp, ByAulum, Timelog, Høgsgaard, weproduce');
+        form.append('prompt', buildWhisperPrompt());
         form.append('language', 'da');
         const res = await fetch('/api/stt', { method: 'POST', body: form });
         if (!res.ok) {
@@ -937,7 +937,64 @@ async function loadUserProfile() {
   try {
     const { data } = await sb.from('user_profile').select('key, value');
     if (data) data.forEach(row => { userProfile[row.key] = row.value; });
+    // Parse struktureret profil hvis den findes
+    if (userProfile['_profile']) {
+      try { userProfile._parsed = JSON.parse(userProfile['_profile']); } catch {}
+    }
   } catch(e) { userProfile = {}; }
+}
+
+// Gem struktureret profil-opdatering — kaldes kun når Claude lærer noget nyt
+async function updateStructuredProfile(updates) {
+  try {
+    const current = userProfile._parsed || {
+      persons: {}, vocabulary: [], patterns: [], preferences: []
+    };
+    // Merge updates
+    if (updates.persons) Object.assign(current.persons, updates.persons);
+    if (updates.vocabulary) {
+      updates.vocabulary.forEach(v => { if (!current.vocabulary.includes(v)) current.vocabulary.push(v); });
+    }
+    if (updates.patterns) {
+      updates.patterns.forEach(p => { if (!current.patterns.includes(p)) current.patterns.push(p); });
+    }
+    if (updates.preferences) {
+      updates.preferences.forEach(p => { if (!current.preferences.includes(p)) current.preferences.push(p); });
+    }
+    // Begræns størrelse — maks 50 personer, 100 vocab, 20 patterns, 20 prefs
+    current.vocabulary = current.vocabulary.slice(-100);
+    current.patterns   = current.patterns.slice(-20);
+    current.preferences = current.preferences.slice(-20);
+
+    userProfile._parsed = current;
+    await saveToUserProfile('_profile', JSON.stringify(current));
+    console.log('[Profile] Updated:', JSON.stringify(updates).substring(0, 100));
+  } catch(e) { console.warn('[Profile] Update failed:', e.message); }
+}
+
+// Byg Whisper prompt fra profil — navne og termer
+function buildWhisperPrompt() {
+  const base = 'Martin, Mie, WoodUpp, ByAulum, Timelog, Høgsgaard, weproduce, Groq, Supabase, Vercel';
+  const profile = userProfile._parsed;
+  if (!profile) return base;
+  const vocab = profile.vocabulary || [];
+  const persons = Object.keys(profile.persons || {});
+  const extra = [...new Set([...vocab, ...persons])].slice(0, 30).join(', ');
+  return extra ? base + ', ' + extra : base;
+}
+
+// Byg profil-kontekst til Claude — komprimeret
+function buildProfileContext() {
+  const profile = userProfile._parsed;
+  if (!profile) return '';
+  const lines = [];
+  const persons = profile.persons || {};
+  if (Object.keys(persons).length > 0) {
+    lines.push('PERSONS: ' + Object.entries(persons).map(([k,v]) => k + ': ' + v).join('; '));
+  }
+  if (profile.patterns?.length) lines.push('PATTERNS: ' + profile.patterns.join('; '));
+  if (profile.preferences?.length) lines.push('PREFERENCES: ' + profile.preferences.join('; '));
+  return lines.length ? '\n' + lines.join('\n') : '';
 }
 
 async function saveToUserProfile(key, value) {
@@ -1191,7 +1248,7 @@ ALWAYS use Europe/Copenhagen timezone.
 DATE REFERENCE: ${next60.join(', ')}
 ${activeProject ? `Active project: "${activeProject.name}".${projectMemory ? `\n\nPREVIOUS SUMMARY:\n${projectMemory}` : ''}` : 'No active project.'}${calendarContext}
 ${driveFiles.length > 0 ? `\nPROJECT FILES: ${driveFiles.map(f=>f.name).join(', ')}${driveContext ? '\nFILE CONTENTS:\n' + driveContext : ''}` : ''}
-${Object.keys(userProfile).length > 0 ? `USER PROFILE:\n${Object.entries(userProfile).map(([k,v])=>`${k}: ${v}`).join('\n')}\n` : ''}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Martin speaks Danish to you — that is fine and expected. But your replies must be in English. Martin is frequently driving so replies are read aloud. Be conversational and concise.
+${Object.keys(userProfile).length > 0 ? `USER PROFILE:\n${Object.entries(userProfile).filter(([k])=>!k.startsWith('_')).map(([k,v])=>`${k}: ${v}`).join('\n')}\n` : ''}${buildProfileContext()}CRITICAL LANGUAGE RULE: You MUST reply in English. ALWAYS. Every single word. No exceptions. Martin speaks Danish to you — that is fine and expected. But your replies must be in English. Martin is frequently driving so replies are read aloud. Be conversational and concise.
 
 ACTIONS — append one or more on separate lines at the end of your reply (NEVER read them aloud — they are silent commands):
 ACTION:{"type":"create_project","name":"ProjectName"}
@@ -1221,6 +1278,7 @@ ACTION:{"type":"read_inbox"}
 ACTION:{"type":"find_and_read_email","query":"Mie Priess","summary_only":true}
 ACTION:{"type":"reply_to_email","body":"Dit svar her"}
 ACTION:{"type":"forward_email","query":"Kenni Lahn"}
+ACTION:{"type":"update_profile","persons":{"name":"relation/context"},"vocabulary":["navn"],"patterns":["pattern"],"preferences":["preference"]}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
@@ -1236,6 +1294,8 @@ Rules:
 - NEVER say "let me", "I will", "I need to" — just do it and confirm.
 - You can append multiple ACTION lines if needed (e.g. create event AND send email).
 - NEVER read ACTION lines aloud.
+- When you learn something new about Martin (a person, preference, pattern, correction), append: ACTION:{"type":"update_profile","persons":{"Henrik":"bror"},"vocabulary":["Kenni Lahn"],"patterns":[],"preferences":[]}
+- Only include fields that have new information. Keep values very short (max 10 words each).
 - CRITICAL: NEVER invent, fabricate or assume email content. NEVER write email body text unless Martin explicitly dictates it word for word.
 - CRITICAL: NEVER claim you have sent or done something you have not actually done.
 - CRITICAL: For forwarding emails, ONLY use forward_email action with the actual content from window._lastReadEmail. Never write the forward body yourself.
@@ -1584,6 +1644,14 @@ async function executeAction(action) {
         }
       }
     } catch(e) { console.warn('Web search error:', e); speak('Web search failed.'); }
+  } else if (action.type === 'update_profile') {
+    // Gem ny viden om Martin — billig operation, kun når der er nyt at gemme
+    const updates = {};
+    if (action.persons && Object.keys(action.persons).length) updates.persons = action.persons;
+    if (action.vocabulary?.length) updates.vocabulary = action.vocabulary;
+    if (action.patterns?.length) updates.patterns = action.patterns;
+    if (action.preferences?.length) updates.preferences = action.preferences;
+    if (Object.keys(updates).length) await updateStructuredProfile(updates);
   } else if (action.type === 'go_home') {
     goHome();
   }
