@@ -1771,42 +1771,52 @@ async function sendEmail(to, subject, body, cc, attachment) {
 
 async function findAndReadEmail(query, summaryOnly) {
   try {
-    // Hent inbox
-    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list' }) });
-    const data = await res.json();
-    const messages = data.messages || [];
-    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
-
-    // Find mail der matcher query (afsender-navn)
-    const q = query.toLowerCase();
-    const match = messages.find(m => {
-      const from = (m.from || '').toLowerCase();
-      const name = from.replace(/<.*>/,'').trim();
-      // Fuzzy match — del-streng eller initialer
-      return name.includes(q) || q.split(' ').some(part => part.length > 2 && name.includes(part));
+    // Søg direkte i Gmail efter afsender — ikke kun de første 5 inbox mails
+    const searchRes = await fetch('/api/gmail', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'list', query: 'from:' + query + ' in:inbox' })
     });
+    const searchData = await searchRes.json();
+    let messages = searchData.messages || [];
 
-    if (!match) {
-      speak(`I could not find an email from ${query} in your inbox.`);
+    // Fallback: søg bredere hvis ingen resultat
+    if (messages.length === 0) {
+      const fallbackRes = await fetch('/api/gmail', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ action: 'list', query: query + ' in:inbox' })
+      });
+      const fallbackData = await fallbackRes.json();
+      messages = fallbackData.messages || [];
+    }
+
+    if (messages.length === 0) {
+      speak('I could not find any emails from ' + query + ' in your inbox.');
       return;
     }
 
-    // Læs mail-indholdet
-    const msgRes = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', messageId: match.id }) });
+    // Læs den første/nyeste mail
+    const match = messages[0];
+    const msgRes = await fetch('/api/gmail', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'get', messageId: match.id })
+    });
     const msgData = await msgRes.json();
-    if (!msgData.body) { speak(`Found an email from ${match.from.replace(/<.*>/,'').trim()} but could not read the content.`); return; }
 
-    const from    = match.from.replace(/<.*>/,'').trim();
+    if (!msgData.body || msgData.body.trim().length < 3) {
+      speak('Found an email from ' + (match.from || query) + ' but could not read the content.');
+      return;
+    }
+
+    const from    = (match.from || query).replace(/<.*>/,'').trim();
     const subject = match.subject || '';
     const body    = msgData.body.substring(0, 800);
 
     if (summaryOnly) {
-      // Lad Claude opsummere svaret i én sætning
       const sumRes = await fetch('/api/claude', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514', max_tokens: 150,
-          system: 'Summarize the key answer from this email in 1-2 spoken sentences. Focus on yes/no answers and key info. Be direct.',
+          system: 'Summarize the key point of this email in 1-2 spoken sentences. Be direct and concrete — yes/no answers, dates, key facts.',
           messages: [{ role: 'user', content: 'From: ' + from + '\nSubject: ' + subject + '\n\n' + body }]
         })
       });
@@ -1815,7 +1825,7 @@ async function findAndReadEmail(query, summaryOnly) {
       addBubble('assistant', summary);
       speak(summary);
     } else {
-      const spoken = `Email from ${from}. Subject: ${subject}. ${body}`;
+      const spoken = 'Email from ' + from + '. Subject: ' + subject + '. ' + body;
       addBubble('assistant', spoken.substring(0, 300));
       speak(spoken.substring(0, 500));
     }
@@ -1824,6 +1834,7 @@ async function findAndReadEmail(query, summaryOnly) {
     speak('Could not read the email.');
   }
 }
+
 
 
 async function readInbox() {
