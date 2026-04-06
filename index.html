@@ -680,6 +680,10 @@ async function handleEmailPreviewCommand(text) {
     emailPreviewCancel(); return;
   }
 
+  // Ja/Nej til confirm-card (adresse-valg)
+  if (t === 'ja' || t === 'yes') { confirmCardYes(); return; }
+  if (t === 'nej' || t === 'no') { confirmCardNo(); return; }
+
   const bodyEl      = document.getElementById('emailPreviewBody');
   const currentTo      = window._emailPreviewTo || '';
   const currentSubject = window._emailPreviewSubject || '';
@@ -1215,6 +1219,7 @@ ACTION:{"type":"web_search","query":"Restaurant ET Aarhus adresse"}
 ACTION:{"type":"web_search","query":"Restaurant ET Aarhus adresse","then_update_event":"Add address to the Restaurant ET dinner event"}
 ACTION:{"type":"read_inbox"}
 ACTION:{"type":"find_and_read_email","query":"Mie Priess","summary_only":true}
+ACTION:{"type":"reply_to_email","body":"Dit svar her"}
 ACTION:{"type":"read_email","message_id":"MESSAGE_ID"}
 
 Rules:
@@ -1231,6 +1236,7 @@ Rules:
 - You can append multiple ACTION lines if needed (e.g. create event AND send email).
 - NEVER read ACTION lines aloud.
 - To read a specific email: use find_and_read_email with the sender name — NEVER list all emails first.
+- To reply to the last read email: use reply_to_email action with the reply body.
 - When asked about email content, summarize the key point in 1-2 sentences.
 - You CAN search the web. Use web_search action when asked for addresses, locations, phone numbers, or current info.
 - update_event supports location field for addresses, and description for notes. Always use location for addresses.
@@ -1502,6 +1508,14 @@ async function executeAction(action) {
       const to = window._confirmedEmail || action.to; window._confirmedEmail = null;
       showEmailPreview(to, action.subject, action.body, (t,s,b,c) => sendEmail(t,s,b,c), null, action.cc||'');
     }
+  } else if (action.type === 'reply_to_email') {
+    const last = window._lastReadEmail;
+    if (!last) { speak('No email to reply to.'); return; }
+    const reSubject = last.subject.startsWith('Re:') ? last.subject : 'Re: ' + last.subject;
+    const reBody = action.body + '\n\n---\n' + last.from + ' wrote:\n' + last.body.substring(0, 300);
+    showEmailPreview(last.senderEmail, reSubject, reBody,
+      (to, subj, body) => replyEmail(to, subj, body, last.threadId),
+      null, '', false, null);
   } else if (action.type === 'find_and_read_email') {
     setTimeout(() => findAndReadEmail(action.query, action.summary_only !== false), 500);
   } else if (action.type === 'read_inbox') {
@@ -1758,6 +1772,16 @@ async function findContact(query, subject, body) {
   } catch { speak('Could not search contacts.'); }
 }
 
+async function replyEmail(to, subject, body, threadId) {
+  window._toEmailConfirmed = null;
+  try {
+    const payload = { action:'send', to, subject, body, cc:'', threadId: threadId || '' };
+    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    speak(data.id ? 'Reply sent.' : 'Could not send the reply. ' + (data.error||''));
+  } catch { speak('Could not send the reply.'); }
+}
+
 async function sendEmail(to, subject, body, cc, attachment) {
   window._toEmailConfirmed = null;
   try {
@@ -1821,6 +1845,10 @@ async function findAndReadEmail(query, summaryOnly) {
     const from    = (msgData.from || match.from || query).replace(/<.*>/,'').trim();
     const subject = msgData.subject || match.subject || '';
     const body    = msgData.body.substring(0, 800);
+
+    // Gem som kontekst til evt. svar
+    const senderEmail = (msgData.from || match.from || '').match(/<([^>]+)>/)?.[1] || '';
+    window._lastReadEmail = { from: msgData.from || match.from, senderEmail, subject, body, messageId: match.id, threadId: msgData.threadId || match.threadId };
 
     if (summaryOnly) {
       const sumRes = await fetch('/api/claude', {
