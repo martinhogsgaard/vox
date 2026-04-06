@@ -90,13 +90,14 @@ function extractText(payload) {
   return '';
 }
 
-function makeEmail({ to, subject, body, cc, attachment }) {
+function makeEmail({ to, subject, body, cc, attachment, threadId }) {
   const boundary = 'vox_' + Date.now();
   if (!attachment) {
     const lines = [
       `To: ${to}`,
       ...(cc ? [`Cc: ${cc}`] : []),
       `Subject: ${encodeSubject(subject)}`,
+      ...(threadId ? [`In-Reply-To: ${threadId}`, `References: ${threadId}`] : []),
       `MIME-Version: 1.0`,
       `Content-Type: text/plain; charset=utf-8`,
       `Content-Transfer-Encoding: base64`,
@@ -176,7 +177,8 @@ export default async function handler(req, res) {
           };
         }
       }
-      const raw = makeEmail({ to, subject, body, cc, attachment: attachmentData });
+      const threadId = req.body.threadId || '';
+      const raw = makeEmail({ to, subject, body, cc, attachment: attachmentData, threadId });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST', headers,
         body: JSON.stringify({ raw })
