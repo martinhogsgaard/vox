@@ -1771,22 +1771,30 @@ async function sendEmail(to, subject, body, cc, attachment) {
 
 async function findAndReadEmail(query, summaryOnly) {
   try {
-    // Søg direkte i Gmail efter afsender — ikke kun de første 5 inbox mails
-    const searchRes = await fetch('/api/gmail', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ action: 'list', query: 'from:' + query + ' in:inbox' })
-    });
-    const searchData = await searchRes.json();
-    let messages = searchData.messages || [];
+    // Søg med afsendernavn — prøv flere varianter
+    const searchQueries = [
+      'from:' + query + ' in:inbox',
+      query + ' in:inbox',
+    ];
 
-    // Fallback: søg bredere hvis ingen resultat
-    if (messages.length === 0) {
-      const fallbackRes = await fetch('/api/gmail', {
+    // Tilføj fornavn-søgning som fallback
+    const firstName = query.split(' ')[0];
+    if (firstName && firstName.length > 2) {
+      searchQueries.push('from:' + firstName + ' in:inbox');
+    }
+
+    let messages = [];
+    for (const q of searchQueries) {
+      const r = await fetch('/api/gmail', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ action: 'list', query: query + ' in:inbox' })
+        body: JSON.stringify({ action: 'list', query: q })
       });
-      const fallbackData = await fallbackRes.json();
-      messages = fallbackData.messages || [];
+      const d = await r.json();
+      if (d.messages && d.messages.length > 0) {
+        messages = d.messages;
+        console.log('[findAndReadEmail] Found', messages.length, 'with query:', q);
+        break;
+      }
     }
 
     if (messages.length === 0) {
@@ -1796,35 +1804,22 @@ async function findAndReadEmail(query, summaryOnly) {
 
     // Læs den første/nyeste mail
     const match = messages[0];
+    console.log('[findAndReadEmail] Reading:', match.from, match.subject);
+
     const msgRes = await fetch('/api/gmail', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ action: 'get', messageId: match.id })
     });
     const msgData = await msgRes.json();
-    console.log('[Gmail get] id:', match.id, 'body length:', msgData.body?.length, 'keys:', Object.keys(msgData));
+    console.log('[findAndReadEmail] Body length:', msgData.body?.length, 'from:', msgData.from);
 
-    // Prøv threadId hvis body er tom
-    if (!msgData.body || msgData.body.trim().length < 3) {
-      console.warn('[Gmail get] Empty body — trying threadId:', match.threadId);
-      if (match.threadId && match.threadId !== match.id) {
-        const threadRes = await fetch('/api/gmail', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ action: 'get', messageId: match.threadId })
-        });
-        const threadData = await threadRes.json();
-        console.log('[Gmail get thread] body length:', threadData.body?.length);
-        if (threadData.body && threadData.body.trim().length > 3) {
-          msgData.body = threadData.body;
-        }
-      }
-      if (!msgData.body || msgData.body.trim().length < 3) {
-        speak('Found an email from ' + (match.from || query) + ' but the email appears to be empty or HTML only.');
-        return;
-      }
+    if (!msgData.body || msgData.body.trim().length < 5) {
+      speak('Found an email from ' + (msgData.from || query).replace(/<.*>/,'').trim() + ' but could not read the content.');
+      return;
     }
 
-    const from    = (match.from || query).replace(/<.*>/,'').trim();
-    const subject = match.subject || '';
+    const from    = (msgData.from || match.from || query).replace(/<.*>/,'').trim();
+    const subject = msgData.subject || match.subject || '';
     const body    = msgData.body.substring(0, 800);
 
     if (summaryOnly) {
@@ -1832,7 +1827,7 @@ async function findAndReadEmail(query, summaryOnly) {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514', max_tokens: 150,
-          system: 'Summarize the key point of this email in 1-2 spoken sentences. Be direct and concrete — yes/no answers, dates, key facts.',
+          system: 'Summarize the key point of this email in 1-2 spoken sentences. Be direct — yes/no answers, dates, key facts. Ignore disclaimers and signatures.',
           messages: [{ role: 'user', content: 'From: ' + from + '\nSubject: ' + subject + '\n\n' + body }]
         })
       });
@@ -1842,7 +1837,7 @@ async function findAndReadEmail(query, summaryOnly) {
       speak(summary);
     } else {
       const spoken = 'Email from ' + from + '. Subject: ' + subject + '. ' + body;
-      addBubble('assistant', spoken.substring(0, 300));
+      addBubble('assistant', spoken.substring(0, 400));
       speak(spoken.substring(0, 500));
     }
   } catch(e) {
@@ -1850,179 +1845,3 @@ async function findAndReadEmail(query, summaryOnly) {
     speak('Could not read the email.');
   }
 }
-
-
-
-async function readInbox() {
-  try {
-    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list' }) });
-    const data = await res.json();
-    const messages = data.messages || [];
-    if (messages.length === 0) { speak('Your inbox is empty.'); return; }
-    window._lastInboxMessages = messages;
-    speak(`You have ${messages.length} recent emails. ${messages.map((m,i) => `${i+1}. From ${m.from.replace(/<.*>/,'').trim()}: ${m.subject}`).join('. ')}.`);
-  } catch { speak('Could not load your inbox.'); }
-}
-
-async function readEmail(messageId) {
-  try {
-    const res = await fetch('/api/gmail', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'get', messageId }) });
-    const data = await res.json();
-    if (data.body) speak(`Email from ${data.from}. Subject: ${data.subject}. ${data.body.substring(0,500)}`);
-    else speak('Could not read that email.');
-  } catch { speak('Could not read that email.'); }
-}
-
-// ═══════════════════════════════════════════════════════
-// VOICE COMMAND HANDLER
-// ═══════════════════════════════════════════════════════
-function handleCommand(text) {
-  setTranscript(text);
-  if (text.toLowerCase().includes('morgenoverblik') || text.toLowerCase().includes('godmorgen')) { playMorningBrief(); return; }
-  if ((text.toLowerCase().includes('gå hjem') || text.toLowerCase().includes('hjem')) && activeProject) { goHome(); speak('Going home.'); return; }
-  if (activeProject) { sendToClaude(text); return; }
-  const TASK_WORDS = ['resumé','resume','opsummer','analyser','skriv','send','mail','inbox','fil','hent','lav','opret','slet','find','vis','læs'];
-  const hasTask = TASK_WORDS.some(w => text.toLowerCase().includes(w));
-  if (!hasTask) {
-    for (const p of projects) {
-      if (text.toLowerCase().includes(p.name.toLowerCase())) { openProject(p); speak(`Opening ${p.name}.`); return; }
-    }
-  }
-  if (text.toLowerCase().includes('reconnect') || text.toLowerCase().includes('forbind igen')) { window.location.href = '/api/google-auth?force=true'; return; }
-  sendToClaude(text);
-}
-
-// ═══════════════════════════════════════════════════════
-// MORNING BRIEF
-// ═══════════════════════════════════════════════════════
-async function playMorningBrief() {
-  if (recognition) try { recognition.stop(); } catch {}
-  isListening = false;
-  const weather = await fetchWeather();
-  const d = new Date();
-  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-  speak(`Good morning Martin. Today is ${days[d.getDay()]}, ${d.getDate()}. ${months[d.getMonth()]}. Weather in Denmark: ${weather}. You have ${projects.length} active projects: ${projects.map(p=>p.name).join(', ')}. What would you like to start with today?`);
-}
-
-// ═══════════════════════════════════════════════════════
-// INBOX FILE PROCESSING
-// ═══════════════════════════════════════════════════════
-async function listInbox(autoTask, autoSaveTo) {
-  try {
-    const res = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'list_inbox' }) });
-    const data = await res.json();
-    const files = data.files || [];
-    if (files.length === 0) { speak('Your Vox inbox is empty.'); return; }
-    window._inboxFiles = files;
-    if (files.length === 1 && autoTask) { await processInboxFile(autoTask, autoSaveTo, files[0].name, false); return; }
-    speak(`You have ${files.length} file${files.length>1?'s':''} in your inbox: ${files.map(f=>f.name).join(', ')}.`);
-  } catch { speak('Could not read your inbox.'); }
-}
-
-async function processInboxFile(task, saveTo, fileName, sendEmailAfter) {
-  setMicState('thinking'); setMicHint('Læser fil...');
-  speak('Reading your file.');
-  try {
-    const readRes = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'read_inbox_file', fileName: fileName||null }) });
-    const fileData = await readRes.json();
-    if (fileData.error) { speak('Could not read the file. ' + fileData.error); return; }
-    const { fileName: name, mimeType, content: fileContent } = fileData;
-    setMicHint(`Behandler "${name}"...`);
-    speak(`Got it. Processing "${name}" now.`);
-    let userContent;
-    if (fileContent.type === 'text') {
-      userContent = `Here is the document "${name}":\n\n${fileContent.content}\n\nTask: ${task}`;
-    } else if (fileContent.type === 'base64') {
-      userContent = [{ type: mimeType==='application/pdf'?'document':'image', source:{ type:'base64', media_type:mimeType, data:fileContent.content } }, { type:'text', text:`Task: ${task}. Be thorough. Write in the same language as the document.` }];
-    }
-    const claudeRes = await fetch('/api/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:2000, system:'You are processing a document for Martin Høgsgaard. Complete the task thoroughly. Write in the same language as the document unless instructed otherwise.', messages:[{ role:'user', content:userContent }] }) });
-    const claudeData = await claudeRes.json();
-    const result = claudeData.content?.[0]?.text || '';
-    if (!result) { speak('Could not process the file.'); return; }
-    const projectFolder = saveTo || (activeProject ? activeProject.name : 'Nye idéer');
-    const docName = `${task} — ${name} — ${new Date().toLocaleDateString('da-DK')}`;
-    saveToHistory('assistant', result);
-    window._lastInboxFile = { driveFileId: fileData.fileId, filename: fileData.fileName, mimeType: fileData.mimeType };
-    const saveRes = await fetch('/api/drive', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'save_to_project', projectName:projectFolder, content:result, docName }) });
-    const saveData = await saveRes.json();
-    speak(saveData.success ? `Done. Saved to your ${projectFolder} folder in Drive.` : `Done. Could not save to Drive.`);
-  } catch(e) {
-    console.error('processInboxFile error:', e);
-    setMicState('idle'); setMicHint('Tryk for at tale');
-    speak('Something went wrong processing the file.');
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════════════════
-function setMicState(state) {
-  const btn = document.getElementById('micBtn');
-  const status = document.getElementById('micStatus');
-  btn.className = 'mic-outer';
-  if (state === 'listening') { btn.classList.add('listening'); status.textContent = 'Lytter'; }
-  else if (state === 'thinking') { btn.classList.add('thinking'); status.textContent = 'Tænker'; }
-  else if (state === 'speaking') { btn.classList.add('speaking'); status.textContent = 'Svarer'; }
-  else { btn.classList.add('idle'); status.textContent = 'Lytter'; }
-}
-function setTranscript(t) { document.getElementById('transcriptBox').textContent = t; }
-function setMicHint(t) { document.getElementById('micHint').textContent = t; }
-
-// ═══════════════════════════════════════════════════════
-// iOS AUDIO UNLOCK + APP START
-// ═══════════════════════════════════════════════════════
-function startApp() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf; src.connect(ctx.destination); src.start(0);
-    setTimeout(() => ctx.close(), 200);
-  } catch {}
-  try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch {}
-  loadVoices();
-  [300, 800, 1500, 3000].forEach(t => setTimeout(loadVoices, t));
-  document.getElementById('splashScreen').style.display = 'none';
-  init();
-}
-
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
-async function init() {
-  setDate();
-  fetchWeather();
-  await loadProjects();
-  await loadUserProfile();
-  if (!userProfile['own_emails']) {
-    saveToUserProfile('own_emails', 'mh@weproduce.dk, mh@firtal.com, m_hoegsgaard@hotmail.com');
-    saveToUserProfile('name', 'Martin Høgsgaard');
-  }
-  await acquireWakeLock();
-  startAudioHeartbeat();
-  setMicState('idle');
-  setMicHint('Altid lyttende');
-
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('calendar') === 'connected') {
-    calendarConnected = true;
-    window.history.replaceState({}, '', '/');
-    speak('Google Calendar is now connected.');
-  } else if (params.get('calendar') === 'error') {
-    window.history.replaceState({}, '', '/');
-    speak('Could not connect Google Calendar. Please try again.');
-  }
-}
-
-// Chrome starter direkte — ingen splash nødvendig for audio unlock
-if (isChrome && !isIOS) {
-  document.getElementById('splashScreen').style.display = 'none';
-  setTimeout(init, 100);
-} else {
-  // iOS Safari kræver splash for audio unlock
-  document.getElementById('splashScreen').style.display = 'flex';
-}
-</script>
-</body>
-</html>
