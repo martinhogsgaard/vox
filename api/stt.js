@@ -94,9 +94,10 @@ async function transcribeWithGroq(audioBuffer, filename, mimeType, prompt, langu
   const form = new FormData();
   const blob = new Blob([audioBuffer], { type: mimeType });
   form.append('file', blob, filename);
-  form.append('model', 'whisper-large-v3-turbo');
+  form.append('model', 'whisper-large-v3');
   form.append('language', language);
   form.append('response_format', 'json');
+  form.append('temperature', '0');  // Reducerer hallucination og forkert sprog
   if(prompt) form.append('prompt', prompt);
 
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
