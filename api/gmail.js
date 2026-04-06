@@ -37,7 +37,6 @@ function encodeSubject(str) {
   return `=?UTF-8?B?${encoded}?=`;
 }
 
-// ── Dekoder Gmail base64url til tekst (Node.js safe — ingen atob) ──
 function decodeBase64url(data) {
   if (!data) return '';
   try {
@@ -46,20 +45,48 @@ function decodeBase64url(data) {
   } catch { return ''; }
 }
 
-// ── Udtræk tekst rekursivt fra Gmail payload (håndterer nested parts) ──
+// Udtræk tekst — håndterer text/plain, text/html og nested multipart
 function extractText(payload) {
   if (!payload) return '';
-  // Direkte text/plain body
+
+  // Direkte text/plain
   if (payload.mimeType === 'text/plain' && payload.body?.data) {
     return decodeBase64url(payload.body.data);
   }
-  // Rekursivt igennem parts
+
+  // Direkte text/html — strip tags
+  if (payload.mimeType === 'text/html' && payload.body?.data) {
+    const html = decodeBase64url(payload.body.data);
+    return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+               .replace(/<[^>]+>/g, ' ')
+               .replace(/\s+/g, ' ')
+               .trim();
+  }
+
   if (payload.parts) {
+    // Prøv text/plain først i alle parts
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        return decodeBase64url(part.body.data);
+      }
+    }
+    // Prøv text/html
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/html' && part.body?.data) {
+        const html = decodeBase64url(part.body.data);
+        return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                   .replace(/<[^>]+>/g, ' ')
+                   .replace(/\s+/g, ' ')
+                   .trim();
+      }
+    }
+    // Rekursivt i nested parts
     for (const part of payload.parts) {
       const text = extractText(part);
       if (text) return text;
     }
   }
+
   return '';
 }
 
@@ -179,10 +206,8 @@ export default async function handler(req, res) {
     } else if (action === 'get') {
       const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`, { headers });
       const data = await r.json();
-
-      // Brug rekursiv ekstraktering — håndterer både simple og multipart mails
       const bodyText = extractText(data.payload);
-
+      console.log(`[Gmail get] id:${messageId} mimeType:${data.payload?.mimeType} bodyLen:${bodyText.length} parts:${data.payload?.parts?.length || 0}`);
       const hdrs = data.payload?.headers || [];
       return res.status(200).json({
         id: data.id,
@@ -229,7 +254,7 @@ export default async function handler(req, res) {
             .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]))
             .forEach(c => {
               const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
-              if (exists) c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
+              if (exists) c.emails.forEach(e => { if (!exists.emails.includes(e)) existing.emails.push(e); });
               else allContacts.push(c);
             });
         }
