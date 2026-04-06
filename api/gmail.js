@@ -37,12 +37,35 @@ function encodeSubject(str) {
   return `=?UTF-8?B?${encoded}?=`;
 }
 
-function makeEmail({ to, subject, body, cc, attachment }) {
-  // attachment = { filename, mimeType, data (base64) }
-  const boundary = 'vox_' + Date.now();
+// ── Dekoder Gmail base64url til tekst (Node.js safe — ingen atob) ──
+function decodeBase64url(data) {
+  if (!data) return '';
+  try {
+    const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+    return Buffer.from(base64, 'base64').toString('utf-8');
+  } catch { return ''; }
+}
 
+// ── Udtræk tekst rekursivt fra Gmail payload (håndterer nested parts) ──
+function extractText(payload) {
+  if (!payload) return '';
+  // Direkte text/plain body
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    return decodeBase64url(payload.body.data);
+  }
+  // Rekursivt igennem parts
+  if (payload.parts) {
+    for (const part of payload.parts) {
+      const text = extractText(part);
+      if (text) return text;
+    }
+  }
+  return '';
+}
+
+function makeEmail({ to, subject, body, cc, attachment }) {
+  const boundary = 'vox_' + Date.now();
   if (!attachment) {
-    // Simple plain text email
     const lines = [
       `To: ${to}`,
       ...(cc ? [`Cc: ${cc}`] : []),
@@ -53,11 +76,8 @@ function makeEmail({ to, subject, body, cc, attachment }) {
       '',
       Buffer.from(body, 'utf-8').toString('base64')
     ];
-    const raw = lines.join('\r\n');
-    return Buffer.from(raw).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return Buffer.from(lines.join('\r\n')).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
-
-  // Multipart email with attachment
   const encodedFilename = encodeSubject(attachment.filename);
   const parts = [
     `To: ${to}`,
@@ -81,8 +101,7 @@ function makeEmail({ to, subject, body, cc, attachment }) {
     '',
     `--${boundary}--`
   ];
-  const raw = parts.join('\r\n');
-  return Buffer.from(raw).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return Buffer.from(parts.join('\r\n')).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 export default async function handler(req, res) {
@@ -108,11 +127,8 @@ export default async function handler(req, res) {
     console.log('Gmail action:', action);
 
     if (action === 'send') {
-      const { attachment } = req.body; // { filename, mimeType, data (base64), driveFileId }
-
+      const { attachment } = req.body;
       let attachmentData = attachment || null;
-
-      // If driveFileId provided, fetch from Drive
       if (!attachmentData && req.body.driveFileId) {
         const driveToken = tokenData.access_token;
         const fileMetaRes = await fetch(
@@ -133,7 +149,6 @@ export default async function handler(req, res) {
           };
         }
       }
-
       const raw = makeEmail({ to, subject, body, cc, attachment: attachmentData });
       const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST', headers,
@@ -164,14 +179,10 @@ export default async function handler(req, res) {
     } else if (action === 'get') {
       const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`, { headers });
       const data = await r.json();
-      let bodyText = '';
-      const parts = data.payload?.parts || [data.payload];
-      for (const part of parts) {
-        if (part?.mimeType === 'text/plain' && part?.body?.data) {
-          bodyText = decodeURIComponent(escape(atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'))));
-          break;
-        }
-      }
+
+      // Brug rekursiv ekstraktering — håndterer både simple og multipart mails
+      const bodyText = extractText(data.payload);
+
       const hdrs = data.payload?.headers || [];
       return res.status(200).json({
         id: data.id,
@@ -184,32 +195,22 @@ export default async function handler(req, res) {
     } else if (action === 'find_contact') {
       const q = req.body.query || '';
       const allContacts = [];
-
-      // Strict matching: ALL query words must appear in the name
-      // This prevents "Henrik Høgsgaard" from matching "Henrik Kellberg" or "Martin Høgsgaard"
       const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
       const firstWord = words[0] || q.toLowerCase();
       function nameMatches(name, email) {
         const nameLower = name.toLowerCase();
         const emailUser = email.split('@')[0].toLowerCase();
-        // If multi-word query: ALL words must match name
-        if (words.length > 1) {
-          return words.every(w => nameLower.includes(w));
-        }
-        // Single word: match name or email user part
+        if (words.length > 1) return words.every(w => nameLower.includes(w));
         return nameLower.includes(firstWord) || emailUser.includes(firstWord);
       }
 
-      // 1. People API — Strategy A: searchContacts, Strategy B: full connections list
       try {
-        // A: Fast name search
         const rA = await fetch(
           `https://people.googleapis.com/v1/people:searchContacts?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=10`,
           { headers }
         );
         if (rA.ok) {
           const dataA = await rA.json();
-          console.log('searchContacts raw:', JSON.stringify(dataA).substring(0, 600));
           const results = (dataA.results || []).map(p => ({
             name: p.person?.names?.[0]?.displayName || '',
             emails: (p.person?.emailAddresses || []).map(e => e.value)
@@ -217,121 +218,82 @@ export default async function handler(req, res) {
           allContacts.push(...results);
         }
 
-        // B: Full connections list — saved contacts with ALL their emails
         const rB = await fetch(
           `https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses&pageSize=1000`,
           { headers }
         );
         if (rB.ok) {
           const dataB = await rB.json();
-          const matched = (dataB.connections || [])
-            .map(p => ({
-              name: p.names?.[0]?.displayName || '',
-              emails: (p.emailAddresses || []).map(e => e.value)
-            }))
-            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
-          matched.forEach(c => {
-            const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
-            if (exists) {
-              c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
-            } else {
-              allContacts.push(c);
-            }
-          });
-        } else {
-          console.log('Connections API status:', rB.status);
+          (dataB.connections || [])
+            .map(p => ({ name: p.names?.[0]?.displayName || '', emails: (p.emailAddresses || []).map(e => e.value) }))
+            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]))
+            .forEach(c => {
+              const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
+              if (exists) c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
+              else allContacts.push(c);
+            });
         }
 
-        // C: Other Contacts — Gmail's auto-saved addresses (everyone you've emailed)
         const rC = await fetch(
           `https://people.googleapis.com/v1/otherContacts:search?query=${encodeURIComponent(q)}&readMask=names,emailAddresses&pageSize=10`,
           { headers }
         );
         if (rC.ok) {
           const dataC = await rC.json();
-          console.log('otherContacts raw:', JSON.stringify(dataC).substring(0, 600));
-          const otherMatched = (dataC.results || [])
-            .map(p => ({
-              name: p.person?.names?.[0]?.displayName || '',
-              emails: (p.person?.emailAddresses || []).map(e => e.value)
-            }))
-            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]));
-          otherMatched.forEach(c => {
-            const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
-            if (exists) {
-              c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
-            } else {
-              allContacts.push(c);
-            }
-          });
-          console.log('otherContacts matched:', JSON.stringify(otherMatched));
-        } else {
-          console.log('Other contacts status:', rC.status);
+          (dataC.results || [])
+            .map(p => ({ name: p.person?.names?.[0]?.displayName || '', emails: (p.person?.emailAddresses || []).map(e => e.value) }))
+            .filter(c => c.emails.length > 0 && nameMatches(c.name, c.emails[0]))
+            .forEach(c => {
+              const exists = allContacts.find(a => a.name.toLowerCase() === c.name.toLowerCase());
+              if (exists) c.emails.forEach(e => { if (!exists.emails.includes(e)) exists.emails.push(e); });
+              else allContacts.push(c);
+            });
         }
       } catch(e) { console.log('People API error:', e.message); }
 
-      // 2. Search sent AND received mail — match on NAME only (not email domain)
       try {
-
         const emailSet = new Set();
-
-        // Search Gmail directly by name — finds emails TO or FROM this person
-        // Search by full name AND by first name only (handles voice-to-text surname errors)
         const searches = [
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q + ' in:sent')}`, headerName: 'To' },
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(firstWord + ' in:sent')}`, headerName: 'To' },
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(q)}`, headerName: 'From' },
           { url: `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=${encodeURIComponent(firstWord)}`, headerName: 'From' },
         ];
-
         for (const { url, headerName } of searches) {
           const r = await fetch(url, { headers });
           if (!r.ok) continue;
           const data = await r.json();
           if (!data.messages) continue;
           await Promise.all(data.messages.slice(0, 5).map(async m => {
-            const mr = await fetch(
-              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=${headerName}`,
-              { headers }
-            );
+            const mr = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=${headerName}`, { headers });
             if (!mr.ok) return;
             const md = await mr.json();
             const header = md.payload?.headers?.find(h => h.name === headerName)?.value || '';
             const matches = [...header.matchAll(/([^<,]+)<([^>]+)>/g)];
             for (const match of matches) {
-              // Clean name: strip quotes, backslashes, extra whitespace
               const name = match[1].replace(/['"\\]/g, '').trim();
               const email = match[2].trim().toLowerCase();
-              if (nameMatches(name, email)) {
-                emailSet.add(JSON.stringify({ name, email }));
-              }
+              if (nameMatches(name, email)) emailSet.add(JSON.stringify({ name, email }));
             }
           }));
         }
-
         for (const s of emailSet) {
           const { name, email } = JSON.parse(s);
-          const exists = allContacts.some(c => c.emails.includes(email));
-          if (!exists) allContacts.push({ name, emails: [email] });
+          if (!allContacts.some(c => c.emails.includes(email))) allContacts.push({ name, emails: [email] });
         }
       } catch(e) { console.log('Mail search error:', e.message); }
 
-      // Group multiple emails per person (same name = same person)
       const grouped = [];
       allContacts.forEach(c => {
         const existing = grouped.find(g => g.name.toLowerCase() === c.name.toLowerCase());
-        if (existing) {
-          c.emails.forEach(e => { if (!existing.emails.includes(e)) existing.emails.push(e); });
-        } else {
-          grouped.push({ name: c.name, emails: [...c.emails] });
-        }
+        if (existing) c.emails.forEach(e => { if (!existing.emails.includes(e)) existing.emails.push(e); });
+        else grouped.push({ name: c.name, emails: [...c.emails] });
       });
       return res.status(200).json({ contacts: grouped.slice(0, 5) });
 
     } else {
       return res.status(400).json({ error: 'Unknown action: ' + action });
     }
-
   } catch (err) {
     console.error('Gmail error:', err);
     return res.status(500).json({ error: err.message });
