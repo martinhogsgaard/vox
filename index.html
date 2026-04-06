@@ -1801,10 +1801,26 @@ async function findAndReadEmail(query, summaryOnly) {
       body: JSON.stringify({ action: 'get', messageId: match.id })
     });
     const msgData = await msgRes.json();
+    console.log('[Gmail get] id:', match.id, 'body length:', msgData.body?.length, 'keys:', Object.keys(msgData));
 
+    // Prøv threadId hvis body er tom
     if (!msgData.body || msgData.body.trim().length < 3) {
-      speak('Found an email from ' + (match.from || query) + ' but could not read the content.');
-      return;
+      console.warn('[Gmail get] Empty body — trying threadId:', match.threadId);
+      if (match.threadId && match.threadId !== match.id) {
+        const threadRes = await fetch('/api/gmail', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ action: 'get', messageId: match.threadId })
+        });
+        const threadData = await threadRes.json();
+        console.log('[Gmail get thread] body length:', threadData.body?.length);
+        if (threadData.body && threadData.body.trim().length > 3) {
+          msgData.body = threadData.body;
+        }
+      }
+      if (!msgData.body || msgData.body.trim().length < 3) {
+        speak('Found an email from ' + (match.from || query) + ' but the email appears to be empty or HTML only.');
+        return;
+      }
     }
 
     const from    = (match.from || query).replace(/<.*>/,'').trim();
