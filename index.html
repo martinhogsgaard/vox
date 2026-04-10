@@ -52,7 +52,7 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 .bubble.assistant { background:var(--card); color:var(--text); align-self:flex-start; border:1px solid var(--border); border-bottom-left-radius:4px; }
 .back-btn { font-size:13px; color:var(--label); cursor:pointer; padding:4px 0; margin-bottom:8px; }
 
-.transcript-box { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:8px 14px; font-size:13px; color:var(--label); font-style:italic; margin:8px 20px; text-align:center; min-height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.transcript-box { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:8px 14px; font-size:13px; color:var(--text); margin:8px 20px; min-height:36px; flex-shrink:0; width:calc(100% - 40px); outline:none; font-family:inherit; resize:none; line-height:1.4; }
 
 .home-chat-wrap { flex:1; overflow-y:auto; padding:0 20px 8px; display:flex; flex-direction:column; gap:8px; }
 .home-chat-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--label); font-size:13px; padding-bottom:20px; }
@@ -188,14 +188,12 @@ body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text)
 </div>
 
 <!-- TRANSCRIPT -->
-<div class="transcript-box" id="transcriptBox">Tryk på mikrofon for at tale</div>
+<textarea class="transcript-box" id="transcriptBox" placeholder="Tryk på knappen for at tale — eller skriv her og tryk Enter" onkeydown="handleTranscriptKey(event)" rows="1"></textarea>
 
 <!-- MIC -->
 <div class="mic-section">
   <div class="mic-status" id="micStatus">Lytter</div>
-  <div class="mic-outer idle" id="micBtn" onclick="handleMicTap()">
-    <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/></svg>
-  </div>
+  <div class="mic-outer idle" id="micBtn" onclick="handleMicTap()"></div>
   <div class="mic-hint" id="micHint">Altid lyttende</div>
 </div>
 
@@ -572,7 +570,7 @@ function startListeningWhisper() {
   _audioChunks = [];
 
   // Live feedback mens der optages
-  setTranscript('🎙 Optager...');
+  setTranscript('');
 
   navigator.mediaDevices.getUserMedia({ audio: true })
     .then(stream => {
@@ -619,8 +617,8 @@ async function stopListeningWhisper() {
       // Filnavn matcher MIME
       const filename = mimeType.includes('mp4') ? 'audio.mp4' : 'audio.webm';
 
-      setTranscript('⏳ Transskriberer...');
-      setMicHint('Transskriberer...');
+      setTranscript('');
+      setMicHint('Et øjeblik...');
 
       try {
         const form = new FormData();
@@ -1045,6 +1043,7 @@ function buildProfileContext() {
     if (p.employees)         lines.push('EMPLOYEES/REPORTS: ' + p.employees);
     if (p.assistant_name)    lines.push('ASSISTANT: ' + p.assistant_name);
     if (p.key_clients)       lines.push('KEY CLIENTS: ' + p.key_clients);
+    if (p.key_suppliers)     lines.push('KEY SUPPLIERS: ' + p.key_suppliers);
     if (p.always_reply_fast) lines.push('ALWAYS REPLY FAST TO: ' + p.always_reply_fast);
     if (p.keep_distance)     lines.push('KEEP DISTANCE FROM: ' + p.keep_distance);
     if (p.responsibilities)  lines.push('RESPONSIBILITIES: ' + p.responsibilities);
@@ -2172,8 +2171,26 @@ function setMicState(state) {
   else if (state === 'speaking') { btn.classList.add('speaking'); status.textContent = 'Svarer'; }
   else { btn.classList.add('idle'); status.textContent = 'Lytter'; }
 }
-function setTranscript(t) { document.getElementById('transcriptBox').textContent = t; }
+function setTranscript(t) {
+  const el = document.getElementById('transcriptBox');
+  if (el) { el.value = t; el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+}
 function setMicHint(t) { document.getElementById('micHint').textContent = t; }
+
+function handleTranscriptKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const text = document.getElementById('transcriptBox').value.trim();
+    if (text) {
+      setTranscript('');
+      handleCommand(text);
+    }
+  }
+  // Auto-resize
+  const el = e.target;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
 
 function startApp() {
   try {
