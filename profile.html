@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vox — Min profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#fafaf8;--surface:#fff;--border:#e8e6e0;--border2:#f0ede8;
+  --text:#1a1a18;--text2:#6b6860;--text3:#a8a49e;
+  --accent:#2d5a3d;--accent-light:#e8f0eb;
+  --r:12px;--rs:8px;
+}
+html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text)}
+.top-bar{padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);background:var(--surface);position:sticky;top:0;z-index:10}
+.logo{font-family:'Instrument Serif',serif;font-size:20px;font-style:italic}
+.save-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .2s}
+.save-btn:hover{opacity:.85}
+.save-btn.saved{background:#4a7c59}
+
+.main{max-width:720px;margin:0 auto;padding:32px 20px 80px}
+.page-title{font-family:'Instrument Serif',serif;font-size:28px;margin-bottom:4px}
+.page-sub{font-size:14px;color:var(--text2);margin-bottom:32px}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:28px}
+.tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Sections */
+.section{margin-bottom:28px}
+.section-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border2)}
+
+.field-grid{display:grid;gap:10px}
+.field{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.field-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px}
+.field-sub{font-size:11px;color:var(--text3);margin-bottom:10px}
+
+/* Radio */
+.radio-group{display:flex;flex-wrap:wrap;gap:6px}
+.radio-opt input{display:none}
+.radio-btn{padding:5px 13px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;display:block}
+.radio-opt input:checked+.radio-btn{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.toggle{width:40px;height:22px;background:var(--border);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.toggle.on::after{left:21px}
+
+/* Inputs */
+.text-input,.time-input,.textarea-input{border:1px solid var(--border);border-radius:var(--rs);padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none;width:100%}
+.textarea-input{resize:vertical;min-height:80px;line-height:1.5}
+.text-input:focus,.time-input:focus,.textarea-input:focus{border-color:var(--accent)}
+.time-input{width:auto}
+
+/* Checkbox */
+.checkbox-group{display:flex;flex-wrap:wrap;gap:6px}
+.checkbox-opt input{display:none}
+.checkbox-btn{padding:4px 11px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;display:block}
+.checkbox-opt input:checked+.checkbox-btn{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Profile info cards */
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px}
+.info-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.info-row:last-child{margin-bottom:0}
+.info-key{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;width:120px;flex-shrink:0;padding-top:2px}
+.info-val{font-size:13px;color:var(--text);line-height:1.5;flex:1}
+.info-val.empty{color:var(--text3);font-style:italic}
+.edit-info-btn{font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-left:8px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo">Vox</div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button onclick="window.location.href='/'" style="background:none;border:1px solid var(--border);border-radius:var(--rs);padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);cursor:pointer">← Tilbage til Vox</button>
+    <button onclick="window.location.href='/onboarding?uid='+getUserId()" style="background:none;border:1px solid var(--border);border-radius:var(--rs);padding:7px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);cursor:pointer">Opdater interview</button>
+    <button class="save-btn" id="saveBtn" onclick="saveAll()">Gem ændringer</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">Min profil</div>
+  <div class="page-sub">Her kan du se og redigere din profil og præferencer.</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('prefs')">Præferencer</div>
+    <div class="tab" onclick="switchTab('profile')">Om mig</div>
+  </div>
+
+  <!-- PRÆFERENCER TAB -->
+  <div class="tab-content active" id="tab-prefs">
+
+    <div class="section">
+      <div class="section-title">Sprog & tone</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="field-label">Svar altid på</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="language" value="danish"><span class="radio-btn">Dansk</span></label>
+            <label class="radio-opt"><input type="radio" name="language" value="english"><span class="radio-btn">Engelsk</span></label>
+            <label class="radio-opt"><input type="radio" name="language" value="follow"><span class="radio-btn">Følg mit sprog</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Svarlængde</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="reply_length" value="short"><span class="radio-btn">Kort & præcis</span></label>
+            <label class="radio-opt"><input type="radio" name="reply_length" value="medium"><span class="radio-btn">Mellem</span></label>
+            <label class="radio-opt"><input type="radio" name="reply_length" value="long"><span class="radio-btn">Uddybende</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Humor</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="use_humor" value="never"><span class="radio-btn">Aldrig</span></label>
+            <label class="radio-opt"><input type="radio" name="use_humor" value="little"><span class="radio-btn">Lidt</span></label>
+            <label class="radio-opt"><input type="radio" name="use_humor" value="yes"><span class="radio-btn">Gerne</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Stemme</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="field-label">Stemmekøn</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="voice_gender" value="female"><span class="radio-btn">Kvinde</span></label>
+            <label class="radio-opt"><input type="radio" name="voice_gender" value="male"><span class="radio-btn">Mand</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Hastighed</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="voice_speed" value="slow"><span class="radio-btn">Langsom</span></label>
+            <label class="radio-opt"><input type="radio" name="voice_speed" value="normal"><span class="radio-btn">Normal</span></label>
+            <label class="radio-opt"><input type="radio" name="voice_speed" value="fast"><span class="radio-btn">Hurtig</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Adfærd</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:2px">Stil opklarende spørgsmål</div>
+              <div class="field-sub" style="margin-bottom:0">Når jeg er i tvivl om hvad du mener</div>
+            </div>
+            <div class="toggle" id="tog-ask_when_unclear" onclick="tog('ask_when_unclear')"></div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:2px">Foreslå ting proaktivt</div>
+              <div class="field-sub" style="margin-bottom:0">Påmind om ting du måske har glemt</div>
+            </div>
+            <div class="toggle" id="tog-proactive_suggest" onclick="tog('proactive_suggest')"></div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:2px">Giv besked når opgave er færdig</div>
+            </div>
+            <div class="toggle" id="tog-notify_on_done" onclick="tog('notify_on_done')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Email</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:2px">Vis altid preview inden afsendelse</div>
+            </div>
+            <div class="toggle" id="tog-confirm_before_send" onclick="tog('confirm_before_send')"></div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Email-tone</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="email_tone" value="formal"><span class="radio-btn">Formel</span></label>
+            <label class="radio-opt"><input type="radio" name="email_tone" value="informal"><span class="radio-btn">Uformel</span></label>
+            <label class="radio-opt"><input type="radio" name="email_tone" value="follow"><span class="radio-btn">Følg modtager</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Min signatur</div>
+          <input type="text" class="text-input" name="signature" placeholder="fx Martin Høgsgaard, WeProduce">
+        </div>
+        <div class="field">
+          <div class="field-label">Påmind om ubesvarede emails</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="remind_unanswered" value="1day"><span class="radio-btn">1 dag</span></label>
+            <label class="radio-opt"><input type="radio" name="remind_unanswered" value="3days"><span class="radio-btn">3 dage</span></label>
+            <label class="radio-opt"><input type="radio" name="remind_unanswered" value="1week"><span class="radio-btn">1 uge</span></label>
+            <label class="radio-opt"><input type="radio" name="remind_unanswered" value="never"><span class="radio-btn">Aldrig</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Kalender</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="field-label">Arbejdsdage</div>
+          <div class="checkbox-group">
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="mon"><span class="checkbox-btn">Man</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="tue"><span class="checkbox-btn">Tirs</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="wed"><span class="checkbox-btn">Ons</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="thu"><span class="checkbox-btn">Tors</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="fri"><span class="checkbox-btn">Fre</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="sat"><span class="checkbox-btn">Lør</span></label>
+            <label class="checkbox-opt"><input type="checkbox" name="workday" value="sun"><span class="checkbox-btn">Søn</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Arbejdstider</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input type="time" class="time-input" name="work_start">
+            <span style="color:var(--text3);font-size:13px">til</span>
+            <input type="time" class="time-input" name="work_end">
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Buffer mellem møder</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="meeting_buffer" value="none"><span class="radio-btn">Ingen</span></label>
+            <label class="radio-opt"><input type="radio" name="meeting_buffer" value="15min"><span class="radio-btn">15 min</span></label>
+            <label class="radio-opt"><input type="radio" name="meeting_buffer" value="30min"><span class="radio-btn">30 min</span></label>
+            <label class="radio-opt"><input type="radio" name="meeting_buffer" value="1hour"><span class="radio-btn">1 time</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Mødereferater</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="field-label">Format</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="referat_format" value="bullets"><span class="radio-btn">Bullet points</span></label>
+            <label class="radio-opt"><input type="radio" name="referat_format" value="prose"><span class="radio-btn">Løbende tekst</span></label>
+            <label class="radio-opt"><input type="radio" name="referat_format" value="both"><span class="radio-btn">Begge</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Send til</div>
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="referat_send_to" value="me"><span class="radio-btn">Kun mig</span></label>
+            <label class="radio-opt"><input type="radio" name="referat_send_to" value="all"><span class="radio-btn">Alle deltagere</span></label>
+            <label class="radio-opt"><input type="radio" name="referat_send_to" value="ask"><span class="radio-btn">Spørg mig</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Daglig oversigt</div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="toggle-row">
+            <div>
+              <div class="field-label" style="margin-bottom:2px">Morgenoversigt</div>
+              <div class="field-sub" style="margin-bottom:0">Daglig briefing med møder og vigtige emails</div>
+            </div>
+            <div class="toggle" id="tog-morning_brief" onclick="tog('morning_brief')"></div>
+          </div>
+          <div id="morning-time" style="margin-top:12px;display:none">
+            <input type="time" class="time-input" name="morning_brief_time">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- OM MIG TAB -->
+  <div class="tab-content" id="tab-profile">
+    <div class="section">
+      <div class="section-title">Min profil</div>
+      <div id="profileCards">
+        <div style="color:var(--text3);font-size:14px;padding:20px 0">Indlæser profil…</div>
+      </div>
+      <button class="save-btn" style="margin-top:16px" onclick="goToOnboarding()">Opdater via samtale →</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">Gemt ✓</div>
+
+<script>
+const SUPABASE_URL = window.VOX_SUPABASE_URL || '';
+const SUPABASE_KEY = window.VOX_SUPABASE_KEY || '';
+const sb = (SUPABASE_URL && SUPABASE_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const USER_ID = new URLSearchParams(window.location.search).get('uid') || localStorage.getItem('vox_user_id') || '';
+
+const toggles = {};
+
+function tog(key) {
+  toggles[key] = !toggles[key];
+  const el = document.getElementById('tog-' + key);
+  if (el) el.classList.toggle('on', toggles[key]);
+  if (key === 'morning_brief') {
+    document.getElementById('morning-time').style.display = toggles[key] ? 'block' : 'none';
+  }
+}
+
+function setToggle(key, val) {
+  toggles[key] = !!val;
+  const el = document.getElementById('tog-' + key);
+  if (el) el.classList.toggle('on', !!val);
+  if (key === 'morning_brief') {
+    document.getElementById('morning-time').style.display = val ? 'block' : 'none';
+  }
+}
+
+function setRadio(name, value) {
+  const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (el) el.checked = true;
+}
+
+function setCheckboxes(name, csv) {
+  const vals = (csv || '').split(',');
+  document.querySelectorAll(`input[name="${name}"]`).forEach(c => {
+    c.checked = vals.includes(c.value);
+  });
+}
+
+function setInput(name, value) {
+  const el = document.querySelector(`[name="${name}"]`);
+  if (el) el.value = value || '';
+}
+
+async function loadPrefs() {
+  if (!sb || !USER_ID) return;
+  const { data } = await sb.from('vox_preferences').select('*').eq('user_id', USER_ID).single();
+  if (!data) return;
+
+  setRadio('language', data.language || 'danish');
+  setRadio('reply_length', data.reply_length || 'medium');
+  setRadio('use_humor', data.use_humor || 'little');
+  setRadio('voice_gender', data.voice_gender || 'male');
+  setRadio('voice_speed', data.voice_speed || 'normal');
+  setRadio('email_tone', data.email_tone || 'follow');
+  setRadio('remind_unanswered', data.remind_unanswered || '3days');
+  setRadio('meeting_buffer', data.meeting_buffer || '15min');
+  setRadio('referat_format', data.referat_format || 'bullets');
+  setRadio('referat_send_to', data.referat_send_to || 'me');
+
+  setToggle('confirm_before_send', data.confirm_before_send !== false);
+  setToggle('ask_when_unclear', data.ask_when_unclear !== false);
+  setToggle('proactive_suggest', data.proactive_suggest !== false);
+  setToggle('notify_on_done', data.notify_on_done !== false);
+  setToggle('morning_brief', !!data.morning_brief);
+
+  setCheckboxes('workday', data.work_days || 'mon,tue,wed,thu,fri');
+  setInput('work_start', data.work_start || '08:00');
+  setInput('work_end', data.work_end || '17:00');
+  setInput('morning_brief_time', data.morning_brief_time || '08:00');
+  setInput('signature', data.signature || '');
+}
+
+async function loadProfile() {
+  const container = document.getElementById('profileCards');
+  if (!sb || !USER_ID) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:14px">Ingen profil fundet.</div>';
+    return;
+  }
+  const { data } = await sb.from('vox_profiles').select('*').eq('user_id', USER_ID).single();
+  if (!data) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:14px">Ingen profil endnu. Gå igennem onboarding-samtalen for at bygge din profil.</div>';
+    return;
+  }
+  const fields = [
+    ['Navn', data.full_name],
+    ['Virksomhed', data.company],
+    ['Rolle', data.role],
+    ['Platform', data.platform],
+    ['Vigtige kontakter', data.key_clients],
+    ['Familie', data.family],
+    ['Bedst til', data.best_at],
+    ['Hjælp med', data.help_with],
+    ['Kommunikation', data.comm_preference],
+    ['Andre systemer', data.other_systems],
+    ['Aldrig uden at spørge', data.never_without_asking],
+    ['Off limits', data.off_limits],
+  ];
+  container.innerHTML = fields.filter(([,v]) => v).map(([k,v]) => `
+    <div class="info-card">
+      <div class="info-row">
+        <div class="info-key">${k}</div>
+        <div class="info-val">${v || '<span class="empty">Ikke udfyldt</span>'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveAll() {
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Gemmer…';
+  btn.disabled = true;
+
+  const prefs = { user_id: USER_ID, updated_at: new Date().toISOString() };
+  document.querySelectorAll('input[type="radio"]:checked').forEach(r => { prefs[r.name] = r.value; });
+  Object.entries(toggles).forEach(([k,v]) => { prefs[k] = v; });
+  const days = [...document.querySelectorAll('input[name="workday"]:checked')].map(c => c.value);
+  prefs.work_days = days.join(',');
+  prefs.work_start = document.querySelector('[name="work_start"]')?.value || '08:00';
+  prefs.work_end = document.querySelector('[name="work_end"]')?.value || '17:00';
+  prefs.morning_brief_time = document.querySelector('[name="morning_brief_time"]')?.value || '08:00';
+  prefs.signature = document.querySelector('[name="signature"]')?.value || '';
+
+  if (sb && USER_ID) {
+    await sb.from('vox_preferences').upsert(prefs, { onConflict: 'user_id' });
+  }
+
+  btn.textContent = 'Gemt ✓';
+  btn.classList.add('saved');
+  showToast('Dine præferencer er gemt');
+  setTimeout(() => { btn.textContent = 'Gem ændringer'; btn.disabled = false; btn.classList.remove('saved'); }, 2000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['prefs','profile'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function goToOnboarding() {
+  window.location.href = '/onboarding' + (USER_ID ? '?uid=' + USER_ID : '');
+}
+
+function getUserId() {
+  return new URLSearchParams(window.location.search).get('uid') || localStorage.getItem('vox_user_id') || '';
+}
+
+function getUserId() {
+  return new URLSearchParams(window.location.search).get('uid') || localStorage.getItem('vox_user_id') || '';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadPrefs();
+  loadProfile();
+});
+</script>
+</body>
+</html>
