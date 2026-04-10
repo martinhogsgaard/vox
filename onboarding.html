@@ -520,27 +520,34 @@ function startMic() {
   if (!SR) { alert('Taleindput ikke understøttet i denne browser. Brug Chrome eller Safari.'); return; }
   recognition = new SR();
   recognition.lang = 'da-DK';
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.onstart = () => {
     isListening = true;
     document.getElementById('micBtn').classList.add('listening');
-    document.getElementById('inp').placeholder = '🎤 Taler…';
+    document.getElementById('micBtn').title = 'Tryk for at stoppe';
+    document.getElementById('inp').placeholder = '🎤 Taler — tryk mikrofon igen når du er færdig…';
   };
   recognition.onresult = e => {
-    let txt = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
-    document.getElementById('inp').value = txt;
-    if (e.results[e.results.length-1].isFinal) stopMic();
+    let final = '';
+    let interim = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    // Vis både færdig og igangværende tekst
+    document.getElementById('inp').value = final + interim;
   };
   recognition.onerror = () => stopMic();
   recognition.onend = () => {
     isListening = false;
     document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micBtn').title = 'Tal dit svar';
     document.getElementById('inp').placeholder = 'Skriv eller tal dit svar…';
-    // Auto-send hvis der er tekst
-    const val = document.getElementById('inp').value.trim();
-    if (val) send();
+    // Fokus på tekstfeltet så man kan rette
+    document.getElementById('inp').focus();
+    const len = document.getElementById('inp').value.length;
+    document.getElementById('inp').setSelectionRange(len, len);
   };
   recognition.start();
 }
