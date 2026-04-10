@@ -39,6 +39,9 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
 .chat-input{flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:40px;max-height:100px}
 .chat-input:focus{border-color:var(--accent)}
 .chat-send{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer}
+.mic-btn{background:none;border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-size:18px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.mic-btn.listening{background:var(--accent);border-color:var(--accent);animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 .progress-bar{height:3px;background:var(--border2);border-radius:2px;margin-bottom:10px;overflow:hidden}
 .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
 /* PREFS */
@@ -97,7 +100,8 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
   <div class="chat-wrap">
     <div class="chat-msgs" id="msgs"></div>
     <div class="chat-input-row">
-      <textarea class="chat-input" id="inp" placeholder="Skriv dit svar…" rows="1" onkeydown="hk(event)"></textarea>
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Tal dit svar">🎤</button>
+      <textarea class="chat-input" id="inp" placeholder="Skriv eller tal dit svar…" rows="1" onkeydown="hk(event)"></textarea>
       <button class="chat-send" onclick="send()">Send</button>
     </div>
   </div>
@@ -500,6 +504,51 @@ async function ensureUser(){
   }catch{
     try{const{data}=await sb.from('vox_users').select('id').eq('email','mh@weproduce.dk').single();if(data){USER_ID=data.id;localStorage.setItem('vox_user_id',USER_ID);}}catch{}
   }
+}
+
+// ── TALE INPUT ──
+let recognition = null;
+let isListening = false;
+
+function toggleMic() {
+  if (isListening) stopMic();
+  else startMic();
+}
+
+function startMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Taleindput ikke understøttet i denne browser. Brug Chrome eller Safari.'); return; }
+  recognition = new SR();
+  recognition.lang = 'da-DK';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('inp').placeholder = '🎤 Taler…';
+  };
+  recognition.onresult = e => {
+    let txt = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+    document.getElementById('inp').value = txt;
+    if (e.results[e.results.length-1].isFinal) stopMic();
+  };
+  recognition.onerror = () => stopMic();
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('inp').placeholder = 'Skriv eller tal dit svar…';
+    // Auto-send hvis der er tekst
+    const val = document.getElementById('inp').value.trim();
+    if (val) send();
+  };
+  recognition.start();
+}
+
+function stopMic() {
+  if (recognition) { try { recognition.stop(); } catch {} }
+  isListening = false;
+  document.getElementById('micBtn').classList.remove('listening');
 }
 
 window.addEventListener('DOMContentLoaded',async()=>{
