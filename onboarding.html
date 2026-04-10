@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vox — Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#fafaf8;--surface:#fff;--border:#e8e6e0;--border2:#f0ede8;--text:#1a1a18;--text2:#6b6860;--text3:#a8a49e;--accent:#2d5a3d;--accent-light:#e8f0eb;--r:12px;--rs:8px}
+html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text)}
+.top-bar{padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);background:var(--surface);position:sticky;top:0;z-index:10}
+.logo{font-family:'Instrument Serif',serif;font-size:20px;font-style:italic}
+.step-pills{display:flex;gap:6px}
+.pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;background:var(--border2);color:var(--text3);transition:all .2s}
+.pill.active{background:var(--accent);color:#fff}
+.pill.done{background:var(--accent-light);color:var(--accent)}
+.main{max-width:680px;margin:0 auto;padding:32px 20px 80px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.title{font-family:'Instrument Serif',serif;font-size:30px;line-height:1.2;margin-bottom:10px}
+.sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px}
+.step-view{display:none}.step-view.active{display:block}
+/* CHAT */
+.chat-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.chat-msgs{padding:20px;display:flex;flex-direction:column;gap:12px;min-height:160px;max-height:400px;overflow-y:auto}
+.chat-msgs::-webkit-scrollbar{display:none}
+.msg{max-width:90%}.msg.agent{align-self:flex-start}.msg.user{align-self:flex-end}
+.bubble{padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.6}
+.msg.agent .bubble{background:var(--accent-light);border-bottom-left-radius:3px}
+.msg.user .bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+.mtime{font-size:11px;color:var(--text3);margin-top:3px;padding:0 3px}
+.msg.user .mtime{text-align:right}
+.typing{display:flex;gap:4px;padding:11px 15px;background:var(--accent-light);border-radius:14px;border-bottom-left-radius:3px;width:fit-content}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:tb .8s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.chat-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border2)}
+.chat-input{flex:1;border:1px solid var(--border);border-radius:var(--rs);padding:9px 13px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:40px;max-height:100px}
+.chat-input:focus{border-color:var(--accent)}
+.chat-send{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer}
+.progress-bar{height:3px;background:var(--border2);border-radius:2px;margin-bottom:10px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
+/* PREFS */
+.pcat{margin-bottom:26px}
+.pcat-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border2)}
+.pgrid{display:grid;gap:10px}
+.pitem{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.plabel{font-size:13px;font-weight:500;margin-bottom:3px}
+.psub{font-size:11px;color:var(--text3);margin-bottom:10px}
+.rg,.cg{display:flex;flex-wrap:wrap;gap:6px}
+.ro input,.co input{display:none}
+.rb,.cb{padding:5px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;display:block;white-space:nowrap}
+.cb{border-radius:6px}
+.ro input:checked+.rb,.co input:checked+.cb{background:var(--accent);color:#fff;border-color:var(--accent)}
+.trow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tog{width:40px;height:22px;background:var(--border);border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tog::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.tog.on::after{left:21px}
+.ti{border:1px solid var(--border);border-radius:var(--rs);padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none;width:100%}
+.ti:focus{border-color:var(--accent)}
+.tt{border:1px solid var(--border);border-radius:var(--rs);padding:8px 11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none}
+.tt:focus{border-color:var(--accent)}
+.h{display:none}
+/* BUTTONS */
+.nav-row{display:flex;gap:10px;margin-top:20px}
+.bp{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:13px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer}
+.bp:hover{opacity:.85}
+.bs{background:none;color:var(--text2);border:1px solid var(--border);border-radius:var(--rs);padding:13px 18px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer}
+.bskip{background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:8px 0;text-decoration:underline}
+/* DONE */
+.done{text-align:center;padding:48px 20px}
+.done-icon{width:60px;height:60px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:26px}
+.done-title{font-family:'Instrument Serif',serif;font-size:26px;margin-bottom:10px}
+.done-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:28px}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="logo">Vox</div>
+  <div class="step-pills">
+    <div class="pill active" id="pill1">1 Interview</div>
+    <div class="pill" id="pill2">2 Præferencer</div>
+    <div class="pill" id="pill3">3 Klar</div>
+  </div>
+</div>
+<div class="main">
+
+<!-- STEP 1 -->
+<div class="step-view active" id="step1">
+  <div class="eyebrow">Trin 1 af 3</div>
+  <div class="title">Lad os lære hinanden at kende</div>
+  <div class="sub">Jeg stiller dig 50 spørgsmål så jeg kan lære dig så godt at kende som muligt. Jo mere du deler, jo bedre bliver jeg fra dag ét. Det tager ca. 15-20 minutter.</div>
+  <div class="progress-bar"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="prog-lbl">Spørgsmål 0 af 50</div>
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="msgs"></div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="inp" placeholder="Skriv dit svar…" rows="1" onkeydown="hk(event)"></textarea>
+      <button class="chat-send" onclick="send()">Send</button>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <button class="bskip" onclick="goS2()">Spring interview over →</button>
+    <button class="bp" id="toS2btn" style="display:none;max-width:200px" onclick="goS2()">Fortsæt →</button>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step-view" id="step2">
+  <div class="eyebrow">Trin 2 af 3</div>
+  <div class="title">Indstil din assistent</div>
+  <div class="sub">Vælg hvordan du vil have mig til at opføre mig. Du kan altid ændre det bagefter.</div>
+
+  <div class="pcat"><div class="pcat-title">Sprog & tone</div><div class="pgrid">
+    <div class="pitem"><div class="plabel">Svar altid på</div><div class="rg">
+      <label class="ro"><input type="radio" name="language" value="danish" checked><span class="rb">Dansk</span></label>
+      <label class="ro"><input type="radio" name="language" value="english"><span class="rb">Engelsk</span></label>
+      <label class="ro"><input type="radio" name="language" value="follow"><span class="rb">Følg mit sprog</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Svarlængde</div><div class="rg">
+      <label class="ro"><input type="radio" name="reply_length" value="short"><span class="rb">Kort & præcis</span></label>
+      <label class="ro"><input type="radio" name="reply_length" value="medium" checked><span class="rb">Mellemlang</span></label>
+      <label class="ro"><input type="radio" name="reply_length" value="long"><span class="rb">Uddybende</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Tiltaleform</div><div class="rg">
+      <label class="ro"><input type="radio" name="salutation" value="du" checked><span class="rb">Du</span></label>
+      <label class="ro"><input type="radio" name="salutation" value="de"><span class="rb">De</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Brug humor</div><div class="rg">
+      <label class="ro"><input type="radio" name="use_humor" value="never"><span class="rb">Aldrig</span></label>
+      <label class="ro"><input type="radio" name="use_humor" value="little" checked><span class="rb">Lidt</span></label>
+      <label class="ro"><input type="radio" name="use_humor" value="yes"><span class="rb">Gerne</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Brug emojis</div><div class="rg">
+      <label class="ro"><input type="radio" name="use_emoji" value="never" checked><span class="rb">Aldrig</span></label>
+      <label class="ro"><input type="radio" name="use_emoji" value="internal"><span class="rb">Kun internt</span></label>
+      <label class="ro"><input type="radio" name="use_emoji" value="yes"><span class="rb">Ja</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Hilseform i emails</div><div class="rg">
+      <label class="ro"><input type="radio" name="greeting_style" value="hej" checked><span class="rb">Hej [navn]</span></label>
+      <label class="ro"><input type="radio" name="greeting_style" value="kaere"><span class="rb">Kære [navn]</span></label>
+      <label class="ro"><input type="radio" name="greeting_style" value="none"><span class="rb">Ingen hilsen</span></label>
+    </div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Undgå klichéer og standardvendinger</div></div><div class="tog on" id="tog-no_clichees" onclick="tog('no_clichees')"></div></div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Undgå fagjargon</div></div><div class="tog" id="tog-avoid_jargon" onclick="tog('avoid_jargon')"></div></div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Stemme</div><div class="pgrid">
+    <div class="pitem"><div class="plabel">Stemmekøn</div><div class="rg">
+      <label class="ro"><input type="radio" name="voice_gender" value="female"><span class="rb">Kvinde</span></label>
+      <label class="ro"><input type="radio" name="voice_gender" value="male" checked><span class="rb">Mand</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Talehastighed</div><div class="rg">
+      <label class="ro"><input type="radio" name="voice_speed" value="slow"><span class="rb">Langsom</span></label>
+      <label class="ro"><input type="radio" name="voice_speed" value="normal" checked><span class="rb">Normal</span></label>
+      <label class="ro"><input type="radio" name="voice_speed" value="fast"><span class="rb">Hurtig</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Stemmeaktivering</div><div class="rg">
+      <label class="ro"><input type="radio" name="voice_activation" value="button" checked><span class="rb">Kun når jeg trykker</span></label>
+      <label class="ro"><input type="radio" name="voice_activation" value="always"><span class="rb">Altid lyttende</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Jeg foretrækker</div><div class="rg">
+      <label class="ro"><input type="radio" name="prefer_voice_or_text" value="voice"><span class="rb">Talesvar</span></label>
+      <label class="ro"><input type="radio" name="prefer_voice_or_text" value="text"><span class="rb">Tekstsvar</span></label>
+      <label class="ro"><input type="radio" name="prefer_voice_or_text" value="both" checked><span class="rb">Begge</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Jeg er i bilen</div><div class="rg">
+      <label class="ro"><input type="radio" name="drives_often" value="never"><span class="rb">Næsten aldrig</span></label>
+      <label class="ro"><input type="radio" name="drives_often" value="sometimes" checked><span class="rb">Sommetider</span></label>
+      <label class="ro"><input type="radio" name="drives_often" value="often"><span class="rb">Ofte</span></label>
+      <label class="ro"><input type="radio" name="drives_often" value="mostly"><span class="rb">Mest af dagen</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Adfærd & beslutninger</div><div class="pgrid">
+    <div class="pitem"><div class="plabel">Stil opklarende spørgsmål hvis noget er uklart</div><div class="rg">
+      <label class="ro"><input type="radio" name="ask_when_unclear" value="always"><span class="rb">Altid</span></label>
+      <label class="ro"><input type="radio" name="ask_when_unclear" value="important" checked><span class="rb">Kun ved vigtige opgaver</span></label>
+      <label class="ro"><input type="radio" name="ask_when_unclear" value="never"><span class="rb">Bare gæt</span></label>
+    </div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Opsummer hvad du har gjort når en opgave er færdig</div></div><div class="tog on" id="tog-summarize_done" onclick="tog('summarize_done')"></div></div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Foreslå proaktivt ting jeg måske har glemt</div></div><div class="tog on" id="tog-proactive_suggest" onclick="tog('proactive_suggest')"></div></div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Giv mig besked hvis du opdager noget der haster</div></div><div class="tog on" id="tog-alert_urgent" onclick="tog('alert_urgent')"></div></div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Prioriter en opgaveliste for mig automatisk</div></div><div class="tog on" id="tog-prioritize_tasks" onclick="tog('prioritize_tasks')"></div></div></div>
+    <div class="pitem"><div class="plabel">Hvad må jeg booke uden at spørge?</div><div class="rg">
+      <label class="ro"><input type="radio" name="may_book" value="ask" checked><span class="rb">Spørg altid</span></label>
+      <label class="ro"><input type="radio" name="may_book" value="under1h"><span class="rb">Møder under 1t</span></label>
+      <label class="ro"><input type="radio" name="may_book" value="all_meetings"><span class="rb">Alle møder</span></label>
+      <label class="ro"><input type="radio" name="may_book" value="everything"><span class="rb">Alt</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Hvad må jeg svare på i dit navn?</div><div class="rg">
+      <label class="ro"><input type="radio" name="may_reply" value="nothing" checked><span class="rb">Ingenting</span></label>
+      <label class="ro"><input type="radio" name="may_reply" value="confirmations"><span class="rb">Kun bekræftelser</span></label>
+      <label class="ro"><input type="radio" name="may_reply" value="routine"><span class="rb">Rutinespørgsmål</span></label>
+      <label class="ro"><input type="radio" name="may_reply" value="all"><span class="rb">Alt</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Email</div><div class="pgrid">
+    <div class="pitem"><div class="trow"><div><div class="plabel">Vis altid preview inden afsendelse</div></div><div class="tog on" id="tog-confirm_before_send" onclick="tog('confirm_before_send')"></div></div></div>
+    <div class="pitem"><div class="plabel">Email-tone</div><div class="rg">
+      <label class="ro"><input type="radio" name="email_tone" value="formal"><span class="rb">Formel</span></label>
+      <label class="ro"><input type="radio" name="email_tone" value="informal"><span class="rb">Uformel</span></label>
+      <label class="ro"><input type="radio" name="email_tone" value="follow" checked><span class="rb">Følg modtager</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Min signatur</div><input type="text" class="ti" name="signature" placeholder="fx Martin Høgsgaard, WeProduce"></div>
+    <div class="pitem"><div class="plabel">Fast CC på alle emails</div><div class="psub">Lad stå tom hvis ikke relevant</div><input type="text" class="ti" name="cc_fixed" placeholder="fx assistent@firma.dk"></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">BCC mig selv på alle emails</div></div><div class="tog" id="tog-bcc_self" onclick="tog('bcc_self')"></div></div></div>
+    <div class="pitem"><div class="plabel">Prioriterede kontakter — svar altid hurtigt</div><div class="psub">Navne adskilt af komma</div><input type="text" class="ti" name="priority_contacts" placeholder="fx Mie, Henrik, Torben Dahl"></div>
+    <div class="pitem"><div class="plabel">Kontakter der kan vente</div><input type="text" class="ti" name="low_priority_contacts" placeholder="fx nyhedsbreve, leverandører"></div>
+    <div class="pitem"><div class="plabel">Påmind om ubesvarede emails efter</div><div class="rg">
+      <label class="ro"><input type="radio" name="remind_unanswered" value="1day"><span class="rb">1 dag</span></label>
+      <label class="ro"><input type="radio" name="remind_unanswered" value="3days" checked><span class="rb">3 dage</span></label>
+      <label class="ro"><input type="radio" name="remind_unanswered" value="1week"><span class="rb">1 uge</span></label>
+      <label class="ro"><input type="radio" name="remind_unanswered" value="never"><span class="rb">Aldrig</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Opsummer indbakken</div><div class="rg">
+      <label class="ro"><input type="radio" name="inbox_summary" value="morning"><span class="rb">Dagligt om morgenen</span></label>
+      <label class="ro"><input type="radio" name="inbox_summary" value="request" checked><span class="rb">På forespørgsel</span></label>
+      <label class="ro"><input type="radio" name="inbox_summary" value="never"><span class="rb">Aldrig</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Kalender</div><div class="pgrid">
+    <div class="pitem"><div class="trow"><div><div class="plabel">Spørg altid inden du opretter aftaler</div></div><div class="tog on" id="tog-confirm_before_cal" onclick="tog('confirm_before_cal')"></div></div></div>
+    <div class="pitem"><div class="plabel">Arbejdsdage</div><div class="cg">
+      <label class="co"><input type="checkbox" name="workday" value="mon" checked><span class="cb">Man</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="tue" checked><span class="cb">Tirs</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="wed" checked><span class="cb">Ons</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="thu" checked><span class="cb">Tors</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="fri" checked><span class="cb">Fre</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="sat"><span class="cb">Lør</span></label>
+      <label class="co"><input type="checkbox" name="workday" value="sun"><span class="cb">Søn</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Arbejdstider</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="time" class="tt" name="work_start" value="08:00">
+        <span style="color:var(--text3);font-size:13px">til</span>
+        <input type="time" class="tt" name="work_end" value="17:00">
+      </div>
+    </div>
+    <div class="pitem"><div class="plabel">Mødefrie tidspunkter</div><div class="psub">Fx "fredage efter 14" eller "aldrig før 9"</div><input type="text" class="ti" name="no_meeting_times" placeholder="Fx fredage efter 14:00"></div>
+    <div class="pitem"><div class="plabel">Buffer mellem møder</div><div class="rg">
+      <label class="ro"><input type="radio" name="meeting_buffer" value="none"><span class="rb">Ingen</span></label>
+      <label class="ro"><input type="radio" name="meeting_buffer" value="15min" checked><span class="rb">15 min</span></label>
+      <label class="ro"><input type="radio" name="meeting_buffer" value="30min"><span class="rb">30 min</span></label>
+      <label class="ro"><input type="radio" name="meeting_buffer" value="1hour"><span class="rb">1 time</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Påmind om møder</div><div class="rg">
+      <label class="ro"><input type="radio" name="remind_before" value="10min"><span class="rb">10 min</span></label>
+      <label class="ro"><input type="radio" name="remind_before" value="30min" checked><span class="rb">30 min</span></label>
+      <label class="ro"><input type="radio" name="remind_before" value="1hour"><span class="rb">1 time</span></label>
+      <label class="ro"><input type="radio" name="remind_before" value="day"><span class="rb">Dagen før</span></label>
+    </div></div>
+    <div class="pitem">
+      <div class="trow"><div><div class="plabel">Bloker frokosttid</div></div><div class="tog on" id="tog-block_lunch" onclick="tog('block_lunch')"></div></div>
+      <div style="margin-top:10px"><input type="time" class="tt" name="lunch_time" value="12:00"></div>
+    </div>
+    <div class="pitem">
+      <div class="trow"><div><div class="plabel">Bloker daglig fokus-tid</div><div class="psub" style="margin-bottom:0">Reservér tid til uforstyrret arbejde</div></div><div class="tog" id="tog-block_focus" onclick="tog('block_focus')"></div></div>
+      <div id="focus-wrap" class="h" style="margin-top:10px"><input type="time" class="tt" name="focus_time" value="09:00"></div>
+    </div>
+    <div class="pitem"><div class="plabel">Beløbsgrænse jeg må handle inden for uden at spørge</div><div class="rg">
+      <label class="ro"><input type="radio" name="amount_limit" value="ask" checked><span class="rb">Spørg altid</span></label>
+      <label class="ro"><input type="radio" name="amount_limit" value="500"><span class="rb">Under 500 kr</span></label>
+      <label class="ro"><input type="radio" name="amount_limit" value="2000"><span class="rb">Under 2.000 kr</span></label>
+      <label class="ro"><input type="radio" name="amount_limit" value="none"><span class="rb">Ingen grænse</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Mødereferater</div><div class="pgrid">
+    <div class="pitem"><div class="plabel">Format</div><div class="rg">
+      <label class="ro"><input type="radio" name="referat_format" value="bullets" checked><span class="rb">Bullet points</span></label>
+      <label class="ro"><input type="radio" name="referat_format" value="prose"><span class="rb">Løbende tekst</span></label>
+      <label class="ro"><input type="radio" name="referat_format" value="both"><span class="rb">Begge</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Inkluder altid</div><div class="cg">
+      <label class="co"><input type="checkbox" name="referat_inc" value="summary" checked><span class="cb">Resumé øverst</span></label>
+      <label class="co"><input type="checkbox" name="referat_inc" value="decisions" checked><span class="cb">Beslutninger</span></label>
+      <label class="co"><input type="checkbox" name="referat_inc" value="actions" checked><span class="cb">Action points</span></label>
+      <label class="co"><input type="checkbox" name="referat_inc" value="deadlines"><span class="cb">Deadlines</span></label>
+      <label class="co"><input type="checkbox" name="referat_inc" value="quotes"><span class="cb">Hvem sagde hvad</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Send referat til</div><div class="rg">
+      <label class="ro"><input type="radio" name="referat_send_to" value="me" checked><span class="rb">Kun mig</span></label>
+      <label class="ro"><input type="radio" name="referat_send_to" value="all"><span class="rb">Alle deltagere</span></label>
+      <label class="ro"><input type="radio" name="referat_send_to" value="ask"><span class="rb">Spørg mig</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Sprog i referater</div><div class="rg">
+      <label class="ro"><input type="radio" name="referat_language" value="danish" checked><span class="rb">Dansk</span></label>
+      <label class="ro"><input type="radio" name="referat_language" value="english"><span class="rb">Engelsk</span></label>
+      <label class="ro"><input type="radio" name="referat_language" value="follow"><span class="rb">Følg mødesproget</span></label>
+    </div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Tilføj mine action points til kalenderen automatisk</div></div><div class="tog on" id="tog-referat_to_cal" onclick="tog('referat_to_cal')"></div></div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Dokumenter & filer</div><div class="pgrid">
+    <div class="pitem"><div class="plabel">Gem dokumenter i</div><div class="rg">
+      <label class="ro"><input type="radio" name="doc_storage" value="drive" checked><span class="rb">Google Drive</span></label>
+      <label class="ro"><input type="radio" name="doc_storage" value="onedrive"><span class="rb">OneDrive</span></label>
+      <label class="ro"><input type="radio" name="doc_storage" value="ask"><span class="rb">Spørg mig</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Foretrukket filformat</div><div class="rg">
+      <label class="ro"><input type="radio" name="doc_format" value="google" checked><span class="rb">Google Docs</span></label>
+      <label class="ro"><input type="radio" name="doc_format" value="word"><span class="rb">Word</span></label>
+      <label class="ro"><input type="radio" name="doc_format" value="pdf"><span class="rb">PDF</span></label>
+    </div></div>
+    <div class="pitem"><div class="plabel">Navngiv filer efter</div><div class="rg">
+      <label class="ro"><input type="radio" name="doc_naming" value="subject" checked><span class="rb">Emne først</span></label>
+      <label class="ro"><input type="radio" name="doc_naming" value="date"><span class="rb">Dato først</span></label>
+      <label class="ro"><input type="radio" name="doc_naming" value="ask"><span class="rb">Spørg mig</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Notifikationer</div><div class="pgrid">
+    <div class="pitem">
+      <div class="trow"><div><div class="plabel">Daglig morgenoversigt</div><div class="psub" style="margin-bottom:0">Briefing med møder, emails og opgaver</div></div><div class="tog" id="tog-morning_brief" onclick="tog('morning_brief')"></div></div>
+      <div id="morning-wrap" class="h" style="margin-top:10px"><input type="time" class="tt" name="morning_brief_time" value="08:00"></div>
+    </div>
+    <div class="pitem"><div class="plabel">Indhold i morgenoversigt</div><div class="cg">
+      <label class="co"><input type="checkbox" name="morning_content" value="meetings" checked><span class="cb">Dagens møder</span></label>
+      <label class="co"><input type="checkbox" name="morning_content" value="emails" checked><span class="cb">Ubesvarede emails</span></label>
+      <label class="co"><input type="checkbox" name="morning_content" value="tasks" checked><span class="cb">Opgaver der haster</span></label>
+      <label class="co"><input type="checkbox" name="morning_content" value="weather"><span class="cb">Vejr</span></label>
+    </div></div>
+    <div class="pitem">
+      <div class="trow"><div><div class="plabel">Ugentlig opsummering</div></div><div class="tog" id="tog-weekly_summary" onclick="tog('weekly_summary')"></div></div>
+      <div id="weekly-wrap" class="h" style="margin-top:10px"><div class="rg">
+        <label class="ro"><input type="radio" name="weekly_day" value="monday" checked><span class="rb">Mandag</span></label>
+        <label class="ro"><input type="radio" name="weekly_day" value="friday"><span class="rb">Fredag</span></label>
+        <label class="ro"><input type="radio" name="weekly_day" value="sunday"><span class="rb">Søndag</span></label>
+      </div></div>
+    </div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Notificer mig når en opgave er fuldført</div></div><div class="tog on" id="tog-notify_on_done" onclick="tog('notify_on_done')"></div></div></div>
+  </div></div>
+
+  <div class="pcat"><div class="pcat-title">Privatliv & grænser</div><div class="pgrid">
+    <div class="pitem"><div class="trow"><div><div class="plabel">Brug mit fornavn når du taler med mig</div></div><div class="tog on" id="tog-use_firstname" onclick="tog('use_firstname')"></div></div></div>
+    <div class="pitem"><div class="trow"><div><div class="plabel">Nævn private aftaler når du planlægger arbejde</div><div class="psub" style="margin-bottom:0">Fx "du har privataftale kl. 15 — vil du mødes kl. 13?"</div></div><div class="tog on" id="tog-mention_private" onclick="tog('mention_private')"></div></div></div>
+    <div class="pitem"><div class="plabel">Emner jeg aldrig må bringe op</div><div class="psub">Adskil med komma</div><input type="text" class="ti" name="forbidden_topics" placeholder="Fx løn, bestemte kunder"></div>
+    <div class="pitem"><div class="plabel">Må jeg gemme information om din familie og privatliv</div><div class="rg">
+      <label class="ro"><input type="radio" name="store_family_info" value="yes"><span class="rb">Ja — gør mig bedre</span></label>
+      <label class="ro"><input type="radio" name="store_family_info" value="necessary" checked><span class="rb">Kun det nødvendige</span></label>
+      <label class="ro"><input type="radio" name="store_family_info" value="no"><span class="rb">Nej</span></label>
+    </div></div>
+  </div></div>
+
+  <div class="nav-row">
+    <button class="bs" onclick="goS1()">← Tilbage</button>
+    <button class="bp" onclick="saveFinish()">Gem og åbn Vox →</button>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step-view" id="step3">
+  <div class="done">
+    <div class="done-icon">✓</div>
+    <div class="done-title">Du er klar, <span id="doneName"></span>!</div>
+    <div class="done-sub">Din profil er gemt. Vox kender dig nu og vil blive bedre for hver dag der går.<br><br>Du kan altid opdatere dine præferencer under <strong>Indstillinger</strong>.</div>
+    <button class="bp" style="max-width:240px;margin:0 auto" onclick="goVox()">Åbn Vox →</button>
+  </div>
+</div>
+
+</div>
+<script>
+const SB_URL='https://kahpdsismxckxljddxya.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthaHBkc2lzbXhja3hsamRkeHlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE1OTMsImV4cCI6MjA4ODQwNzU5M30.KzFNs2rhbatc4u8Ec1ZcfDVKykZnkLfV2K_cvSakSxc';
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+let USER_ID=new URLSearchParams(location.search).get('uid')||localStorage.getItem('vox_user_id')||'';
+
+const QS=[
+  "Hvad hedder du fuldt ud, og hvad er din officielle titel?",
+  "Hvilken virksomhed arbejder du i — og hvad laver den kort fortalt?",
+  "Har du flere virksomheder, roller eller arbejdssteder jeg skal kende til?",
+  "Hvad er din primære arbejdsadresse?",
+  "Hvad er dit mobilnummer — og må jeg kontakte dig der hvis noget haster?",
+  "Hvem er de 3-5 vigtigste mennesker i dit arbejdsliv? Giv mig navne og hvad de betyder for dig.",
+  "Har du medarbejdere? Hvem rapporterer til dig, og hvem rapporterer du til?",
+  "Har du en eksisterende assistent eller sekretær jeg skal koordinere med?",
+  "Hvem er dine vigtigste kunder eller faste samarbejdspartnere?",
+  "Er der nogen du altid skal svare hurtigt — inden for timer?",
+  "Er der nogen du bevidst holder på afstand eller sjældent vil kontaktes af?",
+  "Hvad er dine primære ansvarsområder i din rolle?",
+  "Hvem er de vigtigste mennesker i dit privatliv — partner, børn, forældre?",
+  "Har du faste private forpligtelser der aldrig må bookes hen over — hentning, sport, familietid?",
+  "Er der perioder på året der er særligt travle eller rolige for dig?",
+  "Hvornår starter din arbejdsdag typisk, og hvornår slutter den?",
+  "Hvornår på dagen er du mest fokuseret og produktiv?",
+  "Hvornår tjekker du email — morgen, løbende, eller på bestemte tidspunkter?",
+  "Kører du meget bil i arbejdstiden? Bruger du Vox primært mens du kører?",
+  "Holder du frokostpause — og hvornår?",
+  "Har du faste ugentlige møder eller rytmer jeg skal kende?",
+  "Hvad må jeg gøre helt selvstændigt uden at spørge dig?",
+  "Hvad kræver altid din godkendelse — uanset hvad?",
+  "Må jeg acceptere mødeindkaldelser på dine vegne?",
+  "Må jeg aflyse eller rykke møder uden at spørge dig først?",
+  "Må jeg svare på emails i dit navn — og i hvilke situationer?",
+  "Er der en beløbsgrænse for hvad jeg må booke eller godkende uden at spørge?",
+  "Foretrækker du korte og præcise svar, eller vil du have kontekst og forklaring med?",
+  "Går du direkte til sagen i dine egne emails, eller starter du med lidt smalltalk?",
+  "Bruger du punktlister i dine emails — eller skriver du i sammenhængende tekst?",
+  "Er der ord, vendinger eller en tone du aldrig vil have brugt i din kommunikation?",
+  "Hvad irriterer dig allermest når folk kommunikerer med dig?",
+  "Er der kunder eller kontakter der kræver særlig tone eller behandling?",
+  "Er der emner du aldrig vil have jeg sender en email om uden at spørge dig først?",
+  "Bruger du Google eller Microsoft til email og kalender?",
+  "Hvad hedder dine vigtigste kalendere, og hvad bruges de til?",
+  "Bruger du et CRM-system til kunder og leads — og hvilket?",
+  "Bruger du et regnskabssystem — og hvilket?",
+  "Hvor gemmer du vigtige dokumenter og filer?",
+  "Bruger du projektstyringsværktøjer som Asana, Trello eller lignende?",
+  "Er der systemer du ville ønske du brugte bedre eller mere konsekvent?",
+  "Hvad er de opgaver du bruger mest tid på og mindst nyder?",
+  "Hvad er de ting der falder mellem stolene i din hverdag — ting der aldrig bliver gjort?",
+  "Har du haft en assistent før — menneskelig eller AI — og hvad gik galt?",
+  "Hvad er den ene ting en god assistent aldrig må gøre?",
+  "Hvad er den ene ting en god assistent altid skal huske?",
+  "Er der emner eller områder i dit liv du ikke vil have jeg roder i overhovedet?",
+  "Er der personer der ikke må vide at du bruger en AI-assistent?",
+  "Hvad må jeg aldrig sige eller skrive på dine vegne?",
+  "Er der noget vigtigt om dig jeg bør vide, som jeg ikke har spurgt om?"
+];
+
+const QMAP=['full_name','company','extra_companies','work_address','mobile',
+  'key_people','employees','assistant_name','key_clients','always_reply_fast',
+  'keep_distance','responsibilities','family','fixed_private','busy_periods',
+  'work_start_habit','productive_time','email_check_habit','drives_often',
+  'lunch_habit','weekly_patterns','can_do_alone','always_ask','may_accept_meetings',
+  'may_cancel_meetings','may_reply_as_me','amount_limit','reply_depth','context_pref',
+  'uses_bullets','forbidden_words','comm_annoyances','special_contacts','no_email_topics',
+  'platform','calendar_names','crm_system','accounting','file_storage','project_tools',
+  'wants_better','time_wasters','falls_between','previous_assistant','never_do',
+  'always_remember','off_limits','hide_ai','never_say','notes'];
+
+let qi=0;
+const TS={no_clichees:true,avoid_jargon:false,summarize_done:true,proactive_suggest:true,
+  alert_urgent:true,prioritize_tasks:true,confirm_before_send:true,bcc_self:false,
+  confirm_before_cal:true,block_lunch:true,block_focus:false,referat_to_cal:true,
+  morning_brief:false,weekly_summary:false,notify_on_done:true,use_firstname:true,mention_private:true};
+
+function addMsg(txt,type){
+  const w=document.getElementById('msgs');
+  const d=document.createElement('div');d.className='msg '+type;
+  const t=new Date().toLocaleTimeString('da',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML=`<div class="bubble">${txt}</div><div class="mtime">${t}</div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function showTyp(){const w=document.getElementById('msgs');const d=document.createElement('div');d.className='msg agent';d.id='typ';d.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';w.appendChild(d);w.scrollTop=w.scrollHeight;}
+function hideTyp(){document.getElementById('typ')?.remove();}
+function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+
+async function send(){
+  const inp=document.getElementById('inp');
+  const txt=inp.value.trim();if(!txt)return;
+  inp.value='';addMsg(txt,'user');
+  const col=QMAP[qi];
+  if(col&&USER_ID){try{await sb.from('vox_profiles').upsert({user_id:USER_ID,[col]:txt,updated_at:new Date().toISOString()},{onConflict:'user_id'});}catch{}}
+  qi++;upProg();
+  if(qi<QS.length){showTyp();await dl(500+Math.random()*300);hideTyp();addMsg(QS[qi],'agent');}
+  else{showTyp();await dl(700);hideTyp();addMsg("Tak — jeg har nu et rigtig godt billede af dig. Lad os nu indstille dine præferencer, så er du klar.",'agent');await dl(1000);document.getElementById('toS2btn').style.display='block';}
+}
+function upProg(){const p=Math.round(qi/QS.length*100);document.getElementById('prog').style.width=p+'%';document.getElementById('prog-lbl').textContent='Spørgsmål '+qi+' af '+QS.length;}
+
+function tog(k){TS[k]=!TS[k];document.getElementById('tog-'+k)?.classList.toggle('on',TS[k]);const on=TS[k];if(k==='morning_brief')sh('morning-wrap',on);if(k==='block_focus')sh('focus-wrap',on);if(k==='weekly_summary')sh('weekly-wrap',on);}
+function sh(id,show){const el=document.getElementById(id);if(el){el.classList.toggle('h',!show);el.style.display=show?'block':'none';}}
+function initT(){Object.entries(TS).forEach(([k,v])=>{document.getElementById('tog-'+k)?.classList.toggle('on',v);});}
+
+function collectPrefs(){
+  const p={user_id:USER_ID,updated_at:new Date().toISOString()};
+  document.querySelectorAll('input[type="radio"]:checked').forEach(r=>{p[r.name]=r.value;});
+  Object.entries(TS).forEach(([k,v])=>{p[k]=v;});
+  p.work_days=[...document.querySelectorAll('input[name="workday"]:checked')].map(c=>c.value).join(',');
+  p.referat_includes=[...document.querySelectorAll('input[name="referat_inc"]:checked')].map(c=>c.value).join(',');
+  p.morning_content=[...document.querySelectorAll('input[name="morning_content"]:checked')].map(c=>c.value).join(',');
+  ['signature','cc_fixed','no_meeting_times','priority_contacts','low_priority_contacts',
+   'forbidden_topics','work_start','work_end','morning_brief_time','lunch_time','focus_time']
+    .forEach(n=>{const el=document.querySelector('[name="'+n+'"]');if(el)p[n]=el.value;});
+  return p;
+}
+
+async function saveFinish(){
+  const btn=document.querySelector('#step2 .bp:last-child');btn.textContent='Gemmer…';btn.disabled=true;
+  const prefs=collectPrefs();
+  try{await sb.from('vox_preferences').upsert(prefs,{onConflict:'user_id'});await sb.from('vox_users').update({onboarded:true}).eq('id',USER_ID);}catch(e){console.warn(e);}
+  try{const{data}=await sb.from('vox_profiles').select('full_name').eq('user_id',USER_ID).single();if(data?.full_name)document.getElementById('doneName').textContent=data.full_name.split(' ')[0];}catch{}
+  setStep(3);window.scrollTo(0,0);
+}
+
+function goS1(){setStep(1);}function goS2(){setStep(2);window.scrollTo(0,0);}function goVox(){window.location.href='/';}
+function setStep(n){[1,2,3].forEach(i=>{document.getElementById('step'+i).classList.toggle('active',i===n);const p=document.getElementById('pill'+i);p.classList.toggle('active',i===n);p.classList.toggle('done',i<n);});}
+function dl(ms){return new Promise(r=>setTimeout(r,ms));}
+
+async function ensureUser(){
+  if(USER_ID)return;
+  try{
+    const{data,error}=await sb.from('vox_users').insert({name:'Martin Høgsgaard',email:'mh@weproduce.dk',company:'WeProduce',is_active:true}).select().single();
+    if(data){USER_ID=data.id;localStorage.setItem('vox_user_id',USER_ID);}
+  }catch{
+    try{const{data}=await sb.from('vox_users').select('id').eq('email','mh@weproduce.dk').single();if(data){USER_ID=data.id;localStorage.setItem('vox_user_id',USER_ID);}}catch{}
+  }
+}
+
+window.addEventListener('DOMContentLoaded',async()=>{
+  await ensureUser();initT();
+  await dl(400);
+  addMsg("Hej! Jeg er din personlige AI-assistent. Lad os bruge lidt tid på at lære hinanden at kende — jo mere du fortæller mig nu, jo bedre kan jeg hjælpe dig fra dag ét.\n\nJeg stiller dig 50 spørgsmål. Det tager ca. 15-20 minutter.\n\n"+QS[0],'agent');
+  qi=1;upProg();
+});
+</script>
+</body>
+</html>
