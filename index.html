@@ -1034,53 +1034,82 @@ function buildProfileContext() {
   const prefs = userProfile._vox_prefs;
 
   if (p) {
-    if (p.full_name)        lines.push('NAME: ' + p.full_name + (p.title ? ', ' + p.title : ''));
-    if (p.company)          lines.push('COMPANY: ' + p.company);
-    if (p.key_people)       lines.push('KEY PEOPLE: ' + p.key_people);
-    if (p.family)           lines.push('FAMILY: ' + p.family);
+    // Identitet
+    if (p.full_name)         lines.push('NAME: ' + p.full_name + (p.title ? ', ' + p.title : ''));
+    if (p.company)           lines.push('COMPANY: ' + p.company);
+    if (p.extra_companies)   lines.push('OTHER ROLES: ' + p.extra_companies);
+    if (p.work_address)      lines.push('WORK ADDRESS: ' + p.work_address);
+    if (p.mobile)            lines.push('MOBILE: ' + p.mobile);
+    // Arbejdsliv
+    if (p.key_people)        lines.push('KEY PEOPLE: ' + p.key_people);
+    if (p.employees)         lines.push('EMPLOYEES/REPORTS: ' + p.employees);
+    if (p.assistant_name)    lines.push('ASSISTANT: ' + p.assistant_name);
+    if (p.key_clients)       lines.push('KEY CLIENTS: ' + p.key_clients);
     if (p.always_reply_fast) lines.push('ALWAYS REPLY FAST TO: ' + p.always_reply_fast);
-    if (p.keep_distance)    lines.push('KEEP DISTANCE FROM: ' + p.keep_distance);
-    if (p.can_do_alone)     lines.push('CAN DO WITHOUT ASKING: ' + p.can_do_alone);
-    if (p.always_ask)       lines.push('ALWAYS ASK BEFORE: ' + p.always_ask);
-    if (p.never_do)         lines.push('NEVER DO: ' + p.never_do);
-    if (p.always_remember)  lines.push('ALWAYS REMEMBER: ' + p.always_remember);
-    if (p.forbidden_words)  lines.push('NEVER USE THESE WORDS/PHRASES: ' + p.forbidden_words);
-    if (p.comm_annoyances)  lines.push('COMMUNICATION ANNOYANCES: ' + p.comm_annoyances);
-    if (p.special_contacts) lines.push('SPECIAL CONTACT TREATMENT: ' + p.special_contacts);
-    if (p.no_email_topics)  lines.push('NEVER EMAIL ABOUT WITHOUT ASKING: ' + p.no_email_topics);
-    if (p.off_limits)       lines.push('OFF LIMITS: ' + p.off_limits);
-    if (p.never_say)        lines.push('NEVER SAY ON THEIR BEHALF: ' + p.never_say);
-    if (p.drives_often)     lines.push('DRIVES OFTEN: ' + p.drives_often);
-    if (p.productive_time)  lines.push('MOST PRODUCTIVE: ' + p.productive_time);
-    if (p.time_wasters)     lines.push('TIME WASTERS: ' + p.time_wasters);
-    if (p.platform)         lines.push('PLATFORM: ' + p.platform);
-    if (p.calendar_names)   lines.push('CALENDARS: ' + p.calendar_names);
+    if (p.keep_distance)     lines.push('KEEP DISTANCE FROM: ' + p.keep_distance);
+    if (p.responsibilities)  lines.push('RESPONSIBILITIES: ' + p.responsibilities);
+    // Privatliv
+    if (p.family)            lines.push('FAMILY: ' + p.family);
+    if (p.fixed_private)     lines.push('FIXED PRIVATE COMMITMENTS: ' + p.fixed_private);
+    if (p.busy_periods)      lines.push('BUSY PERIODS: ' + p.busy_periods);
+    // Vaner
+    if (p.work_start_habit)  lines.push('WORK HOURS HABIT: ' + p.work_start_habit);
+    if (p.productive_time)   lines.push('MOST PRODUCTIVE: ' + p.productive_time);
+    if (p.email_check_habit) lines.push('CHECKS EMAIL: ' + p.email_check_habit);
+    if (p.drives_often)      lines.push('DRIVES OFTEN: ' + p.drives_often);
+    if (p.weekly_patterns)   lines.push('WEEKLY PATTERNS: ' + p.weekly_patterns);
+    // Beslutninger
+    if (p.can_do_alone)      lines.push('CAN DO WITHOUT ASKING: ' + p.can_do_alone);
+    if (p.always_ask)        lines.push('ALWAYS ASK BEFORE: ' + p.always_ask);
+    if (p.may_accept_meetings) lines.push('MAY ACCEPT MEETINGS: ' + p.may_accept_meetings);
+    if (p.may_cancel_meetings) lines.push('MAY CANCEL MEETINGS: ' + p.may_cancel_meetings);
+    if (p.may_reply_as_me)   lines.push('MAY REPLY AS ME: ' + p.may_reply_as_me);
+    // Kommunikation
+    if (p.reply_depth)       lines.push('PREFERS REPLIES: ' + p.reply_depth);
+    if (p.email_style)       lines.push('EMAIL STYLE: ' + p.email_style);
+    if (p.forbidden_words)   lines.push('NEVER USE: ' + p.forbidden_words);
+    if (p.comm_annoyances)   lines.push('COMMUNICATION ANNOYANCES: ' + p.comm_annoyances);
+    if (p.special_contacts)  lines.push('SPECIAL CONTACTS: ' + p.special_contacts);
+    if (p.no_email_topics)   lines.push('NEVER EMAIL ABOUT: ' + p.no_email_topics);
+    // Systemer
+    if (p.platform)          lines.push('PLATFORM: ' + p.platform);
+    if (p.calendar_names)    lines.push('CALENDARS: ' + p.calendar_names);
+    if (p.crm_system)        lines.push('CRM: ' + p.crm_system);
+    if (p.accounting)        lines.push('ACCOUNTING: ' + p.accounting);
+    if (p.file_storage)      lines.push('FILE STORAGE: ' + p.file_storage);
+    // Grænser
+    if (p.never_do)          lines.push('NEVER DO: ' + p.never_do);
+    if (p.always_remember)   lines.push('ALWAYS REMEMBER: ' + p.always_remember);
+    if (p.off_limits)        lines.push('OFF LIMITS: ' + p.off_limits);
+    if (p.never_say)         lines.push('NEVER SAY: ' + p.never_say);
+    if (p.time_wasters)      lines.push('TIME WASTERS: ' + p.time_wasters);
   }
 
   if (prefs) {
-    if (prefs.language)     lines.push('LANGUAGE PREF: ' + prefs.language);
-    if (prefs.reply_length) lines.push('REPLY LENGTH: ' + prefs.reply_length);
-    if (prefs.may_book)     lines.push('MAY BOOK WITHOUT ASKING: ' + prefs.may_book);
-    if (prefs.may_reply)    lines.push('MAY REPLY AS THEM: ' + prefs.may_reply);
-    if (prefs.priority_contacts) lines.push('PRIORITY CONTACTS: ' + prefs.priority_contacts);
-    if (prefs.email_tone)   lines.push('EMAIL TONE: ' + prefs.email_tone);
-    if (prefs.signature)    lines.push('EMAIL SIGNATURE: ' + prefs.signature);
-    if (prefs.no_meeting_times) lines.push('NO MEETINGS: ' + prefs.no_meeting_times);
-    if (prefs.meeting_buffer) lines.push('MEETING BUFFER: ' + prefs.meeting_buffer);
-    if (prefs.forbidden_topics) lines.push('FORBIDDEN TOPICS: ' + prefs.forbidden_topics);
+    if (prefs.signature)          lines.push('EMAIL SIGNATURE: ' + prefs.signature);
+    if (prefs.priority_contacts)  lines.push('PRIORITY CONTACTS: ' + prefs.priority_contacts);
+    if (prefs.low_priority_contacts) lines.push('LOW PRIORITY: ' + prefs.low_priority_contacts);
+    if (prefs.no_meeting_times)   lines.push('NO MEETINGS: ' + prefs.no_meeting_times);
+    if (prefs.meeting_buffer)     lines.push('MEETING BUFFER: ' + prefs.meeting_buffer);
+    if (prefs.forbidden_topics)   lines.push('FORBIDDEN TOPICS: ' + prefs.forbidden_topics);
+    if (prefs.may_book)           lines.push('MAY BOOK: ' + prefs.may_book);
+    if (prefs.may_reply)          lines.push('MAY REPLY AS: ' + prefs.may_reply);
+    if (prefs.email_tone)         lines.push('EMAIL TONE: ' + prefs.email_tone);
+    if (prefs.amount_limit)       lines.push('AMOUNT LIMIT: ' + prefs.amount_limit);
   }
 
   // Fallback til gammel parsed profil
   if (!p) {
-    const old = userProfile._parsed;
-    if (old) {
-      const persons = old.persons || {};
+    const oldP = userProfile._parsed;
+    if (oldP) {
+      const persons = oldP.persons || {};
       if (Object.keys(persons).length > 0) lines.push('PERSONS: ' + Object.entries(persons).map(([k,v]) => k+': '+v).join('; '));
-      if (old.patterns?.length) lines.push('PATTERNS: ' + old.patterns.join('; '));
-      if (old.preferences?.length) lines.push('PREFERENCES: ' + old.preferences.join('; '));
+      if (oldP.patterns?.length) lines.push('PATTERNS: ' + oldP.patterns.join('; '));
+      if (oldP.preferences?.length) lines.push('PREFERENCES: ' + oldP.preferences.join('; '));
     }
   }
 
+  console.log('[Profile] Context lines:', lines.length, lines.slice(0,3));
   return lines.length ? '\n' + lines.join('\n') : '';
 }
 
