@@ -935,13 +935,55 @@ async function saveProjectMemory(projectId, newMessages) {
 
 async function loadUserProfile() {
   try {
-    const { data } = await sb.from('user_profile').select('key, value');
-    if (data) data.forEach(row => { userProfile[row.key] = row.value; });
-    // Parse struktureret profil hvis den findes
-    if (userProfile['_profile']) {
+    // Hent fra gammel user_profile tabel (bagudkompatibel)
+    const { data: oldData } = await sb.from('user_profile').select('key, value');
+    if (oldData) oldData.forEach(row => { userProfile[row.key] = row.value; });
+
+    // Hent user_id fra localStorage (sat af onboarding)
+    const uid = localStorage.getItem('vox_user_id');
+    if (uid) {
+      // Hent ny struktureret profil
+      const { data: profile } = await sb.from('vox_profiles').select('*').eq('user_id', uid).single();
+      if (profile) {
+        userProfile._vox_profile = profile;
+        // Byg _parsed fra vox_profiles
+        userProfile._parsed = {
+          persons: buildPersonsFromProfile(profile),
+          vocabulary: buildVocabFromProfile(profile),
+          patterns: [],
+          preferences: []
+        };
+      }
+      // Hent præferencer
+      const { data: prefs } = await sb.from('vox_preferences').select('*').eq('user_id', uid).single();
+      if (prefs) userProfile._vox_prefs = prefs;
+    }
+
+    // Parse gammel _profile JSON hvis ingen ny profil
+    if (!userProfile._vox_profile && userProfile['_profile']) {
       try { userProfile._parsed = JSON.parse(userProfile['_profile']); } catch {}
     }
-  } catch(e) { userProfile = {}; }
+  } catch(e) { console.warn('loadUserProfile error:', e); userProfile = {}; }
+}
+
+function buildPersonsFromProfile(p) {
+  const persons = {};
+  if (p.key_people) persons['Vigtige kontakter'] = p.key_people;
+  if (p.family) persons['Familie'] = p.family;
+  if (p.assistant_name) persons['Assistent'] = p.assistant_name;
+  if (p.key_clients) persons['Kunder'] = p.key_clients;
+  if (p.always_reply_fast) persons['Svar hurtigt til'] = p.always_reply_fast;
+  return persons;
+}
+
+function buildVocabFromProfile(p) {
+  const vocab = [];
+  if (p.full_name) vocab.push(...p.full_name.split(' '));
+  if (p.company) vocab.push(p.company);
+  if (p.key_people) vocab.push(...p.key_people.split(/[,\n]/).map(s=>s.trim()).filter(Boolean));
+  if (p.key_clients) vocab.push(...p.key_clients.split(/[,\n]/).map(s=>s.trim()).filter(Boolean));
+  if (p.always_reply_fast) vocab.push(...p.always_reply_fast.split(/[,\n]/).map(s=>s.trim()).filter(Boolean));
+  return [...new Set(vocab.filter(v => v.length > 2))].slice(0, 50);
 }
 
 // Gem struktureret profil-opdatering — kaldes kun når Claude lærer noget nyt
@@ -985,15 +1027,58 @@ function buildWhisperPrompt() {
 
 // Byg profil-kontekst til Claude — komprimeret
 function buildProfileContext() {
-  const profile = userProfile._parsed;
-  if (!profile) return '';
   const lines = [];
-  const persons = profile.persons || {};
-  if (Object.keys(persons).length > 0) {
-    lines.push('PERSONS: ' + Object.entries(persons).map(([k,v]) => k + ': ' + v).join('; '));
+  const p = userProfile._vox_profile;
+  const prefs = userProfile._vox_prefs;
+
+  if (p) {
+    if (p.full_name)        lines.push('NAME: ' + p.full_name + (p.title ? ', ' + p.title : ''));
+    if (p.company)          lines.push('COMPANY: ' + p.company);
+    if (p.key_people)       lines.push('KEY PEOPLE: ' + p.key_people);
+    if (p.family)           lines.push('FAMILY: ' + p.family);
+    if (p.always_reply_fast) lines.push('ALWAYS REPLY FAST TO: ' + p.always_reply_fast);
+    if (p.keep_distance)    lines.push('KEEP DISTANCE FROM: ' + p.keep_distance);
+    if (p.can_do_alone)     lines.push('CAN DO WITHOUT ASKING: ' + p.can_do_alone);
+    if (p.always_ask)       lines.push('ALWAYS ASK BEFORE: ' + p.always_ask);
+    if (p.never_do)         lines.push('NEVER DO: ' + p.never_do);
+    if (p.always_remember)  lines.push('ALWAYS REMEMBER: ' + p.always_remember);
+    if (p.forbidden_words)  lines.push('NEVER USE THESE WORDS/PHRASES: ' + p.forbidden_words);
+    if (p.comm_annoyances)  lines.push('COMMUNICATION ANNOYANCES: ' + p.comm_annoyances);
+    if (p.special_contacts) lines.push('SPECIAL CONTACT TREATMENT: ' + p.special_contacts);
+    if (p.no_email_topics)  lines.push('NEVER EMAIL ABOUT WITHOUT ASKING: ' + p.no_email_topics);
+    if (p.off_limits)       lines.push('OFF LIMITS: ' + p.off_limits);
+    if (p.never_say)        lines.push('NEVER SAY ON THEIR BEHALF: ' + p.never_say);
+    if (p.drives_often)     lines.push('DRIVES OFTEN: ' + p.drives_often);
+    if (p.productive_time)  lines.push('MOST PRODUCTIVE: ' + p.productive_time);
+    if (p.time_wasters)     lines.push('TIME WASTERS: ' + p.time_wasters);
+    if (p.platform)         lines.push('PLATFORM: ' + p.platform);
+    if (p.calendar_names)   lines.push('CALENDARS: ' + p.calendar_names);
   }
-  if (profile.patterns?.length) lines.push('PATTERNS: ' + profile.patterns.join('; '));
-  if (profile.preferences?.length) lines.push('PREFERENCES: ' + profile.preferences.join('; '));
+
+  if (prefs) {
+    if (prefs.language)     lines.push('LANGUAGE PREF: ' + prefs.language);
+    if (prefs.reply_length) lines.push('REPLY LENGTH: ' + prefs.reply_length);
+    if (prefs.may_book)     lines.push('MAY BOOK WITHOUT ASKING: ' + prefs.may_book);
+    if (prefs.may_reply)    lines.push('MAY REPLY AS THEM: ' + prefs.may_reply);
+    if (prefs.priority_contacts) lines.push('PRIORITY CONTACTS: ' + prefs.priority_contacts);
+    if (prefs.email_tone)   lines.push('EMAIL TONE: ' + prefs.email_tone);
+    if (prefs.signature)    lines.push('EMAIL SIGNATURE: ' + prefs.signature);
+    if (prefs.no_meeting_times) lines.push('NO MEETINGS: ' + prefs.no_meeting_times);
+    if (prefs.meeting_buffer) lines.push('MEETING BUFFER: ' + prefs.meeting_buffer);
+    if (prefs.forbidden_topics) lines.push('FORBIDDEN TOPICS: ' + prefs.forbidden_topics);
+  }
+
+  // Fallback til gammel parsed profil
+  if (!p) {
+    const old = userProfile._parsed;
+    if (old) {
+      const persons = old.persons || {};
+      if (Object.keys(persons).length > 0) lines.push('PERSONS: ' + Object.entries(persons).map(([k,v]) => k+': '+v).join('; '));
+      if (old.patterns?.length) lines.push('PATTERNS: ' + old.patterns.join('; '));
+      if (old.preferences?.length) lines.push('PREFERENCES: ' + old.preferences.join('; '));
+    }
+  }
+
   return lines.length ? '\n' + lines.join('\n') : '';
 }
 
