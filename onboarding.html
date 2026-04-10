@@ -31,6 +31,18 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
 .msg.user .bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px}
 .mtime{font-size:11px;color:var(--text3);margin-top:3px;padding:0 3px}
 .msg.user .mtime{text-align:right}
+.msg.user:hover .edit-btn{opacity:1}
+.edit-btn{opacity:0;background:none;border:none;font-size:11px;color:rgba(255,255,255,.7);cursor:pointer;padding:0 4px;transition:opacity .2s}
+.edit-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-end;justify-content:center;padding:20px}
+.edit-modal.open{display:flex}
+.edit-box{background:var(--surface);border-radius:14px;padding:20px;width:100%;max-width:600px}
+.edit-box-title{font-size:13px;font-weight:600;margin-bottom:4px;color:var(--text2)}
+.edit-box-q{font-size:14px;color:var(--text);margin-bottom:12px;line-height:1.5}
+.edit-textarea{width:100%;border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--bg);outline:none;resize:vertical;min-height:80px;line-height:1.5}
+.edit-textarea:focus{border-color:var(--accent)}
+.edit-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+.edit-save{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer}
+.edit-cancel{background:none;border:1px solid var(--border);border-radius:var(--rs);padding:8px 14px;font-size:13px;color:var(--text2);cursor:pointer}
 .typing{display:flex;gap:4px;padding:11px 15px;background:var(--accent-light);border-radius:14px;border-bottom-left-radius:3px;width:fit-content}
 .typing span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:tb .8s infinite}
 .typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
@@ -368,6 +380,20 @@ html,body{min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;
 </div>
 
 </div>
+
+<!-- Edit modal -->
+<div class="edit-modal" id="editModal">
+  <div class="edit-box">
+    <div class="edit-box-title">Ret dit svar</div>
+    <div class="edit-box-q" id="editQuestion"></div>
+    <textarea class="edit-textarea" id="editText"></textarea>
+    <div class="edit-btns">
+      <button class="edit-cancel" onclick="closeEdit()">Annuller</button>
+      <button class="edit-save" onclick="saveEdit()">Gem rettelse</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SB_URL='https://kahpdsismxckxljddxya.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthaHBkc2lzbXhja3hsamRkeHlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE1OTMsImV4cCI6MjA4ODQwNzU5M30.KzFNs2rhbatc4u8Ec1ZcfDVKykZnkLfV2K_cvSakSxc';
@@ -444,12 +470,50 @@ const TS={no_clichees:true,avoid_jargon:false,summarize_done:true,proactive_sugg
   confirm_before_cal:true,block_lunch:true,block_focus:false,referat_to_cal:true,
   morning_brief:false,weekly_summary:false,notify_on_done:true,use_firstname:true,mention_private:true};
 
-function addMsg(txt,type){
+function addMsg(txt,type,qIndex){
   const w=document.getElementById('msgs');
   const d=document.createElement('div');d.className='msg '+type;
   const t=new Date().toLocaleTimeString('da',{hour:'2-digit',minute:'2-digit'});
-  d.innerHTML=`<div class="bubble">${txt}</div><div class="mtime">${t}</div>`;
+  if(type==='user' && qIndex!==undefined){
+    d.dataset.qindex=qIndex;
+    d.innerHTML=`<div class="bubble">${txt}<button class="edit-btn" onclick="openEdit(${qIndex},this)" title="Ret svar">✏️</button></div><div class="mtime">${t}</div>`;
+  } else {
+    d.innerHTML=`<div class="bubble">${txt}</div><div class="mtime">${t}</div>`;
+  }
   w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+
+let editIdx=null;
+function openEdit(idx,btn){
+  editIdx=idx;
+  const q=QS[idx]||'';
+  const col=QMAP[idx]||'';
+  document.getElementById('editQuestion').textContent=q;
+  // Find nuværende svar fra bubble
+  const bubble=btn.closest('.bubble');
+  const currentText=bubble.childNodes[0].textContent.trim();
+  document.getElementById('editText').value=currentText;
+  document.getElementById('editModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editText').focus(),100);
+}
+function closeEdit(){document.getElementById('editModal').classList.remove('open');editIdx=null;}
+async function saveEdit(){
+  const newVal=document.getElementById('editText').value.trim();
+  if(!newVal){closeEdit();return;}
+  const col=QMAP[editIdx];
+  // Opdater i Supabase
+  if(USER_ID&&col){
+    try{await sb.from('vox_profiles').upsert({user_id:USER_ID,[col]:newVal,updated_at:new Date().toISOString()},{onConflict:'user_id'});}catch(e){console.warn(e);}
+  }
+  // Opdater bubble i chat
+  const msgs=document.getElementById('msgs');
+  const userMsgs=[...msgs.querySelectorAll('.msg.user')];
+  const target=userMsgs.find(m=>parseInt(m.dataset.qindex)===editIdx);
+  if(target){
+    const btn=target.querySelector('.edit-btn');
+    target.querySelector('.bubble').childNodes[0].textContent=newVal;
+  }
+  closeEdit();
 }
 function showTyp(){const w=document.getElementById('msgs');const d=document.createElement('div');d.className='msg agent';d.id='typ';d.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';w.appendChild(d);w.scrollTop=w.scrollHeight;}
 function hideTyp(){document.getElementById('typ')?.remove();}
@@ -458,7 +522,7 @@ function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
 async function send(){
   const inp=document.getElementById('inp');
   const txt=inp.value.trim();if(!txt)return;
-  inp.value='';addMsg(txt,'user');
+  inp.value='';addMsg(txt,'user',qi-1);
   const col=QMAP[qi];
   if(col&&USER_ID){try{await sb.from('vox_profiles').upsert({user_id:USER_ID,[col]:txt,updated_at:new Date().toISOString()},{onConflict:'user_id'});}catch{}}
   qi++;upProg();
