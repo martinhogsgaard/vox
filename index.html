@@ -1194,7 +1194,7 @@ function navTo(tab) {
   if (tab === 'hjem') { homeHistory = []; hideConfirmCard(); showView('homeView'); }
   else if (tab === 'projekter') { showView('projekterView'); renderProjekterView(); }
   else if (tab === 'kalender') { showView('calendarView'); renderCalendarView(); }
-  else if (tab === 'konto') { showView('homeView'); }
+  else if (tab === 'konto') { window.location.href = '/profile' + (localStorage.getItem('vox_user_id') ? '?uid=' + localStorage.getItem('vox_user_id') : ''); }
 }
 
 function goHome() {
