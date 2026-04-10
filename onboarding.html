@@ -625,6 +625,33 @@ function stopMic() {
 window.addEventListener('DOMContentLoaded',async()=>{
   await ensureUser();initT();
   await dl(400);
+
+  // Genindlæs tidligere svar hvis de findes
+  if(USER_ID){
+    try{
+      const{data:prev}=await sb.from('vox_profiles').select('*').eq('user_id',USER_ID).single();
+      if(prev){
+        let lastAnswered=-1;
+        QMAP.forEach((col,i)=>{if(col&&prev[col])lastAnswered=i;});
+        if(lastAnswered>=0){
+          addMsg('Hej igen! Jeg kan se du allerede har svaret på '+(lastAnswered+1)+' spørgsmål. Vi fortsætter hvor vi slap.','agent');
+          await dl(300);
+          for(let i=0;i<=lastAnswered;i++){
+            const col=QMAP[i];
+            if(col&&prev[col]){addMsg(QS[i],'agent');addMsg(prev[col],'user',i);await dl(30);}
+          }
+          const msgs=document.getElementById('msgs');
+          msgs.scrollTop=msgs.scrollHeight;
+          qi=lastAnswered+1;
+          upProg();
+          if(qi<QS.length){await dl(400);addMsg(QS[qi],'agent');qi++;}
+          else{addMsg('Du har svaret på alle spørgsmål. Ret gerne dine svar ved at trykke ✏️, eller fortsæt til præferencer.','agent');document.getElementById('toS2btn').style.display='block';}
+          return;
+        }
+      }
+    }catch(e){console.warn('Load prev answers:',e);}
+  }
+
   addMsg("Hej! Jeg er din personlige AI-assistent. Lad os bruge lidt tid på at lære hinanden at kende — jo mere du fortæller mig nu, jo bedre kan jeg hjælpe dig fra dag ét.\n\nJeg stiller dig 50 spørgsmål. Det tager ca. 15-20 minutter.\n\n"+QS[0],'agent');
   qi=1;upProg();
 });
