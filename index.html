@@ -941,9 +941,11 @@ async function loadUserProfile() {
 
     // Hent user_id fra localStorage (sat af onboarding)
     const uid = localStorage.getItem('vox_user_id');
+    console.log('[Profile] vox_user_id from localStorage:', uid);
     if (uid) {
       // Hent ny struktureret profil
       const { data: profile } = await sb.from('vox_profiles').select('*').eq('user_id', uid).single();
+      console.log('[Profile] vox_profiles data:', profile);
       if (profile) {
         userProfile._vox_profile = profile;
         // Byg _parsed fra vox_profiles
